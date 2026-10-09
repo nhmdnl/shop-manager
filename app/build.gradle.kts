@@ -81,6 +81,11 @@ dependencies {
   // DataStore
   implementation(libs.androidx.datastore.preferences)
 
+  // Room
+  implementation(libs.androidx.room.runtime)
+  implementation(libs.androidx.room.ktx)
+  ksp(libs.androidx.room.compiler)
+
   // Tooling
   debugImplementation(libs.androidx.compose.ui.tooling)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
@@ -89,6 +94,10 @@ dependencies {
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.turbine)
+  testImplementation(libs.androidx.room.testing)
+  testImplementation(libs.robolectric)
+  testImplementation(libs.androidx.test.core)
+  testImplementation(libs.androidx.test.ext.junit)
 
   // Instrumented tests
   androidTestImplementation(libs.androidx.compose.ui.test.junit4)
