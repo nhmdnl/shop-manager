@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DRAFT: needs native speaker review -->
+<resources>
+    <string name="nav_home">Awaka</string>
+    <string name="nav_sell">Tunda</string>
+    <string name="nav_stock">Ebintu</string>
+    <string name="nav_day">Olunaku</string>
+    <string name="nav_suppliers">Abatuleetera</string>
+    <string name="nav_reports">Lipoota</string>
+    <string name="nav_settings">Enteekateeka</string>
+
+    <string name="action_new_sale">Okutunda okupya</string>
+    <string name="action_add_purchase">Yongerako ebigule</string>
+    <string name="action_add_expense">Yongerako ensaasaanya</string>
+    <string name="action_charge">Sasuza</string>
+    <string name="action_complete_sale">Maliriza okutunda</string>
+    <string name="action_save">Tereka</string>
+    <string name="action_start_day">Tandika olunaku</string>
+    <string name="action_close_day">Ggalawo olunaku</string>
+    <string name="action_cancel">Sazaamu</string>
+    <string name="action_clear">Ggyamu byonna</string>
+    <string name="action_undo">Komawo</string>
+    <string name="action_back">Ddayo</string>
+    <string name="action_see_all">Laba byonna</string>
+    <string name="action_reopen_day">Ggulawo olunaku nate</string>
+
+    <string name="greeting_morning">Wasuze otya</string>
+    <string name="label_cash">Ssente enkalu</string>
+    <string name="label_mobile_money">Mobile Money</string>
+    <string name="label_credit">Ebbanja</string>
+    <string name="label_total">Omugatte</string>
+    <string name="label_change">Enfissi</string>
+    <string name="label_low_stock">Ebiggwaamu</string>
+    <string name="label_sales">Ebitundiddwa</string>
+    <string name="label_expenses">Ensaasaanya</string>
+    <string name="label_purchases">Ebigule</string>
+    <string name="label_profit">Amagoba</string>
+    <string name="label_opening_balance">Ssente z\'okutandika</string>
+    <string name="label_should_have">Kyandibadde</string>
+    <string name="label_counted">Ebibaliddwa</string>
+    <string name="label_difference">Enjawulo</string>
+    <string name="status_short">Kibulamu</string>
+    <string name="status_over">Kisukkiridde</string>
+    <string name="status_balanced">Kituufu</string>
+    <string name="label_owed_to_shop">Amabanja g\'edduuka</string>
+
+    <string name="label_language">Olulimi</string>
+    <string name="label_theme">Endabika</string>
+    <string name="theme_light">Kitangaala</string>
+    <string name="theme_dark">Kizikiza</string>
+    <string name="theme_system">Ssisitemu</string>
+
+    <plurals name="plurals_items">
+        <item quantity="one">ekintu %1$d</item>
+        <item quantity="other">ebintu %1$d</item>
+    </plurals>
+    <plurals name="plurals_left">
+        <item quantity="one">Esisigaddeyo %1$d</item>
+        <item quantity="other">Ebisigaddeyo %1$d</item>
+    </plurals>
+    <plurals name="plurals_sold">
+        <item quantity="one">%1$d ekitundiddwa</item>
+        <item quantity="other">%1$d ebitundiddwa</item>
+    </plurals>
+    <plurals name="plurals_low">
+        <item quantity="one">%1$d ekiggwaamu</item>
+        <item quantity="other">%1$d ebiggwaamu</item>
+    </plurals>
+</resources>

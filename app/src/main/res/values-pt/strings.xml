@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Início</string>
+    <string name="nav_sell">Vender</string>
+    <string name="nav_stock">Stock</string>
+    <string name="nav_day">Dia</string>
+    <string name="nav_suppliers">Fornecedores</string>
+    <string name="nav_reports">Relatórios</string>
+    <string name="nav_settings">Definições</string>
+
+    <string name="action_new_sale">Nova venda</string>
+    <string name="action_add_purchase">Adicionar compra</string>
+    <string name="action_add_expense">Adicionar despesa</string>
+    <string name="action_charge">Cobrar</string>
+    <string name="action_complete_sale">Concluir venda</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_start_day">Iniciar o dia</string>
+    <string name="action_close_day">Fechar o dia</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_clear">Limpar</string>
+    <string name="action_undo">Desfazer</string>
+    <string name="action_back">Voltar</string>
+    <string name="action_see_all">Ver tudo</string>
+    <string name="action_reopen_day">Reabrir o dia</string>
+
+    <string name="greeting_morning">Bom dia</string>
+    <string name="label_cash">Dinheiro</string>
+    <string name="label_mobile_money">Mobile Money</string>
+    <string name="label_credit">Fiado</string>
+    <string name="label_total">Total</string>
+    <string name="label_change">Troco</string>
+    <string name="label_low_stock">Stock baixo</string>
+    <string name="label_sales">Vendas</string>
+    <string name="label_expenses">Despesas</string>
+    <string name="label_purchases">Compras</string>
+    <string name="label_profit">Lucro</string>
+    <string name="label_opening_balance">Saldo de abertura</string>
+    <string name="label_should_have">Deve ter</string>
+    <string name="label_counted">Contado</string>
+    <string name="label_difference">Diferença</string>
+    <string name="status_short">Em falta</string>
+    <string name="status_over">A mais</string>
+    <string name="status_balanced">Certo</string>
+    <string name="label_owed_to_shop">Dívidas à loja</string>
+
+    <string name="label_language">Idioma</string>
+    <string name="label_theme">Tema</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Escuro</string>
+    <string name="theme_system">Sistema</string>
+
+    <plurals name="plurals_items">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d itens</item>
+    </plurals>
+    <plurals name="plurals_left">
+        <item quantity="one">%1$d restante</item>
+        <item quantity="other">%1$d restantes</item>
+    </plurals>
+    <plurals name="plurals_sold">
+        <item quantity="one">%1$d vendido</item>
+        <item quantity="other">%1$d vendidos</item>
+    </plurals>
+    <plurals name="plurals_low">
+        <item quantity="one">%1$d em baixo</item>
+        <item quantity="other">%1$d em baixo</item>
+    </plurals>
+</resources>

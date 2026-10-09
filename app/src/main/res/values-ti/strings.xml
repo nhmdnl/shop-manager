@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DRAFT: needs native speaker review -->
+<resources>
+    <string name="nav_home">ቀንዲ ገጽ</string>
+    <string name="nav_sell">ሸይጥ</string>
+    <string name="nav_stock">ክምችት</string>
+    <string name="nav_day">መዓልቲ</string>
+    <string name="nav_suppliers">ኣቕረብቲ</string>
+    <string name="nav_reports">ጸብጻባት</string>
+    <string name="nav_settings">ምድላዋት</string>
+
+    <string name="action_new_sale">ሓድሽ ሽያጥ</string>
+    <string name="action_add_purchase">ዕድጊ ወስኽ</string>
+    <string name="action_add_expense">ወጻኢ ወስኽ</string>
+    <string name="action_charge">ክፈል</string>
+    <string name="action_complete_sale">ሽያጥ ወድእ</string>
+    <string name="action_save">ዓቕብ</string>
+    <string name="action_start_day">መዓልቲ ጀምር</string>
+    <string name="action_close_day">መዓልቲ ዕጸው</string>
+    <string name="action_cancel">ሰርዝ</string>
+    <string name="action_clear">ኣጽሪ</string>
+    <string name="action_undo">መለስ</string>
+    <string name="action_back">ተመለስ</string>
+    <string name="action_see_all">ኩሉ ርአ</string>
+    <string name="action_reopen_day">መዓልቲ ዳግማይ ክፈት</string>
+
+    <string name="greeting_morning">ከመይ ሓዲርኩም</string>
+    <string name="label_cash">ጥረ ገንዘብ</string>
+    <string name="label_mobile_money">Mobile Money</string>
+    <string name="label_credit">ልቓሕ</string>
+    <string name="label_total">ድምር</string>
+    <string name="label_change">መልሲ</string>
+    <string name="label_low_stock">ዝወሓደ ክምችት</string>
+    <string name="label_sales">ሽያጣት</string>
+    <string name="label_expenses">ወጻኢታት</string>
+    <string name="label_purchases">ዕድጊታት</string>
+    <string name="label_profit">መኽሰብ</string>
+    <string name="label_opening_balance">ናይ መኽፈቲ ሒሳብ</string>
+    <string name="label_should_have">ክህሉ ዘለዎ</string>
+    <string name="label_counted">ዝተቖጽረ</string>
+    <string name="label_difference">ፍልልይ</string>
+    <string name="status_short">ጎደሎ</string>
+    <string name="status_over">ትርፊ</string>
+    <string name="status_balanced">ማዕረ</string>
+    <string name="label_owed_to_shop">ናብ ድኳን ዝግባእ ልቓሕ</string>
+
+    <string name="label_language">ቋንቋ</string>
+    <string name="label_theme">ቴማ</string>
+    <string name="theme_light">ብሩህ</string>
+    <string name="theme_dark">ጸልማት</string>
+    <string name="theme_system">ከም ስልኪ</string>
+
+    <plurals name="plurals_items">
+        <item quantity="one">%1$d ኣቕሓ</item>
+        <item quantity="other">%1$d ኣቑሑት</item>
+    </plurals>
+    <plurals name="plurals_left">
+        <item quantity="one">%1$d ዝተረፈ</item>
+        <item quantity="other">%1$d ዝተረፉ</item>
+    </plurals>
+    <plurals name="plurals_sold">
+        <item quantity="one">%1$d ዝተሸጠ</item>
+        <item quantity="other">%1$d ዝተሸጡ</item>
+    </plurals>
+    <plurals name="plurals_low">
+        <item quantity="one">%1$d ዝወሓደ</item>
+        <item quantity="other">%1$d ዝወሓዱ</item>
+    </plurals>
+</resources>

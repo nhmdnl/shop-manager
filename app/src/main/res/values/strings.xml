@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Shop Manager</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_sell">Sell</string>
+    <string name="nav_stock">Stock</string>
+    <string name="nav_day">Day</string>
+    <string name="nav_suppliers">Suppliers</string>
+    <string name="nav_reports">Reports</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Actions -->
+    <string name="action_new_sale">New sale</string>
+    <string name="action_add_purchase">Add purchase</string>
+    <string name="action_add_expense">Add expense</string>
+    <string name="action_charge">Charge</string>
+    <string name="action_complete_sale">Complete sale</string>
+    <string name="action_save">Save</string>
+    <string name="action_start_day">Start the day</string>
+    <string name="action_close_day">Close day</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_back">Back</string>
+    <string name="action_see_all">See all</string>
+    <string name="action_reopen_day">Reopen day</string>
+
+    <!-- Greetings & Status -->
+    <string name="greeting_morning">Good morning</string>
+    <string name="label_cash">Cash</string>
+    <string name="label_mobile_money">Mobile Money</string>
+    <string name="label_credit">Credit</string>
+    <string name="label_total">Total</string>
+    <string name="label_change">Change</string>
+    <string name="label_low_stock">Low stock</string>
+    <string name="label_sales">Sales</string>
+    <string name="label_expenses">Expenses</string>
+    <string name="label_purchases">Purchases</string>
+    <string name="label_profit">Profit</string>
+    <string name="label_opening_balance">Opening balance</string>
+    <string name="label_should_have">Should have</string>
+    <string name="label_counted">Counted</string>
+    <string name="label_difference">Difference</string>
+    <string name="status_short">Short</string>
+    <string name="status_over">Over</string>
+    <string name="status_balanced">Balanced</string>
+    <string name="label_owed_to_shop">Owed to the shop</string>
+
+    <!-- Settings & Theme -->
+    <string name="label_language">Language</string>
+    <string name="label_theme">Theme</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">System</string>
+    <string name="language_en">English</string>
+    <string name="language_lg">Luganda</string>
+    <string name="language_sw">Kiswahili</string>
+    <string name="language_ti">ትግርኛ (Tigrinya)</string>
+    <string name="language_pt">Português</string>
+    <string name="settings_amounts_note">Amounts always show in UGX with commas, whatever the language.</string>
+    <string name="settings_daily_balance">Daily balance</string>
+    <string name="settings_open_day_on_start">Open the day when the app starts</string>
+    <string name="settings_remind_close_day">Remind me to close the day</string>
+    <string name="settings_allowed_difference">Allowed difference without a reason</string>
+    <string name="settings_carry_closing">Carry closing cash to next opening</string>
+    <string name="settings_shop_and_data">Shop and data</string>
+    <string name="settings_shop_name">Shop name</string>
+    <string name="settings_currency">Currency</string>
+    <string name="settings_backup">Backup</string>
+    <string name="settings_backup_now">Back up now</string>
+    <string name="settings_pin">PIN</string>
+    <string name="settings_pin_desc">PIN for voids, stock corrections, reopening and closing</string>
+
+    <!-- Component & Screen Labels -->
+    <string name="search_placeholder">Search products…</string>
+    <string name="empty_products">No products yet</string>
+    <string name="empty_low_stock">Everything is in stock</string>
+    <string name="empty_reports">No sales in this period</string>
+    <string name="error_could_not_save">Couldn\'t save. Try again.</string>
+    <string name="currency_code">UGX</string>
+    <string name="day_open_since">Day open since %1$s</string>
+    <string name="opening_cash_momo">Opening cash %1$s · Mobile Money %2$s</string>
+    <string name="recent_sales">Recent sales</string>
+    <string name="all_categories">All</string>
+    <string name="coins">Coins</string>
+    <string name="matches">Matches</string>
+    <string name="different_from_yesterday">Different from yesterday by %1$s</string>
+    <string name="yesterday_closed_with">Yesterday closed with %1$s</string>
+
+    <!-- Plurals -->
+    <plurals name="plurals_items">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <plurals name="plurals_left">
+        <item quantity="one">%1$d left</item>
+        <item quantity="other">%1$d left</item>
+    </plurals>
+    <plurals name="plurals_sold">
+        <item quantity="one">%1$d sold</item>
+        <item quantity="other">%1$d sold</item>
+    </plurals>
+    <plurals name="plurals_low">
+        <item quantity="one">%1$d low</item>
+        <item quantity="other">%1$d low</item>
+    </plurals>
+</resources>

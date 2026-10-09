@@ -1,0 +1,277 @@
+package com.archsolutions.shopmanager.core.designsystem.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
+import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.core.money.Money
+
+@Composable
+fun DayBar(
+    openedSince: String,
+    balancesSummary: String,
+    onAddExpense: () -> Unit,
+    onCloseDay: () -> Unit,
+    modifier: Modifier = Modifier,
+    isCompact: Boolean = false,
+) {
+    val colors = LocalShopColors.current
+    ShopCard(modifier = modifier.fillMaxWidth()) {
+        if (isCompact) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(colors.greenTint),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.AccountBalanceWallet,
+                            contentDescription = null,
+                            tint = colors.green,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = openedSince,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.ink,
+                        )
+                        Text(
+                            text = balancesSummary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.muted,
+                        )
+                    }
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    SecondaryButton(
+                        text = "Add expense",
+                        onClick = onAddExpense,
+                        modifier = Modifier.weight(1f),
+                        height = 48.dp,
+                    )
+                    InkButton(
+                        text = "Close day",
+                        onClick = onCloseDay,
+                        modifier = Modifier.weight(1f),
+                        height = 48.dp,
+                    )
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(colors.greenTint),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.AccountBalanceWallet,
+                            contentDescription = null,
+                            tint = colors.green,
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = openedSince,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.ink,
+                        )
+                        Text(
+                            text = balancesSummary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.muted,
+                        )
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SecondaryButton(
+                        text = "Add expense",
+                        onClick = onAddExpense,
+                        height = 48.dp,
+                    )
+                    InkButton(
+                        text = "Close day",
+                        onClick = onCloseDay,
+                        height = 48.dp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatTile(
+    label: String,
+    amountFormatted: String,
+    modifier: Modifier = Modifier,
+    amountColor: Color? = null,
+) {
+    val colors = LocalShopColors.current
+    ShopCard(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.muted,
+            )
+            Text(
+                text = amountFormatted,
+                style = com.archsolutions.shopmanager.core.designsystem.amountTextStyle(24.sp),
+                color = amountColor ?: colors.ink,
+            )
+        }
+    }
+}
+
+@Composable
+fun DenominationRow(
+    denomination: Long,
+    count: Int,
+    onCountChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalShopColors.current
+    val subtotal = denomination * count
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = Money.format(denomination, withCode = false),
+            style = com.archsolutions.shopmanager.core.designsystem.amountTextStyle(16.sp),
+            color = colors.ink,
+            modifier = Modifier.width(110.dp),
+        )
+
+        QtyStepper(
+            value = count.toDouble(),
+            onValueChange = { onCountChange(it.toInt()) },
+            step = 1.0,
+            min = 0.0,
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Text(
+            text = Money.format(subtotal, withCode = true),
+            style = com.archsolutions.shopmanager.core.designsystem.amountTextStyle(16.sp),
+            color = colors.ink,
+            textAlign = TextAlign.End,
+        )
+    }
+}
+
+@Composable
+fun StepIndicator(
+    currentStep: Int,
+    totalSteps: Int = 3,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalShopColors.current
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        for (i in 1..totalSteps) {
+            val isDone = i < currentStep
+            val isCurrent = i == currentStep
+
+            val circleBg = when {
+                isDone || isCurrent -> colors.green
+                else -> colors.segmentTrack
+            }
+            val contentColor = when {
+                isDone || isCurrent -> colors.onGreen
+                else -> colors.muted
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(circleBg),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isDone) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = contentColor,
+                        modifier = Modifier.size(16.dp),
+                    )
+                } else {
+                    Text(
+                        text = i.toString(),
+                        fontFamily = DisplayFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = contentColor,
+                    )
+                }
+            }
+
+            if (i < totalSteps) {
+                Box(
+                    modifier = Modifier
+                        .width(28.dp)
+                        .height(2.dp)
+                        .background(if (i < currentStep) colors.green else colors.segmentTrack)
+                )
+            }
+        }
+    }
+}

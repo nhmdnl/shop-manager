@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Nyumbani</string>
+    <string name="nav_sell">Uza</string>
+    <string name="nav_stock">Stoo</string>
+    <string name="nav_day">Siku</string>
+    <string name="nav_suppliers">Wasambazaji</string>
+    <string name="nav_reports">Ripoti</string>
+    <string name="nav_settings">Mipangilio</string>
+
+    <string name="action_new_sale">Mauzo mapya</string>
+    <string name="action_add_purchase">Ongeza ununuzi</string>
+    <string name="action_add_expense">Ongeza matumizi</string>
+    <string name="action_charge">Lipisha</string>
+    <string name="action_complete_sale">Kamilisha mauzo</string>
+    <string name="action_save">Hifadhi</string>
+    <string name="action_start_day">Anza siku</string>
+    <string name="action_close_day">Funga siku</string>
+    <string name="action_cancel">Ghairi</string>
+    <string name="action_clear">Futa</string>
+    <string name="action_undo">Tendua</string>
+    <string name="action_back">Rudi</string>
+    <string name="action_see_all">Tazama zote</string>
+    <string name="action_reopen_day">Fungua siku tena</string>
+
+    <string name="greeting_morning">Habari za asubuhi</string>
+    <string name="label_cash">Taslimu</string>
+    <string name="label_mobile_money">Mobile Money</string>
+    <string name="label_credit">Mkopo</string>
+    <string name="label_total">Jumla</string>
+    <string name="label_change">Chenji</string>
+    <string name="label_low_stock">Bidhaa zinaisha</string>
+    <string name="label_sales">Mauzo</string>
+    <string name="label_expenses">Matumizi</string>
+    <string name="label_purchases">Manunuzi</string>
+    <string name="label_profit">Faida</string>
+    <string name="label_opening_balance">Salio la kufungua</string>
+    <string name="label_should_have">Inapaswa kuwa</string>
+    <string name="label_counted">Iliyohesabiwa</string>
+    <string name="label_difference">Tofauti</string>
+    <string name="status_short">Upungufu</string>
+    <string name="status_over">Ziada</string>
+    <string name="status_balanced">Imelingana</string>
+    <string name="label_owed_to_shop">Deni kwa duka</string>
+
+    <string name="label_language">Lugha</string>
+    <string name="label_theme">Mandhari</string>
+    <string name="theme_light">Mwangaza</string>
+    <string name="theme_dark">Giza</string>
+    <string name="theme_system">Mfumo</string>
+
+    <plurals name="plurals_items">
+        <item quantity="one">bidhaa %1$d</item>
+        <item quantity="other">bidhaa %1$d</item>
+    </plurals>
+    <plurals name="plurals_left">
+        <item quantity="one">Imebaki %1$d</item>
+        <item quantity="other">Zimebaki %1$d</item>
+    </plurals>
+    <plurals name="plurals_sold">
+        <item quantity="one">%1$d imeuzwa</item>
+        <item quantity="other">%1$d zimeuzwa</item>
+    </plurals>
+    <plurals name="plurals_low">
+        <item quantity="one">%1$d inaisha</item>
+        <item quantity="other">%1$d zinaisha</item>
+    </plurals>
+</resources>
