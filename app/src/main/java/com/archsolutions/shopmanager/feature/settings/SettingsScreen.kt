@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.archsolutions.shopmanager.R
@@ -63,6 +64,18 @@ import com.archsolutions.shopmanager.core.designsystem.components.ShopCard
 import com.archsolutions.shopmanager.core.designsystem.components.ShopSwitch
 import com.archsolutions.shopmanager.core.locale.LanguageManager
 import java.util.Locale
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.ui.platform.LocalConfiguration
+import com.archsolutions.shopmanager.core.designsystem.components.ShopTextField
+import com.archsolutions.shopmanager.core.util.DayFormat
+import com.archsolutions.shopmanager.data.settings.ShopSettings
+import com.archsolutions.shopmanager.feature.backup.rememberBackupActions
+import com.archsolutions.shopmanager.feature.pin.SetPinDialog
+import com.archsolutions.shopmanager.feature.pin.rememberPinGate
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,10 +87,12 @@ fun SettingsScreen(
 ) {
     val colors = LocalShopColors.current
     val settings by viewModel.settings.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = colors.paper,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -145,8 +160,12 @@ fun SettingsScreen(
                         onAllowedDiffChange = viewModel::setAllowedDifference,
                     )
                     ShopDataSettingsCard(
-                        shopName = settings.shopName,
-                        currency = settings.currencyCode,
+                        settings = settings,
+                        zoneId = viewModel.zoneId,
+                        snackbarHostState = snackbarHostState,
+                        onShopNameChange = viewModel::setShopName,
+                        onPinSet = viewModel::setPin,
+                        onPinOff = viewModel::disablePin,
                     )
                 }
             }
@@ -180,8 +199,12 @@ fun SettingsScreen(
                     onAllowedDiffChange = viewModel::setAllowedDifference,
                 )
                 ShopDataSettingsCard(
-                    shopName = settings.shopName,
-                    currency = settings.currencyCode,
+                    settings = settings,
+                    zoneId = viewModel.zoneId,
+                    snackbarHostState = snackbarHostState,
+                    onShopNameChange = viewModel::setShopName,
+                    onPinSet = viewModel::setPin,
+                    onPinOff = viewModel::disablePin,
                 )
             }
         }
@@ -439,47 +462,141 @@ private fun ReminderTimeRow(time: String, onTimeChange: (String) -> Unit) {
 
 @Composable
 private fun ShopDataSettingsCard(
-    shopName: String,
-    currency: String,
+    settings: ShopSettings,
+    zoneId: ZoneId,
+    snackbarHostState: SnackbarHostState,
+    onShopNameChange: (String) -> Unit,
+    onPinSet: (String) -> Unit,
+    onPinOff: () -> Unit,
 ) {
-    val colors = LocalShopColors.current
+    val locale = LocalConfiguration.current.locales[0]
+    val pinGate = rememberPinGate()
+    val backup = rememberBackupActions(snackbarHostState)
+    var editingName by remember { mutableStateOf(false) }
+    var choosingPin by remember { mutableStateOf(false) }
+    var confirmingRestore by remember { mutableStateOf(false) }
+    val lastBackup = settings.lastBackupAt?.let { at ->
+        val time = DayFormat.time(at, zoneId)
+        val sameDay = Instant.ofEpochMilli(at).atZone(zoneId).toLocalDate() == LocalDate.now(zoneId)
+        val whenText = if (sameDay) stringResource(R.string.backup_today, time) else "${DayFormat.dateOf(at, zoneId, "d MMM", locale)} $time"
+        stringResource(R.string.settings_last_backup, whenText)
+    } ?: stringResource(R.string.settings_no_backup)
+
     ShopCard(modifier = Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             SectionLabel(text = stringResource(R.string.settings_shop_and_data))
-
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = stringResource(R.string.settings_shop_name),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.muted,
-                )
-                Text(
-                    text = shopName,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colors.ink,
-                    fontWeight = FontWeight.Bold,
+            SettingRow(title = stringResource(R.string.settings_shop_name)) {
+                RowChip(text = settings.shopName, onClick = { editingName = true })
+            }
+            SettingRow(title = stringResource(R.string.settings_currency), subtitle = stringResource(R.string.settings_currency_value, settings.currencyCode)) {
+                RowChip(text = stringResource(R.string.settings_fixed_v1), onClick = null)
+            }
+            SettingRow(title = stringResource(R.string.settings_backup), subtitle = lastBackup) {
+                RowChip(text = stringResource(R.string.settings_backup_now), onClick = backup.backUp)
+            }
+            SettingRow(title = stringResource(R.string.settings_restore), subtitle = stringResource(R.string.settings_restore_desc)) {
+                RowChip(text = stringResource(R.string.action_restore), onClick = { pinGate.run(R.string.pin_for_restore) { confirmingRestore = true } })
+            }
+            SettingRow(title = stringResource(R.string.settings_pin), subtitle = stringResource(R.string.settings_pin_desc)) {
+                ShopSwitch(
+                    checked = settings.pinEnabled,
+                    onCheckedChange = { on -> if (on) choosingPin = true else pinGate.run(R.string.pin_for_settings, onPinOff) },
                 )
             }
-
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = stringResource(R.string.settings_currency),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.muted,
-                )
-                Text(
-                    text = stringResource(R.string.settings_currency_value, currency),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = colors.ink,
-                )
+            if (settings.pinEnabled) {
+                SettingRow(title = stringResource(R.string.settings_change_pin)) {
+                    RowChip(text = stringResource(R.string.action_change), onClick = { pinGate.run(R.string.pin_for_settings) { choosingPin = true } })
+                }
             }
-
-            SecondaryButton(
-                text = stringResource(R.string.settings_backup_now),
-                onClick = {},
-                leadingIcon = Icons.Outlined.CloudUpload,
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
+    }
+
+    if (editingName) {
+        var name by remember { mutableStateOf(settings.shopName) }
+        AlertDialog(
+            onDismissRequest = { editingName = false },
+            title = { Text(stringResource(R.string.settings_shop_name)) },
+            text = {
+                ShopTextField(value = name, onValueChange = { name = it.take(40) }, placeholder = "", capitalization = KeyboardCapitalization.Words)
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onShopNameChange(name.trim())
+                        editingName = false
+                    },
+                    enabled = name.isNotBlank(),
+                ) { Text(stringResource(R.string.action_save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingName = false }) { Text(stringResource(R.string.action_cancel)) }
+            },
+        )
+    }
+    if (confirmingRestore) {
+        AlertDialog(
+            onDismissRequest = { confirmingRestore = false },
+            title = { Text(stringResource(R.string.restore_confirm_title)) },
+            text = { Text(stringResource(R.string.restore_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmingRestore = false
+                        backup.restore()
+                    },
+                ) { Text(stringResource(R.string.restore_choose)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingRestore = false }) { Text(stringResource(R.string.action_cancel)) }
+            },
+        )
+    }
+    if (choosingPin) {
+        SetPinDialog(
+            onDismiss = { choosingPin = false },
+            onSet = { pin ->
+                choosingPin = false
+                onPinSet(pin)
+            },
+        )
+    }
+}
+
+@Composable
+private fun SettingRow(title: String, subtitle: String? = null, trailing: @Composable () -> Unit) {
+    val colors = LocalShopColors.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyMedium, color = colors.ink)
+            if (subtitle != null) {
+                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = colors.muted)
+            }
+        }
+        trailing()
+    }
+}
+
+/** The pill buttons on the right of Settings rows; without [onClick] it is a quiet label ("Fixed in v1"). */
+@Composable
+private fun RowChip(text: String, onClick: (() -> Unit)?) {
+    val colors = LocalShopColors.current
+    val label: @Composable () -> Unit = {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (onClick != null) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (onClick != null) colors.ink else colors.muted,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+        )
+    }
+    if (onClick != null) {
+        Surface(onClick = onClick, shape = RoundedCornerShape(50), color = colors.segmentTrack) { label() }
+    } else {
+        Surface(shape = RoundedCornerShape(50), color = colors.segmentTrack.copy(alpha = 0.6f)) { label() }
     }
 }

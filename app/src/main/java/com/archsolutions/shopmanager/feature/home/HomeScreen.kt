@@ -72,6 +72,11 @@ import com.archsolutions.shopmanager.feature.day.DayGateLockCard
 import com.archsolutions.shopmanager.feature.sales.SaleListRow
 import com.archsolutions.shopmanager.feature.sales.SaleRow
 import java.time.ZoneId
+import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.ui.res.pluralStringResource
+import com.archsolutions.shopmanager.feature.backup.BackupReminder
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,6 +100,9 @@ fun HomeScreen(
     onDaySummary: (dayId: Long) -> Unit,
     onReopenDay: (dayId: Long) -> Unit,
     modifier: Modifier = Modifier,
+    backupReminder: BackupReminder? = null,
+    onBackUp: () -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val colors = LocalShopColors.current
     val locale = LocalConfiguration.current.locales[0]
@@ -106,6 +114,7 @@ fun HomeScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = colors.paper,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -175,6 +184,8 @@ fun HomeScreen(
                     onCloseDay = onCloseDay,
                 )
             }
+
+            backupReminder?.let { BackupReminderCard(reminder = it, onBackUp = onBackUp) }
 
             if (isExpanded) {
                 // Tablet: two big tiles (150 dp tall, radius 24)
@@ -612,5 +623,38 @@ private fun TodayLine(label: String, value: String, valueColor: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.bodyLarge, color = LocalShopColors.current.muted, modifier = Modifier.weight(1f))
         Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = valueColor)
+    }
+}
+
+/** Section 11 and the States board: a quiet nudge once the last backup is a week old. */
+@Composable
+private fun BackupReminderCard(reminder: BackupReminder, onBackUp: () -> Unit) {
+    val colors = LocalShopColors.current
+    val title = pluralStringResource(
+        if (reminder.never) R.plurals.plurals_backup_never else R.plurals.plurals_backup_overdue,
+        reminder.days,
+        reminder.days,
+    )
+    ShopCard(modifier = Modifier.fillMaxWidth(), borderColor = colors.rust.copy(alpha = 0.3f)) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Box(
+                    modifier = Modifier.size(44.dp).clip(CircleShape).background(colors.rustTint),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.CloudUpload, contentDescription = null, tint = colors.rust)
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = colors.ink)
+                    Text(stringResource(R.string.backup_reminder_body), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
+                }
+            }
+            SecondaryButton(
+                text = stringResource(R.string.settings_backup_now),
+                onClick = onBackUp,
+                leadingIcon = Icons.Outlined.CloudUpload,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }

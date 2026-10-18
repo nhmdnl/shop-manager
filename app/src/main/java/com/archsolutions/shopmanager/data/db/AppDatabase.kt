@@ -52,7 +52,7 @@ import javax.inject.Singleton
         StockMovementEntity::class,
         MoneyEntryEntity::class,
     ],
-    version = 1,
+    version = AppDatabase.VERSION,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -70,6 +70,9 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         const val DATABASE_NAME = "shop_manager.db"
+
+        /** Backups record it; a restore refuses a backup made by a newer schema. */
+        const val VERSION = 1
 
         fun createInMemory(context: Context): AppDatabase =
             Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)

@@ -468,5 +468,51 @@
     </plurals>
     <string name="action_decrease">Diminuir</string>
     <string name="action_increase">Aumentar</string>
-    <string name="settings_currency_value">%1$s (xelins inteiros)</string>
+    <string name="settings_currency_value">%1$s · Xelim ugandês</string>
+    <!-- PIN, backup and restore (M9) -->
+    <string name="pin_enter">Introduza o PIN</string>
+    <string name="pin_for_void">Necessário para anular uma venda</string>
+    <string name="pin_for_stock">Necessário para corrigir o stock</string>
+    <string name="pin_for_close">Necessário para fechar o dia</string>
+    <string name="pin_for_reopen">Necessário para reabrir o dia</string>
+    <string name="pin_for_restore">Necessário para restaurar uma cópia</string>
+    <string name="pin_for_settings">Necessário para mudar o PIN</string>
+    <string name="pin_set_title">Escolha um PIN de 4 dígitos</string>
+    <string name="pin_confirm_title">Introduza o PIN outra vez</string>
+    <string name="pin_set_hint">Pedido para anular, corrigir stock, fechar, reabrir e restaurar.</string>
+    <string name="pin_mismatch">Os dois PIN não coincidem. Tente novamente.</string>
+    <string name="pin_backspace">Apagar um dígito</string>
+    <string name="settings_change_pin">Mudar PIN</string>
+    <string name="action_change">Mudar</string>
+    <string name="settings_last_backup">Última cópia %1$s</string>
+    <string name="settings_no_backup">Ainda sem cópia</string>
+    <string name="backup_today">hoje %1$s</string>
+    <string name="settings_fixed_v1">Fixo na v1</string>
+    <string name="settings_restore">Restaurar uma cópia</string>
+    <string name="settings_restore_desc">Substitui tudo neste dispositivo</string>
+    <string name="action_restore">Restaurar</string>
+    <string name="restore_confirm_title">Restaurar uma cópia?</string>
+    <string name="restore_confirm_body">Tudo neste dispositivo é substituído pela cópia. Não é possível desfazer.</string>
+    <string name="restore_choose">Escolher cópia</string>
+    <string name="backup_saved">Cópia guardada</string>
+    <string name="backup_failed">Não foi possível terminar. Tente novamente.</string>
+    <string name="backup_not_a_backup">Esse ficheiro não é uma cópia do Shop Manager.</string>
+    <string name="backup_too_new">Essa cópia vem de uma versão mais recente da aplicação. Atualize primeiro.</string>
+    <string name="backup_reminder_body">Faça uma cópia para não perder a loja se perder o telemóvel</string>
+    <plurals name="plurals_pin_tries_left">
+        <item quantity="one">PIN errado. Resta 1 tentativa.</item>
+        <item quantity="other">PIN errado. Restam %1$d tentativas.</item>
+    </plurals>
+    <plurals name="plurals_pin_wait">
+        <item quantity="one">Demasiadas tentativas. Aguarde 1 segundo.</item>
+        <item quantity="other">Demasiadas tentativas. Aguarde %1$d segundos.</item>
+    </plurals>
+    <plurals name="plurals_backup_overdue">
+        <item quantity="one">A última cópia foi há 1 dia</item>
+        <item quantity="other">A última cópia foi há %1$d dias</item>
+    </plurals>
+    <plurals name="plurals_backup_never">
+        <item quantity="one">Sem cópia há 1 dia</item>
+        <item quantity="other">Sem cópia há %1$d dias</item>
+    </plurals>
 </resources>

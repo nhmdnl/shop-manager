@@ -28,6 +28,8 @@ class DayRepo @Inject constructor(
 
     fun getLatestDay(): Flow<BusinessDayEntity?> = dayDao.getLatestDay()
 
+    fun getFirstOpenedAt(): Flow<Long?> = dayDao.getFirstOpenedAt()
+
     suspend fun getLatestDayDirect(): BusinessDayEntity? = dayDao.getLatestDayDirect()
 
     suspend fun getLatestClosedDayDirect(): BusinessDayEntity? = dayDao.getLatestClosedDayDirect()

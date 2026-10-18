@@ -481,5 +481,51 @@
     </plurals>
     <string name="action_decrease">Decrease</string>
     <string name="action_increase">Increase</string>
-    <string name="settings_currency_value">%1$s (whole shillings)</string>
+    <string name="settings_currency_value">%1$s · Ugandan shilling</string>
+    <!-- PIN, backup and restore (M9) -->
+    <string name="pin_enter">Enter PIN</string>
+    <string name="pin_for_void">Needed to void a sale</string>
+    <string name="pin_for_stock">Needed to correct stock</string>
+    <string name="pin_for_close">Needed to close the day</string>
+    <string name="pin_for_reopen">Needed to reopen the day</string>
+    <string name="pin_for_restore">Needed to restore a backup</string>
+    <string name="pin_for_settings">Needed to change the PIN</string>
+    <string name="pin_set_title">Choose a 4-digit PIN</string>
+    <string name="pin_confirm_title">Enter the PIN again</string>
+    <string name="pin_set_hint">Asked for voids, stock corrections, closing, reopening and restoring.</string>
+    <string name="pin_mismatch">The two PINs don\'t match. Try again.</string>
+    <string name="pin_backspace">Delete a digit</string>
+    <string name="settings_change_pin">Change PIN</string>
+    <string name="action_change">Change</string>
+    <string name="settings_last_backup">Last backup %1$s</string>
+    <string name="settings_no_backup">No backup yet</string>
+    <string name="backup_today">today %1$s</string>
+    <string name="settings_fixed_v1">Fixed in v1</string>
+    <string name="settings_restore">Restore from a backup</string>
+    <string name="settings_restore_desc">Replaces everything on this device</string>
+    <string name="action_restore">Restore</string>
+    <string name="restore_confirm_title">Restore from a backup?</string>
+    <string name="restore_confirm_body">Everything on this device is replaced by the backup. This can\'t be undone.</string>
+    <string name="restore_choose">Choose backup</string>
+    <string name="backup_saved">Backup saved</string>
+    <string name="backup_failed">Couldn\'t finish. Try again.</string>
+    <string name="backup_not_a_backup">That file isn\'t a Shop Manager backup.</string>
+    <string name="backup_too_new">That backup comes from a newer version of the app. Update the app first.</string>
+    <string name="backup_reminder_body">Back up so a lost phone doesn\'t lose the shop</string>
+    <plurals name="plurals_pin_tries_left">
+        <item quantity="one">Wrong PIN. 1 try left.</item>
+        <item quantity="other">Wrong PIN. %1$d tries left.</item>
+    </plurals>
+    <plurals name="plurals_pin_wait">
+        <item quantity="one">Too many tries. Wait 1 second.</item>
+        <item quantity="other">Too many tries. Wait %1$d seconds.</item>
+    </plurals>
+    <plurals name="plurals_backup_overdue">
+        <item quantity="one">Last backup was 1 day ago</item>
+        <item quantity="other">Last backup was %1$d days ago</item>
+    </plurals>
+    <plurals name="plurals_backup_never">
+        <item quantity="one">No backup in 1 day</item>
+        <item quantity="other">No backup in %1$d days</item>
+    </plurals>
 </resources>

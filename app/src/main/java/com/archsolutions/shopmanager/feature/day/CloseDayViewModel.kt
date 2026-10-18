@@ -190,7 +190,6 @@ class CloseDayViewModel @Inject constructor(
 
     fun setSendSummary(send: Boolean) = inputs.update { it.copy(sendSummary = send) }
 
-    // DECISION: the PIN check for closing (addendum C4) arrives with the PIN dialog in M9.
     fun closeDay() {
         val current = state.value
         val day = current.day ?: return

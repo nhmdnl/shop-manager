@@ -110,6 +110,10 @@ class SettingsStore(
         }
     }
 
+    suspend fun setLastBackupAt(millis: Long) {
+        dataStore.edit { it[KEY_LAST_BACKUP] = millis }
+    }
+
     suspend fun setOnboardingDone(done: Boolean) {
         dataStore.edit { it[KEY_ONBOARDING_DONE] = done }
     }

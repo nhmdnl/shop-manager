@@ -468,5 +468,51 @@
     </plurals>
     <string name="action_decrease">Punguza</string>
     <string name="action_increase">Ongeza</string>
-    <string name="settings_currency_value">%1$s (shilingi kamili)</string>
+    <string name="settings_currency_value">%1$s · Shilingi ya Uganda</string>
+    <!-- PIN, backup and restore (M9) -->
+    <string name="pin_enter">Weka PIN</string>
+    <string name="pin_for_void">Inahitajika kufuta mauzo</string>
+    <string name="pin_for_stock">Inahitajika kurekebisha stoo</string>
+    <string name="pin_for_close">Inahitajika kufunga siku</string>
+    <string name="pin_for_reopen">Inahitajika kufungua siku upya</string>
+    <string name="pin_for_restore">Inahitajika kurejesha nakala</string>
+    <string name="pin_for_settings">Inahitajika kubadilisha PIN</string>
+    <string name="pin_set_title">Chagua PIN ya tarakimu 4</string>
+    <string name="pin_confirm_title">Weka PIN tena</string>
+    <string name="pin_set_hint">Itaombwa kwa kufuta mauzo, kurekebisha stoo, kufunga, kufungua upya na kurejesha.</string>
+    <string name="pin_mismatch">PIN mbili hazilingani. Jaribu tena.</string>
+    <string name="pin_backspace">Futa tarakimu</string>
+    <string name="settings_change_pin">Badilisha PIN</string>
+    <string name="action_change">Badilisha</string>
+    <string name="settings_last_backup">Nakala ya mwisho %1$s</string>
+    <string name="settings_no_backup">Bado hakuna nakala</string>
+    <string name="backup_today">leo %1$s</string>
+    <string name="settings_fixed_v1">Haibadiliki v1</string>
+    <string name="settings_restore">Rejesha kutoka kwa nakala</string>
+    <string name="settings_restore_desc">Inabadilisha kila kitu kwenye kifaa hiki</string>
+    <string name="action_restore">Rejesha</string>
+    <string name="restore_confirm_title">Rejesha kutoka kwa nakala?</string>
+    <string name="restore_confirm_body">Kila kitu kwenye kifaa hiki kitabadilishwa na nakala. Haiwezi kutenduliwa.</string>
+    <string name="restore_choose">Chagua nakala</string>
+    <string name="backup_saved">Nakala imehifadhiwa</string>
+    <string name="backup_failed">Imeshindwa kumaliza. Jaribu tena.</string>
+    <string name="backup_not_a_backup">Faili hilo si nakala ya Shop Manager.</string>
+    <string name="backup_too_new">Nakala hiyo ni ya toleo jipya la programu. Sasisha programu kwanza.</string>
+    <string name="backup_reminder_body">Hifadhi nakala ili simu ikipotea duka lisipotee</string>
+    <plurals name="plurals_pin_tries_left">
+        <item quantity="one">PIN si sahihi. Imebaki jaribio 1.</item>
+        <item quantity="other">PIN si sahihi. Yamebaki majaribio %1$d.</item>
+    </plurals>
+    <plurals name="plurals_pin_wait">
+        <item quantity="one">Majaribio mengi. Subiri sekunde 1.</item>
+        <item quantity="other">Majaribio mengi. Subiri sekunde %1$d.</item>
+    </plurals>
+    <plurals name="plurals_backup_overdue">
+        <item quantity="one">Nakala ya mwisho ilikuwa siku 1 iliyopita</item>
+        <item quantity="other">Nakala ya mwisho ilikuwa siku %1$d zilizopita</item>
+    </plurals>
+    <plurals name="plurals_backup_never">
+        <item quantity="one">Hakuna nakala kwa siku 1</item>
+        <item quantity="other">Hakuna nakala kwa siku %1$d</item>
+    </plurals>
 </resources>

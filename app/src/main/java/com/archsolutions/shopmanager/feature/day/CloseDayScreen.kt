@@ -84,6 +84,7 @@ import com.archsolutions.shopmanager.domain.DayBalance
 import com.archsolutions.shopmanager.domain.DaySummary
 import com.archsolutions.shopmanager.domain.SummaryTemplates
 import kotlinx.coroutines.launch
+import com.archsolutions.shopmanager.feature.pin.rememberPinGate
 
 private enum class Channel { CASH, MOBILE_MONEY }
 
@@ -99,6 +100,8 @@ fun CloseDayScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val closeFailed by viewModel.closeFailed.collectAsStateWithLifecycle()
+    val pinGate = rememberPinGate()
+    val closeDay = { pinGate.run(R.string.pin_for_close) { viewModel.closeDay() } }
     val colors = LocalShopColors.current
     val snackbarHostState = remember { SnackbarHostState() }
     val failedMessage = stringResource(R.string.error_could_not_save)
@@ -175,7 +178,7 @@ fun CloseDayScreen(
                 ReasonAndSend(state = state, viewModel = viewModel, label = stringResource(R.string.reason_for_difference))
                 PrimaryButton(
                     text = stringResource(R.string.action_close_day),
-                    onClick = viewModel::closeDay,
+                    onClick = closeDay,
                     enabled = state.canClose,
                     height = 64.dp,
                     leadingIcon = Icons.Outlined.Lock,
@@ -190,6 +193,7 @@ fun CloseDayScreen(
             snackbarHostState = snackbarHostState,
             onBack = onBack,
             onDebtors = onDebtors,
+            onClose = closeDay,
             modifier = modifier,
         )
     }
@@ -406,6 +410,7 @@ private fun CloseDayCompact(
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onDebtors: () -> Unit,
+    onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalShopColors.current
@@ -443,7 +448,7 @@ private fun CloseDayCompact(
         bottomBar = {
             InkButton(
                 text = stringResource(R.string.action_close_day),
-                onClick = viewModel::closeDay,
+                onClick = onClose,
                 enabled = state.canClose,
                 height = 64.dp,
                 leadingIcon = Icons.Outlined.Lock,

@@ -17,6 +17,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import com.archsolutions.shopmanager.testutil.FakeClock
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
@@ -45,7 +46,7 @@ class SettingsViewModelTest {
             produceFile = { testFile },
         )
         val settingsStore = SettingsStore(dataStore)
-        val viewModel = SettingsViewModel(settingsStore)
+        val viewModel = SettingsViewModel(settingsStore, FakeClock())
 
         viewModel.settings.test {
             // Initial default emission

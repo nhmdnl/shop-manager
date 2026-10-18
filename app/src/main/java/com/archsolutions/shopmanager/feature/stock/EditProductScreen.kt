@@ -72,6 +72,7 @@ import com.archsolutions.shopmanager.data.db.entities.CategoryEntity
 import com.archsolutions.shopmanager.data.db.entities.Unit as ProductUnit
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import com.archsolutions.shopmanager.feature.pin.rememberPinGate
 
 /** Edit product / New product (7.3, addendum NewProduct) with the Correct stock sheet. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,6 +85,7 @@ fun EditProductScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val colors = LocalShopColors.current
+    val pinGate = rememberPinGate()
     var showCorrect by rememberSaveable { mutableStateOf(false) }
     var showSupplierPicker by rememberSaveable { mutableStateOf(false) }
     val form = state.form
@@ -250,7 +252,9 @@ fun EditProductScreen(
             unitText = unitText,
             pinEnabled = state.pinEnabled,
             onDismiss = { showCorrect = false },
-            onSave = viewModel::correctStock,
+            onSave = { counted, reason, note ->
+                pinGate.run(R.string.pin_for_stock) { viewModel.correctStock(counted, reason, note) }
+            },
         )
     }
     if (showSupplierPicker) {

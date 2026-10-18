@@ -93,7 +93,6 @@ class SaleDetailViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SaleDetailUiState())
 
-    // DECISION: the PIN check for voids (addendum C4) arrives with the PIN dialog in M9.
     fun void(reason: String, note: String) {
         if (voiding.value) return
         voiding.value = true

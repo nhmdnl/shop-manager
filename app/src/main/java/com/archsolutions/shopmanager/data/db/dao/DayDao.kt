@@ -27,6 +27,9 @@ interface DayDao {
     @Query("SELECT * FROM business_day ORDER BY date DESC LIMIT 1")
     fun getLatestDay(): Flow<BusinessDayEntity?>
 
+    @Query("SELECT MIN(openedAt) FROM business_day")
+    fun getFirstOpenedAt(): Flow<Long?>
+
     @Query("SELECT * FROM business_day ORDER BY date DESC LIMIT 1")
     suspend fun getLatestDayDirect(): BusinessDayEntity?
 

@@ -92,6 +92,12 @@ import com.archsolutions.shopmanager.feature.suppliers.SupplierDetailScreen
 import com.archsolutions.shopmanager.feature.suppliers.SupplierEditScreen
 import com.archsolutions.shopmanager.feature.suppliers.SuppliersScreen
 import kotlinx.serialization.Serializable
+import com.archsolutions.shopmanager.feature.pin.rememberPinGate
+import com.archsolutions.shopmanager.feature.backup.BackupReminderViewModel
+import com.archsolutions.shopmanager.feature.backup.rememberBackupActions
+import com.archsolutions.shopmanager.data.backup.AutoBackupWorker
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.ui.platform.LocalContext
 
 // Type-safe route objects
 @Serializable object HomeRoute
@@ -412,6 +418,7 @@ private fun NavContent(
 ) {
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
     val today by gateViewModel.today.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val openDay = { navController.navigate(OpenDayRoute) { launchSingleTop = true } }
     // Closes the day the gate is on: today's, or the earlier day still waiting to be closed.
     val closeDay = {
@@ -432,6 +439,11 @@ private fun NavContent(
             val recentSales by homeViewModel.recentSales.collectAsStateWithLifecycle()
             val lowStock by homeViewModel.lowStock.collectAsStateWithLifecycle()
             val todaySummary by homeViewModel.todaySummary.collectAsStateWithLifecycle()
+            val pinGate = rememberPinGate()
+            val backupReminderViewModel: BackupReminderViewModel = hiltViewModel()
+            val backupReminder by backupReminderViewModel.reminder.collectAsStateWithLifecycle()
+            val homeSnackbar = remember { SnackbarHostState() }
+            val backup = rememberBackupActions(homeSnackbar)
             HomeScreen(
                 isExpanded = isExpanded,
                 shopName = settings.shopName,
@@ -452,7 +464,10 @@ private fun NavContent(
                 onOpenSale = { navController.navigate(SaleDetailRoute(it)) },
                 todaySummary = todaySummary,
                 onDaySummary = { navController.navigate(DayClosedRoute(it)) },
-                onReopenDay = homeViewModel::reopenDay,
+                onReopenDay = { dayId -> pinGate.run(R.string.pin_for_reopen) { homeViewModel.reopenDay(dayId) } },
+                backupReminder = backupReminder,
+                onBackUp = backup.backUp,
+                snackbarHostState = homeSnackbar,
             )
         }
         navigation<SellGraph>(startDestination = SellRoute) {
@@ -555,6 +570,7 @@ private fun NavContent(
                 onBack = { navController.popBackStack() },
                 onDebtors = { navController.navigate(DebtorsRoute) },
                 onClosed = { dayId, sent ->
+                    AutoBackupWorker.enqueue(context)
                     navController.navigate(DayClosedRoute(dayId, sent)) { popUpTo<CloseDayRoute> { inclusive = true } }
                 },
             )

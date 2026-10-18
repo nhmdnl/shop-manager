@@ -51,7 +51,6 @@ class HomeViewModel @Inject constructor(
         record?.let { TodaySummary(sales = it.balance.totalSales, profit = it.balance.profit, owed = owed) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    // DECISION: the PIN check for reopening (addendum C4) arrives with the PIN dialog in M9.
     /** 6.3-3: reopening clears the close fields and counts the reopen; the gate then shows the day as open. */
     fun reopenDay(dayId: Long) {
         viewModelScope.launch { dayRepo.reopenDay(dayId) }

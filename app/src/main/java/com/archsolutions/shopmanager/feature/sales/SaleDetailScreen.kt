@@ -62,6 +62,7 @@ import com.archsolutions.shopmanager.core.util.Qty
 import com.archsolutions.shopmanager.data.db.entities.PayMethod
 import kotlinx.coroutines.launch
 import kotlin.math.roundToLong
+import com.archsolutions.shopmanager.feature.pin.rememberPinGate
 
 /** Sale detail (addendum SaleDetail): items, totals, and "Void this sale" for the open day. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,6 +74,7 @@ fun SaleDetailScreen(
     viewModel: SaleDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val pinGate = rememberPinGate()
     val voidFailed by viewModel.voidFailed.collectAsStateWithLifecycle()
     val colors = LocalShopColors.current
     val locale = LocalConfiguration.current.locales[0]
@@ -200,7 +202,7 @@ fun SaleDetailScreen(
             pinEnabled = state.pinEnabled,
             voiding = state.voiding,
             onDismiss = { showVoidSheet = false },
-            onVoid = { reason, note -> viewModel.void(reason, note) },
+            onVoid = { reason, note -> pinGate.run(R.string.pin_for_void) { viewModel.void(reason, note) } },
         )
     }
 }

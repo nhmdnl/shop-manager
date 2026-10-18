@@ -169,7 +169,6 @@ class EditProductViewModel @Inject constructor(
         }
     }
 
-    // DECISION: the PIN check for stock corrections (addendum C4) arrives with the PIN dialog in M9.
     /** Correct stock: the counted amount becomes the stock, saved as one ADJUSTMENT movement. */
     fun correctStock(counted: Double, reason: String, note: String) {
         if (productId == 0L) return
