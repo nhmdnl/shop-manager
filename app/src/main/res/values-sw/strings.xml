@@ -345,4 +345,31 @@
         <item quantity="one">Kuhifadhi kunaongeza bidhaa %1$s kwenye stoo na kusasisha bei za kununua</item>
         <item quantity="other">Kuhifadhi kunaongeza bidhaa %1$s kwenye stoo na kusasisha bei za kununua</item>
     </plurals>
+    <!-- Settings and empty states -->
+    <string name="all_categories">Zote</string>
+    <string name="empty_low_stock">Bidhaa zote zipo stoo</string>
+    <string name="empty_products">Bado hakuna bidhaa</string>
+    <string name="empty_reports">Hakuna mauzo katika kipindi hiki</string>
+    <string name="error_could_not_save">Imeshindwa kuhifadhi. Jaribu tena.</string>
+    <string name="recent_sales">Mauzo ya hivi karibuni</string>
+    <string name="search_placeholder">Tafuta bidhaa…</string>
+    <string name="settings_allowed_difference">Tofauti inayoruhusiwa bila sababu</string>
+    <string name="settings_amounts_note">Kiasi huonyeshwa kwa UGX na koma, kwa lugha yoyote.</string>
+    <string name="settings_backup">Nakala rudufu</string>
+    <string name="settings_backup_now">Hifadhi nakala sasa</string>
+    <string name="settings_carry_closing">Pesa za kufunga ziwe za kufungua siku inayofuata</string>
+    <string name="settings_currency">Sarafu</string>
+    <string name="settings_daily_balance">Hesabu ya kila siku</string>
+    <string name="settings_open_day_on_start">Fungua siku programu inapoanza</string>
+    <string name="settings_pin">PIN</string>
+    <string name="settings_pin_desc">PIN ya kufuta mauzo, kurekebisha stoo, kufungua upya na kufunga</string>
+    <string name="settings_remind_close_day">Nikumbushe kufunga siku</string>
+    <string name="settings_shop_and_data">Duka na data</string>
+    <string name="settings_shop_name">Jina la duka</string>
+    <string name="yesterday_closed_with">Jana ilifungwa na %1$s</string>
+
+    <!-- Close-day reminder (6.7) -->
+    <string name="reminder_channel">Kikumbusho cha kufunga siku</string>
+    <string name="reminder_close_title">Funga siku ya duka ya leo</string>
+    <string name="reminder_close_body">Gusa ili kuhesabu droo na kufunga.</string>
 </resources>

@@ -130,6 +130,8 @@ enum class NavDestination(
 @Composable
 fun AppNavHost(
     isExpanded: Boolean,
+    openCloseDay: Boolean = false,
+    onCloseDayOpened: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     gateViewModel: DayGateViewModel = hiltViewModel(),
@@ -164,6 +166,13 @@ fun AppNavHost(
             is GatePrompt.YesterdayOpen -> navController.navigate(YesterdayOpenRoute(prompt.date)) { launchSingleTop = true }
             null -> Unit
         }
+    }
+
+    // The close-day reminder (6.7) goes to Close the day while today is open; otherwise Home shows why not.
+    LaunchedEffect(openCloseDay, currentDestination != null) {
+        if (!openCloseDay || currentDestination == null) return@LaunchedEffect
+        onCloseDayOpened()
+        (gateState as? DayGateState.Ready)?.let { navController.navigate(CloseDayRoute(it.day.date)) { launchSingleTop = true } }
     }
 
     // Check which top-level item is selected

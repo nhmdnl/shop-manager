@@ -20,6 +20,7 @@ appcompat = "1.7.0"
 googleFonts = "1.7.8"
 turbine = "1.2.0"
 room = "2.8.5"
+work = "2.12.0"
 robolectric = "4.15.1"
 
 [libraries]
@@ -55,6 +56,7 @@ androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
 [plugins]

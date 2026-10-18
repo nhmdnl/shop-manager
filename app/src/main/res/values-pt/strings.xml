@@ -345,4 +345,31 @@
         <item quantity="one">Guardar adiciona %1$s artigo ao stock e atualiza os preços de custo</item>
         <item quantity="other">Guardar adiciona %1$s artigos ao stock e atualiza os preços de custo</item>
     </plurals>
+    <!-- Settings and empty states -->
+    <string name="all_categories">Todas</string>
+    <string name="empty_low_stock">Tudo em stock</string>
+    <string name="empty_products">Ainda não há produtos</string>
+    <string name="empty_reports">Sem vendas neste período</string>
+    <string name="error_could_not_save">Não foi possível guardar. Tente novamente.</string>
+    <string name="recent_sales">Vendas recentes</string>
+    <string name="search_placeholder">Procurar produtos…</string>
+    <string name="settings_allowed_difference">Diferença permitida sem motivo</string>
+    <string name="settings_amounts_note">Os valores aparecem sempre em UGX com vírgulas, em qualquer idioma.</string>
+    <string name="settings_backup">Cópia de segurança</string>
+    <string name="settings_backup_now">Fazer cópia agora</string>
+    <string name="settings_carry_closing">Passar o dinheiro do fecho para a abertura seguinte</string>
+    <string name="settings_currency">Moeda</string>
+    <string name="settings_daily_balance">Balanço diário</string>
+    <string name="settings_open_day_on_start">Abrir o dia ao iniciar a aplicação</string>
+    <string name="settings_pin">PIN</string>
+    <string name="settings_pin_desc">PIN para anulações, correções de stock, reabrir e fechar</string>
+    <string name="settings_remind_close_day">Lembrar-me de fechar o dia</string>
+    <string name="settings_shop_and_data">Loja e dados</string>
+    <string name="settings_shop_name">Nome da loja</string>
+    <string name="yesterday_closed_with">Ontem fechou com %1$s</string>
+
+    <!-- Close-day reminder (6.7) -->
+    <string name="reminder_channel">Lembrete de fecho do dia</string>
+    <string name="reminder_close_title">Feche o dia da loja de hoje</string>
+    <string name="reminder_close_body">Toque para contar a gaveta e fechar.</string>
 </resources>

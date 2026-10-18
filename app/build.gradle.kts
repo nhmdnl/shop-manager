@@ -86,6 +86,9 @@ dependencies {
   implementation(libs.androidx.room.ktx)
   ksp(libs.androidx.room.compiler)
 
+  // WorkManager (close-day reminder)
+  implementation(libs.androidx.work.runtime.ktx)
+
   // Tooling
   debugImplementation(libs.androidx.compose.ui.tooling)
   debugImplementation(libs.androidx.compose.ui.test.manifest)

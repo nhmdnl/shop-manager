@@ -45,6 +45,10 @@ Single `app` module, layered by package:
 
 Day locking runs on two layers. The UI shows `feature/day/DayGateLockCard` and greys out actions while the state isn't `Ready`. Every sale, purchase and money-entry write calls `requireOpenDay(dayId)` (`data/repo/DayLock.kt`), which throws `DayNotOpenException`. No day is ever opened implicitly (hub decision 0005).
 
+Gate prompts (Open the day, Yesterday is still open) show once per business date, and `AppNavHost` holds them while Open/Close the day or Day closed is on screen. A prompt pushed over Close the day gets popped with it.
+
+Close-day reminder (`app/CloseReminder.kt`, spec 6.7): one unique one-time WorkManager job. `MainActivity` re-plans it with REPLACE on launch and whenever `closeReminderTime` changes; each run re-plans the next with APPEND_OR_REPLACE so it doesn't cancel itself. The worker reaches Hilt objects through `CloseReminderEntryPoint`. A tap arrives as `ACTION_CLOSE_DAY`, and `AppNavHost` opens Close the day only when the gate is `Ready`.
+
 Adaptive shell: tablet landscape is primary, phone portrait secondary; the same feature screens serve both.
 
 Tests live in `app/src/test` (JVM, in-memory Room) except design-system UI tests in `androidTest`.

@@ -50,6 +50,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setCloseReminderTime(time: String) {
+        viewModelScope.launch {
+            settingsStore.setCloseReminderTime(time)
+        }
+    }
+
     fun setCarryClosingToOpening(carry: Boolean) {
         viewModelScope.launch {
             settingsStore.setCarryClosingToOpening(carry)

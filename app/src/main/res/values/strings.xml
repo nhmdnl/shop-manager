@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Shop Manager</string>
+    <string name="app_name" translatable="false">Shop Manager</string>
 
     <!-- Navigation -->
     <string name="nav_home">Home</string>
@@ -54,11 +54,11 @@
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_system">System</string>
-    <string name="language_en">English</string>
-    <string name="language_lg">Luganda</string>
-    <string name="language_sw">Kiswahili</string>
-    <string name="language_ti">ትግርኛ (Tigrinya)</string>
-    <string name="language_pt">Português</string>
+    <string name="language_en" translatable="false">English</string>
+    <string name="language_lg" translatable="false">Luganda</string>
+    <string name="language_sw" translatable="false">Kiswahili</string>
+    <string name="language_ti" translatable="false">ትግርኛ (Tigrinya)</string>
+    <string name="language_pt" translatable="false">Português</string>
     <string name="settings_amounts_note">Amounts always show in UGX with commas, whatever the language.</string>
     <string name="settings_daily_balance">Daily balance</string>
     <string name="settings_open_day_on_start">Open the day when the app starts</string>
@@ -79,7 +79,7 @@
     <string name="empty_low_stock">Everything is in stock</string>
     <string name="empty_reports">No sales in this period</string>
     <string name="error_could_not_save">Couldn\'t save. Try again.</string>
-    <string name="currency_code">UGX</string>
+    <string name="currency_code" translatable="false">UGX</string>
     <string name="day_open_since">Day open since %1$s</string>
     <string name="opening_cash_momo">Opening cash %1$s · Mobile Money %2$s</string>
     <string name="recent_sales">Recent sales</string>
@@ -381,4 +381,8 @@
         <item quantity="one">Saving adds %1$s item to stock and updates cost prices</item>
         <item quantity="other">Saving adds %1$s items to stock and updates cost prices</item>
     </plurals>
+    <!-- Close-day reminder (6.7) -->
+    <string name="reminder_channel">Close-day reminder</string>
+    <string name="reminder_close_title">Close today\'s shop day</string>
+    <string name="reminder_close_body">Tap to count the drawer and close.</string>
 </resources>

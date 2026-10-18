@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,12 +29,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,9 +50,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.archsolutions.shopmanager.R
+import com.archsolutions.shopmanager.app.parseReminderTime
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.ThemeMode
+import com.archsolutions.shopmanager.core.designsystem.amountTextStyle
 import com.archsolutions.shopmanager.core.designsystem.components.MoneyField
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.SectionLabel
@@ -52,6 +62,7 @@ import com.archsolutions.shopmanager.core.designsystem.components.SegmentedContr
 import com.archsolutions.shopmanager.core.designsystem.components.ShopCard
 import com.archsolutions.shopmanager.core.designsystem.components.ShopSwitch
 import com.archsolutions.shopmanager.core.locale.LanguageManager
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -126,6 +137,8 @@ fun SettingsScreen(
                     DailyBalanceSettingsCard(
                         openDayOnStart = settings.openDayOnStart,
                         onOpenDayChange = viewModel::setOpenDayOnStart,
+                        reminderTime = settings.closeReminderTime,
+                        onReminderTimeChange = viewModel::setCloseReminderTime,
                         carryClosing = settings.carryClosingToOpening,
                         onCarryClosingChange = viewModel::setCarryClosingToOpening,
                         allowedDiff = settings.allowedDifference,
@@ -159,6 +172,8 @@ fun SettingsScreen(
                 DailyBalanceSettingsCard(
                     openDayOnStart = settings.openDayOnStart,
                     onOpenDayChange = viewModel::setOpenDayOnStart,
+                    reminderTime = settings.closeReminderTime,
+                    onReminderTimeChange = viewModel::setCloseReminderTime,
                     carryClosing = settings.carryClosingToOpening,
                     onCarryClosingChange = viewModel::setCarryClosingToOpening,
                     allowedDiff = settings.allowedDifference,
@@ -306,6 +321,8 @@ private fun LanguageSettingsCard(
 private fun DailyBalanceSettingsCard(
     openDayOnStart: Boolean,
     onOpenDayChange: (Boolean) -> Unit,
+    reminderTime: String,
+    onReminderTimeChange: (String) -> Unit,
     carryClosing: Boolean,
     onCarryClosingChange: (Boolean) -> Unit,
     allowedDiff: Long,
@@ -332,6 +349,8 @@ private fun DailyBalanceSettingsCard(
                     onCheckedChange = onOpenDayChange,
                 )
             }
+
+            ReminderTimeRow(time = reminderTime, onTimeChange = onReminderTimeChange)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -362,6 +381,59 @@ private fun DailyBalanceSettingsCard(
                 )
             }
         }
+    }
+}
+
+// 6.7: the close-day reminder time; MainActivity re-plans the reminder when it changes.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReminderTimeRow(time: String, onTimeChange: (String) -> Unit) {
+    val colors = LocalShopColors.current
+    var picking by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = stringResource(R.string.settings_remind_close_day),
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.ink,
+            modifier = Modifier.weight(1f),
+        )
+        Surface(
+            onClick = { picking = true },
+            shape = RoundedCornerShape(12.dp),
+            color = colors.surface,
+            border = BorderStroke(1.dp, colors.line),
+        ) {
+            Text(
+                text = time,
+                style = amountTextStyle(16.sp),
+                color = colors.ink,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            )
+        }
+    }
+    if (picking) {
+        val initial = remember(time) { parseReminderTime(time) }
+        val state = rememberTimePickerState(initialHour = initial.hour, initialMinute = initial.minute, is24Hour = true)
+        AlertDialog(
+            onDismissRequest = { picking = false },
+            title = { Text(stringResource(R.string.settings_remind_close_day)) },
+            text = { TimePicker(state = state) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onTimeChange("%02d:%02d".format(Locale.US, state.hour, state.minute))
+                        picking = false
+                    },
+                ) { Text(stringResource(R.string.action_save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { picking = false }) { Text(stringResource(R.string.action_cancel)) }
+            },
+        )
     }
 }
 
