@@ -1,6 +1,7 @@
 package com.archsolutions.shopmanager.data.repo
 
 import com.archsolutions.shopmanager.data.db.AppDatabase
+import com.archsolutions.shopmanager.data.db.dao.SupplierLink
 import com.archsolutions.shopmanager.data.db.entities.ProductSupplierEntity
 import com.archsolutions.shopmanager.data.db.entities.SupplierEntity
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +21,8 @@ class SupplierRepo @Inject constructor(
     suspend fun getByIdDirect(id: Long): SupplierEntity? = supplierDao.getByIdDirect(id)
 
     suspend fun saveSupplier(supplier: SupplierEntity): Long = supplierDao.insert(supplier)
+
+    fun getSupplierLinks(productId: Long): Flow<List<SupplierLink>> = supplierDao.getSupplierLinks(productId)
 
     fun getProductSuppliers(productId: Long): Flow<List<ProductSupplierEntity>> =
         supplierDao.getProductSuppliers(productId)

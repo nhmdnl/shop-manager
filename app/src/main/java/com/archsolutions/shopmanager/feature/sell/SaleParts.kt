@@ -57,12 +57,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -80,6 +76,7 @@ import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.amountTextStyle
 import com.archsolutions.shopmanager.core.designsystem.components.ChipRow
+import com.archsolutions.shopmanager.core.designsystem.components.dashedBorder
 import com.archsolutions.shopmanager.core.designsystem.components.MoneyField
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.QtyStepper
@@ -435,17 +432,6 @@ internal fun CreditInfoBox(
             .fillMaxWidth()
             .dashedBorder(colors.muted, 14.dp)
             .padding(horizontal = 16.dp, vertical = 12.dp),
-    )
-}
-
-private fun Modifier.dashedBorder(color: Color, radius: Dp): Modifier = drawBehind {
-    drawRoundRect(
-        color = color,
-        cornerRadius = CornerRadius(radius.toPx()),
-        style = Stroke(
-            width = 1.dp.toPx(),
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())),
-        ),
     )
 }
 

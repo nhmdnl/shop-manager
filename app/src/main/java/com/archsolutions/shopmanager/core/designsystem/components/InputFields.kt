@@ -15,9 +15,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.core.designsystem.amountTextStyle
 import com.archsolutions.shopmanager.core.money.Money
 
 @Composable
@@ -226,6 +231,109 @@ fun MoneyField(
                 Badge(
                     text = trailingBadge,
                     kind = if (isMatchesBadge) BadgeKind.Ok else BadgeKind.Warn,
+                )
+            }
+        }
+    }
+}
+
+/** Compact amount box ("UGX 1,100") for per-line costs, e.g. on Add purchase. */
+@Composable
+fun SmallMoneyField(
+    value: Long?,
+    onValueChange: (Long?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalShopColors.current
+    var isFocused by remember { mutableStateOf(false) }
+    val text = if (value == null || value == 0L) "" else Money.format(value, withCode = false)
+
+    Row(
+        modifier = modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(colors.surface)
+            .border(
+                BorderStroke(
+                    width = if (isFocused) 1.5.dp else 1.dp,
+                    color = if (isFocused) colors.green else colors.line,
+                ),
+                RoundedCornerShape(12.dp),
+            )
+            .onFocusChanged { isFocused = it.hasFocus }
+            .padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "UGX",
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.muted,
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        BasicTextField(
+            value = text,
+            onValueChange = { input -> onValueChange(input.filter(Char::isDigit).toLongOrNull()) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            textStyle = amountTextStyle(16.sp).copy(color = colors.ink),
+            cursorBrush = SolidColor(colors.green),
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/** A field that opens a menu of options (supplier, category). */
+@Composable
+fun <T> ShopDropdown(
+    selectedLabel: String,
+    options: List<T>,
+    labelFor: (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalShopColors.current
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        Surface(
+            onClick = { expanded = true },
+            shape = RoundedCornerShape(14.dp),
+            color = colors.surface,
+            border = BorderStroke(1.dp, colors.line),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = selectedLabel,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = colors.ink,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    imageVector = Icons.Outlined.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = colors.muted,
+                )
+            }
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = colors.surface,
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(text = labelFor(option), color = colors.ink) },
+                    onClick = {
+                        onSelect(option)
+                        expanded = false
+                    },
                 )
             }
         }

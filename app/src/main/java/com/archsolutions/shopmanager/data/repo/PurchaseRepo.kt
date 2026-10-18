@@ -89,12 +89,14 @@ class PurchaseRepo @Inject constructor(
             }
 
             if (supplierId != null) {
+                // 5.3: refresh this supplier's cost, keeping whether it is the preferred one.
+                val existing = supplierDao.getProductSupplier(item.productId, supplierId)
                 supplierDao.upsertProductSupplier(
                     ProductSupplierEntity(
                         productId = item.productId,
                         supplierId = supplierId,
                         supplierCost = item.unitCost,
-                        isPreferred = false,
+                        isPreferred = existing?.isPreferred ?: false,
                     )
                 )
             }

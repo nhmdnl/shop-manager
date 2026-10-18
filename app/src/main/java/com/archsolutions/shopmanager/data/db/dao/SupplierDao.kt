@@ -10,6 +10,14 @@ import com.archsolutions.shopmanager.data.db.entities.ProductSupplierEntity
 import com.archsolutions.shopmanager.data.db.entities.SupplierEntity
 import kotlinx.coroutines.flow.Flow
 
+/** A product's supplier with its name, for Edit product. */
+data class SupplierLink(
+    val supplierId: Long,
+    val name: String,
+    val supplierCost: Long?,
+    val isPreferred: Boolean,
+)
+
 @Dao
 interface SupplierDao {
     @Query("SELECT * FROM supplier WHERE active = 1 ORDER BY name ASC")
@@ -35,6 +43,15 @@ interface SupplierDao {
 
     @Query("SELECT * FROM product_supplier WHERE productId = :productId")
     fun getProductSuppliers(productId: Long): Flow<List<ProductSupplierEntity>>
+
+    @Query("""
+        SELECT ps.supplierId AS supplierId, s.name AS name, ps.supplierCost AS supplierCost, ps.isPreferred AS isPreferred
+        FROM product_supplier ps
+        JOIN supplier s ON s.id = ps.supplierId
+        WHERE ps.productId = :productId
+        ORDER BY ps.isPreferred DESC, s.name COLLATE NOCASE ASC
+    """)
+    fun getSupplierLinks(productId: Long): Flow<List<SupplierLink>>
 
     @Query("SELECT * FROM product_supplier WHERE supplierId = :supplierId")
     fun getSupplierProducts(supplierId: Long): Flow<List<ProductSupplierEntity>>

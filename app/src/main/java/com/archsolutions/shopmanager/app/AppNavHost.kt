@@ -55,6 +55,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -77,6 +78,8 @@ import com.archsolutions.shopmanager.feature.reports.ReportsScreen
 import com.archsolutions.shopmanager.feature.sell.SellScreen
 import com.archsolutions.shopmanager.feature.settings.SettingsScreen
 import com.archsolutions.shopmanager.feature.settings.SettingsViewModel
+import com.archsolutions.shopmanager.feature.stock.AddPurchaseScreen
+import com.archsolutions.shopmanager.feature.stock.EditProductScreen
 import com.archsolutions.shopmanager.feature.stock.StockScreen
 import com.archsolutions.shopmanager.feature.suppliers.SuppliersScreen
 import kotlinx.serialization.Serializable
@@ -94,6 +97,8 @@ import kotlinx.serialization.Serializable
 @Serializable object CheckoutRoute
 @Serializable object SalesRoute
 @Serializable data class SaleDetailRoute(val id: Long)
+@Serializable data class AddPurchaseRoute(val productId: Long = 0L, val supplierId: Long = 0L) // 0 = none
+@Serializable data class EditProductRoute(val id: Long = 0L) // 0 = new product
 
 enum class NavDestination(
     val route: Any,
@@ -291,9 +296,12 @@ fun AppNavHost(
             NavDestination.REPORTS,
         )
 
+        val destination = navBackStackEntry?.destination
         val isFullscreenTask = isOpenDay ||
             currentRoute == SettingsRoute::class.qualifiedName ||
-            currentRoute == CheckoutRoute::class.qualifiedName
+            currentRoute == CheckoutRoute::class.qualifiedName ||
+            destination?.hasRoute(AddPurchaseRoute::class) == true ||
+            destination?.hasRoute(EditProductRoute::class) == true
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
@@ -435,7 +443,32 @@ private fun NavContent(
             )
         }
         composable<StockRoute> {
-            StockScreen(isExpanded = isExpanded)
+            StockScreen(
+                isExpanded = isExpanded,
+                gateState = gateState,
+                zoneId = gateViewModel.zoneId,
+                onOpenDay = openDay,
+                onCloseDay = closeDay,
+                onNewProduct = { navController.navigate(EditProductRoute()) },
+                onEditProduct = { navController.navigate(EditProductRoute(it)) },
+                onAddPurchase = { navController.navigate(AddPurchaseRoute(productId = it)) },
+            )
+        }
+        composable<AddPurchaseRoute> {
+            AddPurchaseScreen(
+                gateState = gateState,
+                zoneId = gateViewModel.zoneId,
+                onOpenDay = openDay,
+                onCloseDay = closeDay,
+                onBack = { navController.popBackStack() },
+                onDone = { navController.popBackStack() },
+            )
+        }
+        composable<EditProductRoute> {
+            EditProductScreen(
+                isExpanded = isExpanded,
+                onBack = { navController.popBackStack() },
+            )
         }
         composable<DayRoute> {
             DayScreen(isExpanded = isExpanded)

@@ -14,6 +14,7 @@ import com.archsolutions.shopmanager.data.db.entities.ProductSupplierEntity
 import com.archsolutions.shopmanager.data.db.entities.StockMovementEntity
 import com.archsolutions.shopmanager.data.db.entities.SupplierEntity
 import com.archsolutions.shopmanager.data.db.entities.Unit
+import com.archsolutions.shopmanager.data.repo.ProductRepo
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -132,7 +133,7 @@ class SeedDataLoader @Inject constructor(
                     type = MovementType.ADJUSTMENT,
                     qtyChange = p.stockQty,
                     refId = null,
-                    reason = "Opening stock",
+                    reason = ProductRepo.OPENING_STOCK_REASON,
                     createdAt = now,
                 )
             )
