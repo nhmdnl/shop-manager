@@ -385,4 +385,52 @@
     <string name="reminder_channel">Close-day reminder</string>
     <string name="reminder_close_title">Close today\'s shop day</string>
     <string name="reminder_close_body">Tap to count the drawer and close.</string>
+    <!-- Suppliers and reorder (M7) -->
+    <string name="search_suppliers">Search suppliers</string>
+    <string name="reorder_list">Reorder list</string>
+    <string name="low_across_suppliers">%1$s across %2$s</string>
+    <string name="low_count">%1$s low</string>
+    <string name="show_all_suppliers">Show all suppliers</string>
+    <string name="no_suppliers">No suppliers yet</string>
+    <string name="no_suppliers_hint">Add the people you buy stock from with +.</string>
+    <string name="no_supplier_match">No supplier matches your search</string>
+    <string name="action_call">Call</string>
+    <string name="action_whatsapp">WhatsApp</string>
+    <string name="reorder_title">Reorder</string>
+    <string name="suggested_quantities">Suggested quantities</string>
+    <string name="order_qty">Order %1$s</string>
+    <string name="send_order">Send order on WhatsApp</string>
+    <string name="nothing_to_reorder">Nothing from this supplier is low.</string>
+    <string name="products_from_supplier">Products from this supplier</string>
+    <string name="col_stock">Stock</string>
+    <string name="col_cost">Cost</string>
+    <string name="record_purchase">Record purchase</string>
+    <string name="no_linked_products">No products linked yet. Edit the supplier to link what they sell.</string>
+    <string name="new_supplier">New supplier</string>
+    <string name="edit_supplier">Edit supplier</string>
+    <string name="label_business_name">Business name</string>
+    <string name="label_contact_person">Contact person</string>
+    <string name="label_phone">Phone</string>
+    <string name="whatsapp_same_number">WhatsApp on the same number</string>
+    <string name="label_whatsapp_number">WhatsApp number</string>
+    <string name="label_location_optional">Location (optional)</string>
+    <string name="label_notes_optional">Notes (optional)</string>
+    <string name="supplier_notes_placeholder">Delivery days, terms</string>
+    <string name="products_they_sell">Products they sell</string>
+    <string name="action_link">+ Link</string>
+    <string name="link_product">Link a product</string>
+    <string name="unlink_product">Remove %1$s</string>
+    <string name="save_supplier">Save supplier</string>
+    <string name="order_qty_title">How many: %1$s</string>
+    <string name="order_greeting">Hello %1$s, order from %2$s:</string>
+    <string name="order_line">- %1$s × %2$s</string>
+    <string name="order_thanks">Thank you.</string>
+    <plurals name="plurals_low_items">
+        <item quantity="one">%1$d low item</item>
+        <item quantity="other">%1$d low items</item>
+    </plurals>
+    <plurals name="plurals_suppliers">
+        <item quantity="one">%1$d supplier</item>
+        <item quantity="other">%1$d suppliers</item>
+    </plurals>
 </resources>

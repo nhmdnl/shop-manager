@@ -372,4 +372,52 @@
     <string name="reminder_channel">Lembrete de fecho do dia</string>
     <string name="reminder_close_title">Feche o dia da loja de hoje</string>
     <string name="reminder_close_body">Toque para contar a gaveta e fechar.</string>
+    <!-- Suppliers and reorder (M7) -->
+    <string name="search_suppliers">Procurar fornecedores</string>
+    <string name="reorder_list">Lista de encomendas</string>
+    <string name="low_across_suppliers">%1$s em %2$s</string>
+    <string name="low_count">%1$s baixos</string>
+    <string name="show_all_suppliers">Mostrar todos os fornecedores</string>
+    <string name="no_suppliers">Ainda não há fornecedores</string>
+    <string name="no_suppliers_hint">Adicione com + quem lhe vende o stock.</string>
+    <string name="no_supplier_match">Nenhum fornecedor corresponde à pesquisa</string>
+    <string name="action_call">Ligar</string>
+    <string name="action_whatsapp">WhatsApp</string>
+    <string name="reorder_title">Encomendar</string>
+    <string name="suggested_quantities">Quantidades sugeridas</string>
+    <string name="order_qty">Encomendar %1$s</string>
+    <string name="send_order">Enviar encomenda pelo WhatsApp</string>
+    <string name="nothing_to_reorder">Nada deste fornecedor está com stock baixo.</string>
+    <string name="products_from_supplier">Produtos deste fornecedor</string>
+    <string name="col_stock">Stock</string>
+    <string name="col_cost">Custo</string>
+    <string name="record_purchase">Registar compra</string>
+    <string name="no_linked_products">Ainda sem produtos associados. Edite o fornecedor para associar o que vende.</string>
+    <string name="new_supplier">Novo fornecedor</string>
+    <string name="edit_supplier">Editar fornecedor</string>
+    <string name="label_business_name">Nome da empresa</string>
+    <string name="label_contact_person">Pessoa de contacto</string>
+    <string name="label_phone">Telefone</string>
+    <string name="whatsapp_same_number">WhatsApp no mesmo número</string>
+    <string name="label_whatsapp_number">Número de WhatsApp</string>
+    <string name="label_location_optional">Localização (opcional)</string>
+    <string name="label_notes_optional">Notas (opcional)</string>
+    <string name="supplier_notes_placeholder">Dias de entrega, condições</string>
+    <string name="products_they_sell">Produtos que vendem</string>
+    <string name="action_link">+ Associar</string>
+    <string name="link_product">Associar um produto</string>
+    <string name="unlink_product">Remover %1$s</string>
+    <string name="save_supplier">Guardar fornecedor</string>
+    <string name="order_qty_title">Quantidade: %1$s</string>
+    <string name="order_greeting">Olá %1$s, encomenda de %2$s:</string>
+    <string name="order_line">- %1$s × %2$s</string>
+    <string name="order_thanks">Obrigado.</string>
+    <plurals name="plurals_low_items">
+        <item quantity="one">%1$d artigo com stock baixo</item>
+        <item quantity="other">%1$d artigos com stock baixo</item>
+    </plurals>
+    <plurals name="plurals_suppliers">
+        <item quantity="one">%1$d fornecedor</item>
+        <item quantity="other">%1$d fornecedores</item>
+    </plurals>
 </resources>

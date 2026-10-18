@@ -372,4 +372,52 @@
     <string name="reminder_channel">Kikumbusho cha kufunga siku</string>
     <string name="reminder_close_title">Funga siku ya duka ya leo</string>
     <string name="reminder_close_body">Gusa ili kuhesabu droo na kufunga.</string>
+    <!-- Suppliers and reorder (M7) -->
+    <string name="search_suppliers">Tafuta wasambazaji</string>
+    <string name="reorder_list">Orodha ya kuagiza</string>
+    <string name="low_across_suppliers">%1$s kwa %2$s</string>
+    <string name="low_count">%1$s pungufu</string>
+    <string name="show_all_suppliers">Onyesha wasambazaji wote</string>
+    <string name="no_suppliers">Bado hakuna wasambazaji</string>
+    <string name="no_suppliers_hint">Ongeza watu unaonunua kwao bidhaa kwa +.</string>
+    <string name="no_supplier_match">Hakuna msambazaji anayelingana na utafutaji</string>
+    <string name="action_call">Piga simu</string>
+    <string name="action_whatsapp">WhatsApp</string>
+    <string name="reorder_title">Agiza tena</string>
+    <string name="suggested_quantities">Idadi zinazopendekezwa</string>
+    <string name="order_qty">Agiza %1$s</string>
+    <string name="send_order">Tuma oda kwa WhatsApp</string>
+    <string name="nothing_to_reorder">Hakuna bidhaa ya msambazaji huyu iliyopungua.</string>
+    <string name="products_from_supplier">Bidhaa kutoka kwa msambazaji huyu</string>
+    <string name="col_stock">Stoo</string>
+    <string name="col_cost">Gharama</string>
+    <string name="record_purchase">Rekodi ununuzi</string>
+    <string name="no_linked_products">Bado hakuna bidhaa zilizounganishwa. Hariri msambazaji ili kuunganisha anazouza.</string>
+    <string name="new_supplier">Msambazaji mpya</string>
+    <string name="edit_supplier">Hariri msambazaji</string>
+    <string name="label_business_name">Jina la biashara</string>
+    <string name="label_contact_person">Mtu wa kuwasiliana</string>
+    <string name="label_phone">Simu</string>
+    <string name="whatsapp_same_number">WhatsApp kwenye namba hiyo hiyo</string>
+    <string name="label_whatsapp_number">Namba ya WhatsApp</string>
+    <string name="label_location_optional">Mahali (si lazima)</string>
+    <string name="label_notes_optional">Maelezo (si lazima)</string>
+    <string name="supplier_notes_placeholder">Siku za kuleta, masharti</string>
+    <string name="products_they_sell">Bidhaa wanazouza</string>
+    <string name="action_link">+ Unganisha</string>
+    <string name="link_product">Unganisha bidhaa</string>
+    <string name="unlink_product">Ondoa %1$s</string>
+    <string name="save_supplier">Hifadhi msambazaji</string>
+    <string name="order_qty_title">Idadi: %1$s</string>
+    <string name="order_greeting">Habari %1$s, oda kutoka %2$s:</string>
+    <string name="order_line">- %1$s × %2$s</string>
+    <string name="order_thanks">Asante.</string>
+    <plurals name="plurals_low_items">
+        <item quantity="one">bidhaa %1$d iliyopungua</item>
+        <item quantity="other">bidhaa %1$d zilizopungua</item>
+    </plurals>
+    <plurals name="plurals_suppliers">
+        <item quantity="one">msambazaji %1$d</item>
+        <item quantity="other">wasambazaji %1$d</item>
+    </plurals>
 </resources>

@@ -18,6 +18,16 @@ data class SupplierLink(
     val isPreferred: Boolean,
 )
 
+/** One active product a supplier sells, for the Suppliers screens. `cost` is the supplier's price, else the product's. */
+data class SupplierProductRow(
+    val supplierId: Long,
+    val productId: Long,
+    val name: String,
+    val stockQty: Double,
+    val lowStockLevel: Double,
+    val cost: Long,
+)
+
 @Dao
 interface SupplierDao {
     @Query("SELECT * FROM supplier WHERE active = 1 ORDER BY name ASC")
@@ -55,6 +65,19 @@ interface SupplierDao {
 
     @Query("SELECT * FROM product_supplier WHERE supplierId = :supplierId")
     fun getSupplierProducts(supplierId: Long): Flow<List<ProductSupplierEntity>>
+
+    @Query("SELECT * FROM product_supplier WHERE supplierId = :supplierId")
+    suspend fun getSupplierProductsDirect(supplierId: Long): List<ProductSupplierEntity>
+
+    @Query("""
+        SELECT ps.supplierId AS supplierId, p.id AS productId, p.name AS name, p.stockQty AS stockQty,
+               p.lowStockLevel AS lowStockLevel, COALESCE(ps.supplierCost, p.costPrice) AS cost
+        FROM product_supplier ps
+        JOIN product p ON p.id = ps.productId
+        WHERE p.active = 1
+        ORDER BY p.name COLLATE NOCASE ASC
+    """)
+    fun getSupplierProductRows(): Flow<List<SupplierProductRow>>
 
     @Query("SELECT * FROM product_supplier WHERE productId = :productId AND supplierId = :supplierId LIMIT 1")
     suspend fun getProductSupplier(productId: Long, supplierId: Long): ProductSupplierEntity?

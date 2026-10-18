@@ -88,13 +88,15 @@ import com.archsolutions.shopmanager.feature.settings.SettingsViewModel
 import com.archsolutions.shopmanager.feature.stock.AddPurchaseScreen
 import com.archsolutions.shopmanager.feature.stock.EditProductScreen
 import com.archsolutions.shopmanager.feature.stock.StockScreen
+import com.archsolutions.shopmanager.feature.suppliers.SupplierDetailScreen
+import com.archsolutions.shopmanager.feature.suppliers.SupplierEditScreen
 import com.archsolutions.shopmanager.feature.suppliers.SuppliersScreen
 import kotlinx.serialization.Serializable
 
 // Type-safe route objects
 @Serializable object HomeRoute
 @Serializable object SellRoute
-@Serializable object StockRoute
+@Serializable data class StockRoute(val supplierId: Long = 0L) // tablet "Record purchase" preselects the supplier
 @Serializable object DayRoute
 @Serializable object SuppliersRoute
 @Serializable object ReportsRoute
@@ -111,6 +113,8 @@ import kotlinx.serialization.Serializable
 @Serializable data class CloseDayRoute(val date: String)
 @Serializable data class DayClosedRoute(val dayId: Long, val sent: Boolean = false)
 @Serializable data class YesterdayOpenRoute(val date: String)
+@Serializable data class SupplierDetailRoute(val id: Long)
+@Serializable data class SupplierEditRoute(val id: Long = 0L) // 0 = new supplier
 
 enum class NavDestination(
     val route: Any,
@@ -120,7 +124,7 @@ enum class NavDestination(
 ) {
     HOME(HomeRoute, R.string.nav_home, Icons.Outlined.Home),
     SELL(SellRoute, R.string.nav_sell, Icons.Outlined.ShoppingCart),
-    STOCK(StockRoute, R.string.nav_stock, Icons.Outlined.Inventory2),
+    STOCK(StockRoute(), R.string.nav_stock, Icons.Outlined.Inventory2),
     DAY(DayRoute, R.string.nav_day, Icons.Outlined.AccountBalanceWallet, showInCompactBottomBar = false),
     SUPPLIERS(SuppliersRoute, R.string.nav_suppliers, Icons.Outlined.LocalShipping),
     REPORTS(ReportsRoute, R.string.nav_reports, Icons.Outlined.BarChart),
@@ -176,9 +180,11 @@ fun AppNavHost(
     }
 
     // Check which top-level item is selected
+    // hasRoute, not route strings: routes with arguments (StockRoute) carry them in the string.
     fun isSelected(dest: NavDestination): Boolean {
-        val destRouteName = dest.route::class.qualifiedName
-        return currentRoute == destRouteName
+        val destination = currentDestination ?: return false
+        return destination.hasRoute(dest.route::class) ||
+            (dest == NavDestination.SUPPLIERS && destination.hasRoute(SupplierDetailRoute::class))
     }
 
     fun navigateTo(dest: NavDestination) {
@@ -335,7 +341,8 @@ fun AppNavHost(
             destination?.hasRoute(EditProductRoute::class) == true ||
             destination?.hasRoute(RecordMoneyRoute::class) == true ||
             destination?.hasRoute(CloseDayRoute::class) == true ||
-            destination?.hasRoute(DayClosedRoute::class) == true
+            destination?.hasRoute(DayClosedRoute::class) == true ||
+            destination?.hasRoute(SupplierEditRoute::class) == true
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
@@ -409,6 +416,10 @@ private fun NavContent(
         gateState.currentDay?.date?.let { date -> navController.navigate(CloseDayRoute(date)) { launchSingleTop = true } }
         Unit
     }
+    // 7.5: tablets open Stock with the Add purchase panel on this supplier; phones the full-screen form.
+    val recordPurchase = { supplierId: Long ->
+        if (isExpanded) navController.navigate(StockRoute(supplierId)) else navController.navigate(AddPurchaseRoute(supplierId = supplierId))
+    }
 
     NavHost(
         navController = navController,
@@ -426,7 +437,7 @@ private fun NavContent(
                 gateState = gateState,
                 zoneId = gateViewModel.zoneId,
                 onNavigateToSell = { navController.navigate(SellRoute) },
-                onNavigateToStock = { navController.navigate(StockRoute) },
+                onNavigateToStock = { navController.navigate(StockRoute()) },
                 onAddExpense = {
                     if (isExpanded) navController.navigate(DayRoute) else navController.navigate(RecordMoneyRoute())
                 },
@@ -573,7 +584,26 @@ private fun NavContent(
             )
         }
         composable<SuppliersRoute> {
-            SuppliersScreen(isExpanded = isExpanded)
+            SuppliersScreen(
+                isExpanded = isExpanded,
+                onOpenSupplier = { navController.navigate(SupplierDetailRoute(it)) },
+                onNewSupplier = { navController.navigate(SupplierEditRoute()) },
+                onEditSupplier = { navController.navigate(SupplierEditRoute(it)) },
+                onRecordPurchase = recordPurchase,
+            )
+        }
+        composable<SupplierDetailRoute> {
+            SupplierDetailScreen(
+                onBack = { navController.popBackStack() },
+                onEdit = { navController.navigate(SupplierEditRoute(it)) },
+                onRecordPurchase = recordPurchase,
+            )
+        }
+        composable<SupplierEditRoute> {
+            SupplierEditScreen(
+                isExpanded = isExpanded,
+                onBack = { navController.popBackStack() },
+            )
         }
         composable<ReportsRoute> {
             ReportsScreen(isExpanded = isExpanded)
