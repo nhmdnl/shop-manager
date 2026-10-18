@@ -317,6 +317,7 @@ fun StepIndicator(
     currentStep: Int,
     totalSteps: Int = 3,
     modifier: Modifier = Modifier,
+    labels: List<String> = emptyList(),
 ) {
     val colors = LocalShopColors.current
     Row(
@@ -360,6 +361,16 @@ fun StepIndicator(
                         color = contentColor,
                     )
                 }
+            }
+
+            labels.getOrNull(i - 1)?.let { label ->
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isDone || isCurrent) colors.ink else colors.muted,
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                )
             }
 
             if (i < totalSteps) {

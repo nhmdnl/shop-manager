@@ -30,6 +30,10 @@ interface SaleDao {
     @Query("SELECT * FROM sale WHERE dayId = :dayId ORDER BY createdAt DESC")
     fun getSalesForDay(dayId: Long): Flow<List<SaleEntity>>
 
+    // Every DONE credit sale, oldest first: the input for what each customer owes and since when.
+    @Query("SELECT * FROM sale WHERE status = 'DONE' AND method = 'CREDIT' ORDER BY createdAt ASC, id ASC")
+    fun getCreditSales(): Flow<List<SaleEntity>>
+
     @Transaction
     @Query("SELECT * FROM sale WHERE dayId = :dayId ORDER BY createdAt DESC, id DESC")
     fun getSalesWithItemsForDay(dayId: Long): Flow<List<SaleWithItems>>

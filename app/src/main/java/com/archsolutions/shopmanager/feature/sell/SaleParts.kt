@@ -80,6 +80,7 @@ import com.archsolutions.shopmanager.core.designsystem.components.dashedBorder
 import com.archsolutions.shopmanager.core.designsystem.components.MoneyField
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.QtyStepper
+import com.archsolutions.shopmanager.core.designsystem.components.QuickAmountChips
 import com.archsolutions.shopmanager.core.designsystem.components.SearchField
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.SectionLabel
@@ -222,44 +223,6 @@ internal fun CashReceivedSection(
             )
         }
         MoneyField(value = cashReceived, onValueChange = onCashReceived)
-    }
-}
-
-// Equal-width chips so all four amounts fit the 400 dp tablet panel without scrolling.
-@Composable
-private fun QuickAmountChips(
-    amounts: List<Long>,
-    selected: Long?,
-    labelFor: (Long) -> String,
-    onSelect: (Long) -> Unit,
-) {
-    val colors = LocalShopColors.current
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        amounts.forEach { amount ->
-            val isSelected = amount == selected
-            Surface(
-                onClick = { onSelect(amount) },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
-                shape = CircleShape,
-                color = if (isSelected) colors.ink else colors.surface,
-                border = if (isSelected) null else BorderStroke(1.dp, colors.line),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = labelFor(amount),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isSelected) colors.surface else colors.ink,
-                        maxLines = 1,
-                    )
-                }
-            }
-        }
     }
 }
 

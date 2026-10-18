@@ -38,6 +38,8 @@ class SaleRepo @Inject constructor(
 
     fun getSalesWithItemsForDay(dayId: Long): Flow<List<SaleWithItems>> = saleDao.getSalesWithItemsForDay(dayId)
 
+    fun getCreditSales(): Flow<List<SaleEntity>> = saleDao.getCreditSales()
+
     fun getRecentSales(limit: Int = 5): Flow<List<SaleEntity>> = saleDao.getRecentSales(limit)
 
     fun getSalesBetween(startMillis: Long, endMillis: Long): Flow<List<SaleEntity>> =

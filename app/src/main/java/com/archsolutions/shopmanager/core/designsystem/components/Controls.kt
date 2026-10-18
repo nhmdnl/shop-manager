@@ -34,13 +34,14 @@ fun <T> ChipRow(
     onItemSelected: (T) -> Unit,
     modifier: Modifier = Modifier,
     labelProvider: (T) -> String = { it.toString() },
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(8.dp),
 ) {
     val colors = LocalShopColors.current
     Row(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = horizontalArrangement,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         items.forEach { item ->
@@ -86,6 +87,44 @@ fun <T> ChipRow(
                             color = if (isSelected) colors.surface else colors.ink,
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+/** Equal-width amount chips, so a row of four fits a 400 dp tablet panel without scrolling. */
+@Composable
+fun QuickAmountChips(
+    amounts: List<Long>,
+    selected: Long?,
+    labelFor: (Long) -> String,
+    onSelect: (Long) -> Unit,
+) {
+    val colors = LocalShopColors.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        amounts.forEach { amount ->
+            val isSelected = amount == selected
+            Surface(
+                onClick = { onSelect(amount) },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                shape = CircleShape,
+                color = if (isSelected) colors.ink else colors.surface,
+                border = if (isSelected) null else BorderStroke(1.dp, colors.line),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = labelFor(amount),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isSelected) colors.surface else colors.ink,
+                        maxLines = 1,
+                    )
                 }
             }
         }

@@ -185,7 +185,14 @@ private fun OpenDayExpanded(
                 .fillMaxHeight(),
             padding = 24.dp,
         ) {
-            NoteCounterPanel(state = state, actions = actions, fillHeight = true)
+            NoteCounterPanel(
+                notes = state.notes,
+                coins = state.coins,
+                total = state.notesTotal,
+                onNoteCountChange = actions.onNoteCountChange,
+                onCoinsChange = actions.onCoinsChange,
+                fillHeight = true,
+            )
         }
     }
 }
@@ -269,7 +276,14 @@ private fun OpenDayCompact(
                     .padding(bottom = 24.dp)
                     .verticalScroll(rememberScrollState()),
             ) {
-                NoteCounterPanel(state = state, actions = actions, fillHeight = false)
+                NoteCounterPanel(
+                    notes = state.notes,
+                    coins = state.coins,
+                    total = state.notesTotal,
+                    onNoteCountChange = actions.onNoteCountChange,
+                    onCoinsChange = actions.onCoinsChange,
+                    fillHeight = false,
+                )
                 Spacer(modifier = Modifier.height(16.dp))
                 PrimaryButton(
                     text = stringResource(R.string.action_done),
@@ -418,91 +432,4 @@ private fun StartDayButton(
         height = 68.dp,
         leadingIcon = Icons.Outlined.WbSunny,
     )
-}
-
-// The note total fills the Cash field as the user counts.
-@Composable
-private fun NoteCounterPanel(
-    state: OpenDayUiState,
-    actions: OpenDayActions,
-    fillHeight: Boolean,
-) {
-    val colors = LocalShopColors.current
-    Column(modifier = if (fillHeight) Modifier.fillMaxSize() else Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.count_notes),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = colors.ink,
-            )
-            Badge(text = stringResource(R.string.label_optional), kind = BadgeKind.Muted)
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.count_notes_hint),
-            style = MaterialTheme.typography.bodyMedium,
-            color = colors.muted,
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Column(
-            modifier = if (fillHeight) {
-                Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-            } else {
-                Modifier
-            },
-        ) {
-            NoteCounter.DENOMINATIONS.forEach { denomination ->
-                DenominationRow(
-                    denomination = denomination,
-                    count = state.notes[denomination] ?: 0,
-                    onCountChange = { actions.onNoteCountChange(denomination, it) },
-                )
-                HorizontalDivider(color = colors.line)
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.coins),
-                    style = amountTextStyle(16.sp),
-                    color = colors.ink,
-                    modifier = Modifier.width(110.dp),
-                )
-                MoneyField(
-                    value = state.coins.takeIf { it > 0 },
-                    onValueChange = actions.onCoinsChange,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-        HorizontalDivider(color = colors.line)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.total_counted),
-                style = MaterialTheme.typography.bodyLarge,
-                color = colors.muted,
-            )
-            Text(
-                text = Money.format(state.notesTotal),
-                style = amountTextStyle(28.sp),
-                color = colors.ink,
-            )
-        }
-    }
 }

@@ -33,10 +33,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
@@ -163,10 +166,7 @@ fun MoneyField(
 ) {
     val colors = LocalShopColors.current
     var isFocused by remember { mutableStateOf(false) }
-
-    val formattedString = remember(value) {
-        if (value == null || value == 0L) "" else Money.format(value, withCode = false)
-    }
+    val digits = amountDigits(value)
 
     Box(
         modifier = modifier
@@ -198,7 +198,7 @@ fun MoneyField(
             )
             Spacer(modifier = Modifier.width(10.dp))
             Box(modifier = Modifier.weight(1f)) {
-                if (formattedString.isEmpty()) {
+                if (digits.isEmpty()) {
                     Text(
                         text = "0",
                         fontFamily = DisplayFontFamily,
@@ -208,14 +208,11 @@ fun MoneyField(
                     )
                 }
                 BasicTextField(
-                    value = formattedString,
-                    onValueChange = { input ->
-                        val digits = input.filter { it.isDigit() }
-                        val parsed = digits.toLongOrNull()
-                        onValueChange(parsed)
-                    },
+                    value = digits,
+                    onValueChange = { input -> onAmountInput(input, onValueChange) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = AmountTransformation,
                     textStyle = androidx.compose.ui.text.TextStyle(
                         fontFamily = DisplayFontFamily,
                         fontWeight = FontWeight.Bold,
@@ -246,7 +243,6 @@ fun SmallMoneyField(
 ) {
     val colors = LocalShopColors.current
     var isFocused by remember { mutableStateOf(false) }
-    val text = if (value == null || value == 0L) "" else Money.format(value, withCode = false)
 
     Row(
         modifier = modifier
@@ -271,13 +267,50 @@ fun SmallMoneyField(
         )
         Spacer(modifier = Modifier.width(6.dp))
         BasicTextField(
-            value = text,
-            onValueChange = { input -> onValueChange(input.filter(Char::isDigit).toLongOrNull()) },
+            value = amountDigits(value),
+            onValueChange = { input -> onAmountInput(input, onValueChange) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            visualTransformation = AmountTransformation,
             textStyle = amountTextStyle(16.sp).copy(color = colors.ink),
             cursorBrush = SolidColor(colors.green),
             modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+private const val MAX_AMOUNT_DIGITS = 12
+
+/** What a money box edits: plain digits. [AmountTransformation] draws the thousands separators. */
+private fun amountDigits(value: Long?): String = if (value == null || value == 0L) "" else value.toString()
+
+private fun onAmountInput(input: String, onValueChange: (Long?) -> Unit) {
+    val digits = input.filter(Char::isDigit)
+    if (digits.length <= MAX_AMOUNT_DIGITS) onValueChange(digits.toLongOrNull())
+}
+
+/**
+ * Adds Money's separators for display only, so the caret stays after the digit just typed.
+ * Formatting the edited text itself left the caret one place short once a separator appeared.
+ */
+internal object AmountTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val amount = text.text.toLongOrNull() ?: return TransformedText(text, OffsetMapping.Identity)
+        val shown = Money.format(amount, withCode = false)
+        return TransformedText(
+            AnnotatedString(shown),
+            object : OffsetMapping {
+                override fun originalToTransformed(offset: Int): Int {
+                    if (offset <= 0) return 0
+                    var seen = 0
+                    shown.forEachIndexed { index, char ->
+                        if (char.isDigit() && ++seen == offset) return index + 1
+                    }
+                    return shown.length
+                }
+
+                override fun transformedToOriginal(offset: Int): Int = shown.take(offset).count(Char::isDigit)
+            },
         )
     }
 }

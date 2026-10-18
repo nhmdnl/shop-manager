@@ -7,20 +7,25 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -29,12 +34,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -46,6 +57,7 @@ import com.archsolutions.shopmanager.app.DayGateState
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.components.DayBar
+import com.archsolutions.shopmanager.core.designsystem.components.InkButton
 import com.archsolutions.shopmanager.core.designsystem.components.LockedActionButton
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
@@ -55,6 +67,7 @@ import com.archsolutions.shopmanager.core.money.Money
 import com.archsolutions.shopmanager.core.util.DayFormat
 import com.archsolutions.shopmanager.core.util.Qty
 import com.archsolutions.shopmanager.data.db.dao.LowStockItem
+import com.archsolutions.shopmanager.data.db.entities.BusinessDayEntity
 import com.archsolutions.shopmanager.feature.day.DayGateLockCard
 import com.archsolutions.shopmanager.feature.sales.SaleListRow
 import com.archsolutions.shopmanager.feature.sales.SaleRow
@@ -70,18 +83,25 @@ fun HomeScreen(
     zoneId: ZoneId,
     onNavigateToSell: () -> Unit,
     onNavigateToStock: () -> Unit,
-    onNavigateToDay: () -> Unit,
+    onAddExpense: () -> Unit,
+    onCloseDay: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onOpenDay: () -> Unit,
     recentSales: List<SaleRow>,
     lowStock: List<LowStockItem>,
     onSeeAllSales: () -> Unit,
     onOpenSale: (Long) -> Unit,
+    todaySummary: TodaySummary?,
+    onDaySummary: (dayId: Long) -> Unit,
+    onReopenDay: (dayId: Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalShopColors.current
     val locale = LocalConfiguration.current.locales[0]
     val tradingOpen = gateState is DayGateState.Ready
+    val dayClosed = gateState is DayGateState.TodayClosed
+    var confirmReopen by remember { mutableStateOf(false) }
+    val newSaleLocked = stringResource(if (dayClosed) R.string.selling_opens_tomorrow else R.string.action_new_sale)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -135,16 +155,24 @@ fun HomeScreen(
                         Money.format(gateState.day.openingCash),
                         Money.format(gateState.day.openingMobile),
                     ),
-                    onAddExpense = onNavigateToDay,
-                    onCloseDay = onNavigateToDay,
+                    onAddExpense = onAddExpense,
+                    onCloseDay = onCloseDay,
                     isCompact = !isExpanded,
+                )
+            } else if (gateState is DayGateState.TodayClosed) {
+                DayClosedBar(
+                    day = gateState.day,
+                    zoneId = zoneId,
+                    isCompact = !isExpanded,
+                    onSummary = { onDaySummary(gateState.day.id) },
+                    onReopen = { confirmReopen = true },
                 )
             } else {
                 DayGateLockCard(
                     gateState = gateState,
                     zoneId = zoneId,
                     onOpenDay = onOpenDay,
-                    onCloseDay = onNavigateToDay,
+                    onCloseDay = onCloseDay,
                 )
             }
 
@@ -173,7 +201,7 @@ fun HomeScreen(
                         )
                     } else {
                         LockedActionButton(
-                            text = stringResource(R.string.action_new_sale),
+                            text = newSaleLocked,
                             modifier = Modifier.weight(1f),
                             height = 150.dp,
                             cornerRadius = 24.dp,
@@ -226,31 +254,40 @@ fun HomeScreen(
                         )
                         SecondaryButton(
                             text = stringResource(R.string.action_add_expense),
-                            onClick = onNavigateToDay,
+                            onClick = onAddExpense,
                             modifier = Modifier.weight(1f),
                             leadingIcon = Icons.Outlined.ReceiptLong,
                         )
                     }
                 } else {
                     LockedActionButton(
-                        text = stringResource(R.string.action_new_sale),
+                        text = newSaleLocked,
                         modifier = Modifier.fillMaxWidth(),
                         height = 72.dp,
                         cornerRadius = 20.dp,
                     )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        LockedActionButton(
-                            text = stringResource(R.string.action_add_purchase),
-                            modifier = Modifier.weight(1f),
+                    if (dayClosed) {
+                        Text(
+                            text = stringResource(R.string.closed_read_only_note),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.muted,
                         )
-                        LockedActionButton(
-                            text = stringResource(R.string.action_add_expense),
-                            modifier = Modifier.weight(1f),
-                        )
+                        todaySummary?.let { TodayCard(summary = it, onSeeSales = onSeeAllSales) }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            LockedActionButton(
+                                text = stringResource(R.string.action_add_purchase),
+                                modifier = Modifier.weight(1f),
+                            )
+                            LockedActionButton(
+                                text = stringResource(R.string.action_add_expense),
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
 
@@ -267,6 +304,29 @@ fun HomeScreen(
                 )
             }
         }
+    }
+
+    val closedDay = (gateState as? DayGateState.TodayClosed)?.day
+    if (confirmReopen && closedDay != null) {
+        AlertDialog(
+            onDismissRequest = { confirmReopen = false },
+            containerColor = colors.surface,
+            title = { Text(stringResource(R.string.reopen_confirm_title)) },
+            text = { Text(stringResource(R.string.reopen_confirm_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmReopen = false
+                    onReopenDay(closedDay.id)
+                }) {
+                    Text(stringResource(R.string.action_reopen_day), color = colors.green, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmReopen = false }) {
+                    Text(stringResource(R.string.action_cancel), color = colors.ink)
+                }
+            },
+        )
     }
 }
 
@@ -438,5 +498,119 @@ private fun RecentSalesCard(
                 SaleListRow(row = row, onClick = { onOpenSale(row.saleId) })
             }
         }
+    }
+}
+
+/** 6.3-3: the closed day's counts, Summary and Reopen day, in place of the DayBar. */
+@Composable
+private fun DayClosedBar(
+    day: BusinessDayEntity,
+    zoneId: ZoneId,
+    isCompact: Boolean,
+    onSummary: () -> Unit,
+    onReopen: () -> Unit,
+) {
+    val colors = LocalShopColors.current
+    val counted = stringResource(
+        R.string.counted_summary,
+        Money.format(day.countedCash ?: 0L),
+        Money.format(day.countedMobile ?: 0L),
+    )
+    ShopCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
+        val info: @Composable () -> Unit = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(colors.greenTint),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.green)
+                }
+                Column {
+                    Text(
+                        text = stringResource(R.string.day_closed_at, day.closedAt?.let { DayFormat.time(it, zoneId) }.orEmpty()),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.ink,
+                    )
+                    Text(
+                        text = if (isCompact) counted else counted + " · " + stringResource(R.string.read_only),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.muted,
+                    )
+                }
+            }
+        }
+        if (isCompact) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                info()
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SecondaryButton(
+                        text = stringResource(R.string.action_summary),
+                        onClick = onSummary,
+                        leadingIcon = Icons.Outlined.ReceiptLong,
+                        modifier = Modifier.weight(1f),
+                    )
+                    SecondaryButton(
+                        text = stringResource(R.string.action_reopen_day),
+                        onClick = onReopen,
+                        leadingIcon = Icons.Outlined.Lock,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.weight(1f)) { info() }
+                SecondaryButton(
+                    text = stringResource(R.string.action_summary),
+                    onClick = onSummary,
+                    leadingIcon = Icons.Outlined.ReceiptLong,
+                    height = 48.dp,
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                InkButton(
+                    text = stringResource(R.string.action_reopen_day),
+                    onClick = onReopen,
+                    leadingIcon = Icons.Outlined.Lock,
+                    height = 48.dp,
+                )
+            }
+        }
+    }
+}
+
+/** Phone Home after closing: today's sales, estimated profit and what customers owe. */
+@Composable
+private fun TodayCard(summary: TodaySummary, onSeeSales: () -> Unit) {
+    val colors = LocalShopColors.current
+    ShopCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SectionLabel(text = stringResource(R.string.today_label), modifier = Modifier.weight(1f))
+                Text(
+                    text = stringResource(R.string.see_sales),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.green,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable(onClick = onSeeSales),
+                )
+            }
+            TodayLine(stringResource(R.string.label_sales), Money.format(summary.sales), colors.ink)
+            HorizontalDivider(color = colors.line)
+            TodayLine(stringResource(R.string.profit_est), Money.format(summary.profit), colors.green)
+            HorizontalDivider(color = colors.line)
+            TodayLine(stringResource(R.string.label_owed_to_shop), Money.format(summary.owed), colors.ink)
+        }
+    }
+}
+
+@Composable
+private fun TodayLine(label: String, value: String, valueColor: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, color = LocalShopColors.current.muted, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = valueColor)
     }
 }

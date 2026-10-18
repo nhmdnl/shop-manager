@@ -36,6 +36,9 @@ class PurchaseRepo @Inject constructor(
     fun getPurchasesForDay(dayId: Long): Flow<List<PurchaseEntity>> =
         purchaseDao.getPurchasesForDay(dayId)
 
+    fun getPurchasesWithItemsForDay(dayId: Long): Flow<List<PurchaseWithItems>> =
+        purchaseDao.getPurchasesWithItemsForDay(dayId)
+
     suspend fun savePurchase(
         dayId: Long,
         supplierId: Long?,

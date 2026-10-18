@@ -15,13 +15,19 @@ import kotlinx.coroutines.launch
 import java.time.ZoneId
 import javax.inject.Inject
 
+/** A full-screen step the gate shows once per business date (6.3-1, 6.3-2). */
+sealed interface GatePrompt {
+    data object OpenDay : GatePrompt
+    data class YesterdayOpen(val date: String) : GatePrompt
+}
+
 @HiltViewModel
 class DayGateViewModel @Inject constructor(
     private val dayGate: DayGate,
     seedDataLoader: SeedDataLoader,
 ) : ViewModel() {
     private val seeded = MutableStateFlow(false)
-    private var openDayPromptedFor: String? = null
+    private var promptedKey: String? = null
 
     init {
         // The gate must not judge an empty database that the seed is about to fill.
@@ -43,13 +49,18 @@ class DayGateViewModel @Inject constructor(
     fun onForeground() = dayGate.refreshDate()
 
     /**
-     * True at most once per business date, when the gate needs Open the day (6.3-2). Backing out of
-     * Open the day leaves Home locked ("gate dismissed") instead of reopening the screen.
+     * The screen to show for the current gate state, at most once per business date and state. Backing
+     * out of it leaves Home locked ("gate dismissed") instead of showing it again.
      */
-    fun consumeOpenDayPrompt(): Boolean {
-        val date = today.value
-        if (state.value != DayGateState.OpenDayRequired || openDayPromptedFor == date) return false
-        openDayPromptedFor = date
-        return true
+    fun consumePrompt(): GatePrompt? {
+        val prompt = when (val gate = state.value) {
+            DayGateState.OpenDayRequired -> GatePrompt.OpenDay
+            is DayGateState.PreviousDayStillOpen -> GatePrompt.YesterdayOpen(gate.day.date)
+            else -> return null
+        }
+        val key = "${today.value}|$prompt"
+        if (promptedKey == key) return null
+        promptedKey = key
+        return prompt
     }
 }

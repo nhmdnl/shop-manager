@@ -23,6 +23,8 @@ class MoneyRepo @Inject constructor(
     suspend fun getEntriesForDayDirect(dayId: Long): List<MoneyEntryEntity> =
         moneyEntryDao.getEntriesForDayDirect(dayId)
 
+    fun getRepayments(): Flow<List<MoneyEntryEntity>> = moneyEntryDao.getRepayments()
+
     private suspend fun insertForOpenDay(entry: MoneyEntryEntity): Long = db.withTransaction {
         db.requireOpenDay(entry.dayId)
         moneyEntryDao.insertEntry(entry)

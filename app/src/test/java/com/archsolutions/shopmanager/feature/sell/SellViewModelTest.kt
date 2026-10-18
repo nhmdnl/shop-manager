@@ -6,15 +6,17 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import com.archsolutions.shopmanager.app.DayGate
 import com.archsolutions.shopmanager.data.db.AppDatabase
+import com.archsolutions.shopmanager.data.db.entities.MoneyEntryEntity
 import com.archsolutions.shopmanager.data.db.entities.MoneyEntryType
 import com.archsolutions.shopmanager.data.db.entities.MoneyMethod
-import com.archsolutions.shopmanager.data.db.entities.MoneyEntryEntity
 import com.archsolutions.shopmanager.data.db.entities.PayMethod
 import com.archsolutions.shopmanager.data.db.entities.ProductEntity
 import com.archsolutions.shopmanager.data.db.entities.SaleStatus
 import com.archsolutions.shopmanager.data.repo.CustomerRepo
 import com.archsolutions.shopmanager.data.repo.DayRepo
+import com.archsolutions.shopmanager.data.repo.MoneyRepo
 import com.archsolutions.shopmanager.data.repo.ProductRepo
+import com.archsolutions.shopmanager.data.repo.PurchaseRepo
 import com.archsolutions.shopmanager.data.repo.SaleRepo
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import com.archsolutions.shopmanager.feature.home.HomeViewModel
@@ -109,7 +111,11 @@ class SellViewModelTest {
         val milk = insertProduct("Milk 500ml", price = 1_500L, stock = 3.0)
         val dayGate = newDayGate()
         val viewModel = newViewModel(dayGate)
-        val home = HomeViewModel(dayGate, saleRepo, customerRepo, ProductRepo(db, clock), clock)
+        val home = HomeViewModel(
+            dayGate, saleRepo, customerRepo, ProductRepo(db, clock), dayRepo,
+            MoneyRepo(db, clock),
+            PurchaseRepo(db, clock), clock,
+        )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { home.recentSales.collect {} }
         viewModel.state.first { it.loaded }
 

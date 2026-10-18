@@ -62,11 +62,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
+import androidx.navigation.toRoute
 import androidx.navigation.compose.rememberNavController
 import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.data.db.entities.MoneyEntryType
+import com.archsolutions.shopmanager.feature.day.CloseDayScreen
+import com.archsolutions.shopmanager.feature.day.DayClosedScreen
 import com.archsolutions.shopmanager.feature.day.DayScreen
+import com.archsolutions.shopmanager.feature.day.YesterdayOpenScreen
+import com.archsolutions.shopmanager.feature.day.DebtorsScreen
+import com.archsolutions.shopmanager.feature.day.RecordMoneyScreen
 import com.archsolutions.shopmanager.feature.day.OpenDayScreen
 import com.archsolutions.shopmanager.feature.home.HomeScreen
 import com.archsolutions.shopmanager.feature.home.HomeViewModel
@@ -99,6 +106,11 @@ import kotlinx.serialization.Serializable
 @Serializable data class SaleDetailRoute(val id: Long)
 @Serializable data class AddPurchaseRoute(val productId: Long = 0L, val supplierId: Long = 0L) // 0 = none
 @Serializable data class EditProductRoute(val id: Long = 0L) // 0 = new product
+@Serializable data class RecordMoneyRoute(val type: String = "EXPENSE", val customerId: Long = 0L) // MoneyEntryType name
+@Serializable object DebtorsRoute
+@Serializable data class CloseDayRoute(val date: String)
+@Serializable data class DayClosedRoute(val dayId: Long, val sent: Boolean = false)
+@Serializable data class YesterdayOpenRoute(val date: String)
 
 enum class NavDestination(
     val route: Any,
@@ -134,15 +146,25 @@ fun AppNavHost(
         return
     }
 
-    LaunchedEffect(gateState) {
-        if (gateViewModel.consumeOpenDayPrompt()) {
-            navController.navigate(OpenDayRoute) { launchSingleTop = true }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    val currentRoute = currentDestination?.route
+    // Gate steps are full-screen on every layout (no rail on the design boards).
+    val isOpenDay = currentRoute == OpenDayRoute::class.qualifiedName ||
+        currentDestination?.hasRoute(YesterdayOpenRoute::class) == true
+    // Hold gate prompts while a day is being opened or closed: Open the day pushed over Close the day
+    // was popped along with it, so closing yesterday never led on to opening today.
+    val canPrompt = currentDestination != null && !isOpenDay &&
+        !currentDestination.hasRoute(CloseDayRoute::class) && !currentDestination.hasRoute(DayClosedRoute::class)
+
+    LaunchedEffect(gateState, canPrompt) {
+        if (!canPrompt) return@LaunchedEffect
+        when (val prompt = gateViewModel.consumePrompt()) {
+            GatePrompt.OpenDay -> navController.navigate(OpenDayRoute) { launchSingleTop = true }
+            is GatePrompt.YesterdayOpen -> navController.navigate(YesterdayOpenRoute(prompt.date)) { launchSingleTop = true }
+            null -> Unit
         }
     }
-
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-    val isOpenDay = currentRoute == OpenDayRoute::class.qualifiedName
 
     // Check which top-level item is selected
     fun isSelected(dest: NavDestination): Boolean {
@@ -301,7 +323,10 @@ fun AppNavHost(
             currentRoute == SettingsRoute::class.qualifiedName ||
             currentRoute == CheckoutRoute::class.qualifiedName ||
             destination?.hasRoute(AddPurchaseRoute::class) == true ||
-            destination?.hasRoute(EditProductRoute::class) == true
+            destination?.hasRoute(EditProductRoute::class) == true ||
+            destination?.hasRoute(RecordMoneyRoute::class) == true ||
+            destination?.hasRoute(CloseDayRoute::class) == true ||
+            destination?.hasRoute(DayClosedRoute::class) == true
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
@@ -370,8 +395,11 @@ private fun NavContent(
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
     val today by gateViewModel.today.collectAsStateWithLifecycle()
     val openDay = { navController.navigate(OpenDayRoute) { launchSingleTop = true } }
-    // DECISION: Close the day arrives in M6; until then the lock card's Close button opens the Day screen.
-    val closeDay = { navController.navigate(DayRoute) { launchSingleTop = true } }
+    // Closes the day the gate is on: today's, or the earlier day still waiting to be closed.
+    val closeDay = {
+        gateState.currentDay?.date?.let { date -> navController.navigate(CloseDayRoute(date)) { launchSingleTop = true } }
+        Unit
+    }
 
     NavHost(
         navController = navController,
@@ -381,6 +409,7 @@ private fun NavContent(
             val homeViewModel: HomeViewModel = hiltViewModel()
             val recentSales by homeViewModel.recentSales.collectAsStateWithLifecycle()
             val lowStock by homeViewModel.lowStock.collectAsStateWithLifecycle()
+            val todaySummary by homeViewModel.todaySummary.collectAsStateWithLifecycle()
             HomeScreen(
                 isExpanded = isExpanded,
                 shopName = settings.shopName,
@@ -389,13 +418,19 @@ private fun NavContent(
                 zoneId = gateViewModel.zoneId,
                 onNavigateToSell = { navController.navigate(SellRoute) },
                 onNavigateToStock = { navController.navigate(StockRoute) },
-                onNavigateToDay = { navController.navigate(DayRoute) },
+                onAddExpense = {
+                    if (isExpanded) navController.navigate(DayRoute) else navController.navigate(RecordMoneyRoute())
+                },
+                onCloseDay = closeDay,
                 onNavigateToSettings = { navController.navigate(SettingsRoute) },
                 onOpenDay = openDay,
                 recentSales = recentSales,
                 lowStock = lowStock,
                 onSeeAllSales = { navController.navigate(SalesRoute) },
                 onOpenSale = { navController.navigate(SaleDetailRoute(it)) },
+                todaySummary = todaySummary,
+                onDaySummary = { navController.navigate(DayClosedRoute(it)) },
+                onReopenDay = homeViewModel::reopenDay,
             )
         }
         navigation<SellGraph>(startDestination = SellRoute) {
@@ -471,7 +506,62 @@ private fun NavContent(
             )
         }
         composable<DayRoute> {
-            DayScreen(isExpanded = isExpanded)
+            DayScreen(
+                isExpanded = isExpanded,
+                gateState = gateState,
+                zoneId = gateViewModel.zoneId,
+                onOpenDay = openDay,
+                onCloseDay = closeDay,
+                onRecordMoney = { navController.navigate(RecordMoneyRoute(it.name)) },
+                onDebtors = { navController.navigate(DebtorsRoute) },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable<RecordMoneyRoute> {
+            RecordMoneyScreen(
+                gateState = gateState,
+                zoneId = gateViewModel.zoneId,
+                onOpenDay = openDay,
+                onCloseDay = closeDay,
+                onBack = { navController.popBackStack() },
+                onDone = { navController.popBackStack() },
+            )
+        }
+        composable<CloseDayRoute> {
+            CloseDayScreen(
+                isExpanded = isExpanded,
+                onBack = { navController.popBackStack() },
+                onDebtors = { navController.navigate(DebtorsRoute) },
+                onClosed = { dayId, sent ->
+                    navController.navigate(DayClosedRoute(dayId, sent)) { popUpTo<CloseDayRoute> { inclusive = true } }
+                },
+            )
+        }
+        composable<DayClosedRoute> { entry ->
+            DayClosedScreen(
+                summarySent = entry.toRoute<DayClosedRoute>().sent,
+                zoneId = gateViewModel.zoneId,
+                onDone = {
+                    if (!navController.popBackStack<HomeRoute>(inclusive = false)) navController.navigate(HomeRoute)
+                },
+            )
+        }
+        composable<YesterdayOpenRoute> {
+            YesterdayOpenScreen(
+                zoneId = gateViewModel.zoneId,
+                onCloseDay = { navController.navigate(CloseDayRoute(it)) },
+            )
+        }
+        composable<DebtorsRoute> {
+            DebtorsScreen(
+                isExpanded = isExpanded,
+                zoneId = gateViewModel.zoneId,
+                nowMillis = { System.currentTimeMillis() },
+                onBack = { navController.popBackStack() },
+                onRecordPayment = { customerId ->
+                    navController.navigate(RecordMoneyRoute(MoneyEntryType.CREDIT_REPAYMENT.name, customerId))
+                },
+            )
         }
         composable<SuppliersRoute> {
             SuppliersScreen(isExpanded = isExpanded)

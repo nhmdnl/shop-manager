@@ -33,6 +33,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -122,7 +123,12 @@ internal fun PurchaseForm(
                 )
             }
             Text(
-                text = stringResource(R.string.saving_adds, Qty.format(state.itemsAdded)),
+                // Plural rules need a whole number: exactly one item is "one", anything else (incl. 0.5 kg) is "other".
+                text = pluralStringResource(
+                    R.plurals.plurals_saving_adds,
+                    if (state.itemsAdded == 1.0) 1 else 2,
+                    Qty.format(state.itemsAdded),
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.muted,
             )

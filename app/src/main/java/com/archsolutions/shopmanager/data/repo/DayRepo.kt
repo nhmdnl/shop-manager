@@ -87,6 +87,8 @@ class DayRepo @Inject constructor(
         counts: List<CashCountEntity> = emptyList(),
     ) = db.withTransaction {
         val day = dayDao.getDayByIdDirect(dayId) ?: return@withTransaction
+        // A closed day is read-only (6.7); closing it again would overwrite its counts.
+        check(day.status == DayStatus.OPEN) { "Business day $dayId is already closed" }
         val now = clock.nowMillis()
 
         dayDao.updateDay(
