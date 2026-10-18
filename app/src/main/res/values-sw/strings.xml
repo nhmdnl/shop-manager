@@ -420,4 +420,50 @@
         <item quantity="one">msambazaji %1$d</item>
         <item quantity="other">wasambazaji %1$d</item>
     </plurals>
+    <!-- Reports and export (M8) -->
+    <string name="tab_overview">Muhtasari</string>
+    <string name="tab_days">Siku</string>
+    <string name="period_today">Leo</string>
+    <string name="period_week">Wiki hii</string>
+    <string name="period_month">Mwezi</string>
+    <string name="period_custom">Chagua</string>
+    <string name="share_pdf_csv">Shiriki PDF / CSV</string>
+    <string name="share_report">Shiriki ripoti</string>
+    <string name="share_as_pdf">Ripoti ya PDF</string>
+    <string name="share_as_csv">Faili za CSV (mauzo na siku)</string>
+    <string name="export_failed">Imeshindwa kutengeneza faili. Jaribu tena.</string>
+    <string name="report_sales_ugx">Mauzo, UGX</string>
+    <string name="report_profit_ugx">Faida, UGX</string>
+    <string name="report_number_of_sales">Idadi ya mauzo</string>
+    <string name="report_average_ugx">Wastani wa mauzo, UGX</string>
+    <string name="report_sales_count">Idadi ya mauzo</string>
+    <string name="daily_sales_ugx">Mauzo ya kila siku, UGX</string>
+    <string name="paid_by">Imelipwa kwa</string>
+    <string name="legend_percent">%1$s %2$d%%</string>
+    <string name="top_products">Bidhaa zinazouzwa zaidi</string>
+    <string name="qty_sold">%1$s zimeuzwa</string>
+    <string name="empty_reports_hint">Jaribu tarehe nyingine.</string>
+    <string name="no_closed_days">Hakuna siku zilizofungwa katika kipindi hiki</string>
+    <string name="days_balanced_note">Pungufu au ziada ndani ya %1$s inayoruhusiwa inahesabiwa sawa.</string>
+    <string name="day_row_sales">Mauzo %1$s</string>
+    <string name="closed_at">ilifungwa %1$s</string>
+    <string name="channel_short">%1$s pungufu %2$s</string>
+    <string name="channel_over">%1$s ziada %2$s</string>
+    <string name="channel_balanced">%1$s sawa</string>
+    <string name="channel_balanced_diff">%1$s sawa (%2$s)</string>
+    <string name="label_momo">MoMo</string>
+    <string name="pick_dates">Chagua tarehe</string>
+    <string name="pdf_title">%1$s: ripoti ya mauzo</string>
+    <string name="pdf_daily_totals">Jumla za kila siku</string>
+    <string name="pdf_closed_days">Siku zilizofungwa</string>
+    <string name="pdf_col_date">Tarehe</string>
+    <string name="pdf_col_sold">Zimeuzwa</string>
+    <string name="pdf_col_amount">Kiasi</string>
+    <string name="pdf_col_cash_diff">Tofauti ya taslimu</string>
+    <string name="pdf_col_momo_diff">Tofauti ya MoMo</string>
+    <string name="pdf_made_on">Imetengenezwa na Shop Manager tarehe %1$s</string>
+    <plurals name="plurals_reopened">
+        <item quantity="one">ilifunguliwa upya mara moja</item>
+        <item quantity="other">ilifunguliwa upya mara %1$d</item>
+    </plurals>
 </resources>

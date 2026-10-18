@@ -113,6 +113,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class CloseDayRoute(val date: String)
 @Serializable data class DayClosedRoute(val dayId: Long, val sent: Boolean = false)
 @Serializable data class YesterdayOpenRoute(val date: String)
+@Serializable data class DaySummaryRoute(val dayId: Long) // a closed day's record, read-only (Reports > Days)
 @Serializable data class SupplierDetailRoute(val id: Long)
 @Serializable data class SupplierEditRoute(val id: Long = 0L) // 0 = new supplier
 
@@ -342,6 +343,7 @@ fun AppNavHost(
             destination?.hasRoute(RecordMoneyRoute::class) == true ||
             destination?.hasRoute(CloseDayRoute::class) == true ||
             destination?.hasRoute(DayClosedRoute::class) == true ||
+            destination?.hasRoute(DaySummaryRoute::class) == true ||
             destination?.hasRoute(SupplierEditRoute::class) == true
 
         Scaffold(
@@ -606,7 +608,18 @@ private fun NavContent(
             )
         }
         composable<ReportsRoute> {
-            ReportsScreen(isExpanded = isExpanded)
+            ReportsScreen(
+                isExpanded = isExpanded,
+                onOpenDay = { navController.navigate(DaySummaryRoute(it)) },
+                onDebtors = { navController.navigate(DebtorsRoute) },
+            )
+        }
+        composable<DaySummaryRoute> {
+            DayClosedScreen(
+                summarySent = false,
+                zoneId = gateViewModel.zoneId,
+                onDone = { navController.popBackStack() },
+            )
         }
         composable<SettingsRoute> {
             SettingsScreen(

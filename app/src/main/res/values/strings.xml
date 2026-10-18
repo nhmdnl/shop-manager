@@ -433,4 +433,50 @@
         <item quantity="one">%1$d supplier</item>
         <item quantity="other">%1$d suppliers</item>
     </plurals>
+    <!-- Reports and export (M8) -->
+    <string name="tab_overview">Overview</string>
+    <string name="tab_days">Days</string>
+    <string name="period_today">Today</string>
+    <string name="period_week">This week</string>
+    <string name="period_month">Month</string>
+    <string name="period_custom">Custom</string>
+    <string name="share_pdf_csv">Share PDF / CSV</string>
+    <string name="share_report">Share report</string>
+    <string name="share_as_pdf">PDF report</string>
+    <string name="share_as_csv">CSV files (sales and days)</string>
+    <string name="export_failed">Couldn\'t make the file. Try again.</string>
+    <string name="report_sales_ugx">Sales, UGX</string>
+    <string name="report_profit_ugx">Profit, UGX</string>
+    <string name="report_number_of_sales">Number of sales</string>
+    <string name="report_average_ugx">Average sale, UGX</string>
+    <string name="report_sales_count">Sales count</string>
+    <string name="daily_sales_ugx">Daily sales, UGX</string>
+    <string name="paid_by">Paid by</string>
+    <string name="legend_percent">%1$s %2$d%%</string>
+    <string name="top_products">Top products</string>
+    <string name="qty_sold">%1$s sold</string>
+    <string name="empty_reports_hint">Try another date range.</string>
+    <string name="no_closed_days">No closed days in this period</string>
+    <string name="days_balanced_note">Short or over within the allowed %1$s counts as balanced.</string>
+    <string name="day_row_sales">Sales %1$s</string>
+    <string name="closed_at">closed %1$s</string>
+    <string name="channel_short">%1$s short %2$s</string>
+    <string name="channel_over">%1$s over %2$s</string>
+    <string name="channel_balanced">%1$s balanced</string>
+    <string name="channel_balanced_diff">%1$s balanced (%2$s)</string>
+    <string name="label_momo">MoMo</string>
+    <string name="pick_dates">Pick the dates</string>
+    <string name="pdf_title">%1$s: sales report</string>
+    <string name="pdf_daily_totals">Daily totals</string>
+    <string name="pdf_closed_days">Closed days</string>
+    <string name="pdf_col_date">Date</string>
+    <string name="pdf_col_sold">Sold</string>
+    <string name="pdf_col_amount">Amount</string>
+    <string name="pdf_col_cash_diff">Cash difference</string>
+    <string name="pdf_col_momo_diff">MoMo difference</string>
+    <string name="pdf_made_on">Made with Shop Manager on %1$s</string>
+    <plurals name="plurals_reopened">
+        <item quantity="one">reopened once</item>
+        <item quantity="other">reopened %1$d times</item>
+    </plurals>
 </resources>

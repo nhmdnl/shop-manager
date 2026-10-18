@@ -420,4 +420,50 @@
         <item quantity="one">%1$d fornecedor</item>
         <item quantity="other">%1$d fornecedores</item>
     </plurals>
+    <!-- Reports and export (M8) -->
+    <string name="tab_overview">Resumo</string>
+    <string name="tab_days">Dias</string>
+    <string name="period_today">Hoje</string>
+    <string name="period_week">Esta semana</string>
+    <string name="period_month">Mês</string>
+    <string name="period_custom">Escolher</string>
+    <string name="share_pdf_csv">Partilhar PDF / CSV</string>
+    <string name="share_report">Partilhar relatório</string>
+    <string name="share_as_pdf">Relatório PDF</string>
+    <string name="share_as_csv">Ficheiros CSV (vendas e dias)</string>
+    <string name="export_failed">Não foi possível criar o ficheiro. Tente novamente.</string>
+    <string name="report_sales_ugx">Vendas, UGX</string>
+    <string name="report_profit_ugx">Lucro, UGX</string>
+    <string name="report_number_of_sales">Número de vendas</string>
+    <string name="report_average_ugx">Venda média, UGX</string>
+    <string name="report_sales_count">N.º de vendas</string>
+    <string name="daily_sales_ugx">Vendas diárias, UGX</string>
+    <string name="paid_by">Pago com</string>
+    <string name="legend_percent">%1$s %2$d%%</string>
+    <string name="top_products">Produtos mais vendidos</string>
+    <string name="qty_sold">%1$s vendidos</string>
+    <string name="empty_reports_hint">Experimente outro período.</string>
+    <string name="no_closed_days">Nenhum dia fechado neste período</string>
+    <string name="days_balanced_note">Faltas ou sobras dentro dos %1$s permitidos contam como certas.</string>
+    <string name="day_row_sales">Vendas %1$s</string>
+    <string name="closed_at">fechado às %1$s</string>
+    <string name="channel_short">%1$s em falta %2$s</string>
+    <string name="channel_over">%1$s a mais %2$s</string>
+    <string name="channel_balanced">%1$s certo</string>
+    <string name="channel_balanced_diff">%1$s certo (%2$s)</string>
+    <string name="label_momo">MoMo</string>
+    <string name="pick_dates">Escolha as datas</string>
+    <string name="pdf_title">%1$s: relatório de vendas</string>
+    <string name="pdf_daily_totals">Totais diários</string>
+    <string name="pdf_closed_days">Dias fechados</string>
+    <string name="pdf_col_date">Data</string>
+    <string name="pdf_col_sold">Vendidos</string>
+    <string name="pdf_col_amount">Valor</string>
+    <string name="pdf_col_cash_diff">Diferença em dinheiro</string>
+    <string name="pdf_col_momo_diff">Diferença MoMo</string>
+    <string name="pdf_made_on">Feito com o Shop Manager em %1$s</string>
+    <plurals name="plurals_reopened">
+        <item quantity="one">reaberto uma vez</item>
+        <item quantity="other">reaberto %1$d vezes</item>
+    </plurals>
 </resources>
