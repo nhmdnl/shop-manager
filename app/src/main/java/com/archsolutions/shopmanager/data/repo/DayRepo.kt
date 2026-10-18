@@ -32,6 +32,11 @@ class DayRepo @Inject constructor(
 
     suspend fun getLatestClosedDayDirect(): BusinessDayEntity? = dayDao.getLatestClosedDayDirect()
 
+    /** Oldest day before [date] that was never closed — gate case 6.3-1. */
+    fun getOpenDayBefore(date: String): Flow<BusinessDayEntity?> = dayDao.getOpenDayBefore(date)
+
+    suspend fun getOpenDayBeforeDirect(date: String): BusinessDayEntity? = dayDao.getOpenDayBeforeDirect(date)
+
     fun getAllDays(): Flow<List<BusinessDayEntity>> = dayDao.getAllDays()
 
     fun getDaysBetween(startDate: String, endDate: String): Flow<List<BusinessDayEntity>> =
@@ -46,6 +51,10 @@ class DayRepo @Inject constructor(
         openingMobile: Long,
         counts: List<CashCountEntity> = emptyList(),
     ): Long = db.withTransaction {
+        check(dayDao.getDayByDateDirect(date) == null) { "A business day already exists for $date" }
+        // 6.3-1: today cannot be opened while an earlier day is still open.
+        check(dayDao.getOpenDayBeforeDirect(date) == null) { "An earlier business day is still open" }
+
         val now = clock.nowMillis()
         val dayId = dayDao.insertDay(
             BusinessDayEntity(

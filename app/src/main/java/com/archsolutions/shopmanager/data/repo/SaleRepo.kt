@@ -51,6 +51,7 @@ class SaleRepo @Inject constructor(
         if (method == PayMethod.CREDIT) {
             requireNotNull(customerId) { "Credit sales require a customer" }
         }
+        db.requireOpenDay(dayId)
 
         val now = clock.nowMillis()
         val total = items.sumOf { (it.qty * it.unitPrice).toLong() }
@@ -106,6 +107,7 @@ class SaleRepo @Inject constructor(
     suspend fun voidSale(saleId: Long, reason: String) = db.withTransaction {
         val sale = saleDao.getSaleByIdDirect(saleId) ?: return@withTransaction
         if (sale.status == SaleStatus.VOIDED) return@withTransaction
+        db.requireOpenDay(sale.dayId)
 
         val now = clock.nowMillis()
         saleDao.voidSale(saleId, reason, now)

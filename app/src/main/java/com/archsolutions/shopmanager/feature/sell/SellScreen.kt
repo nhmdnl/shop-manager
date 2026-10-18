@@ -14,14 +14,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.archsolutions.shopmanager.R
+import com.archsolutions.shopmanager.app.DayGateState
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.feature.day.DayGateLockCard
+import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SellScreen(
     isExpanded: Boolean,
+    gateState: DayGateState,
+    zoneId: ZoneId,
+    onOpenDay: () -> Unit,
+    onCloseDay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalShopColors.current
@@ -42,6 +50,18 @@ fun SellScreen(
             )
         },
     ) { paddingValues ->
+        if (gateState !is DayGateState.Ready) {
+            DayGateLockCard(
+                gateState = gateState,
+                zoneId = zoneId,
+                onOpenDay = onOpenDay,
+                onCloseDay = onCloseDay,
+                modifier = Modifier
+                    .padding(paddingValues)
+                    .padding(horizontal = if (isExpanded) 28.dp else 16.dp, vertical = 12.dp),
+            )
+            return@Scaffold
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()

@@ -16,3 +16,35 @@ Record what you learn, or the next agent rediscovers it:
 
 Full rules: `Hub/Protocol.md`
 <!-- hub:end -->
+
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+Constraints, goal and current state live in the hub note above (`Hub/Projects/shop-manager.md`); don't duplicate them here. Specs: v1.0 payload `~/Downloads/ShopManager_Android_Build_Payload.md` (milestones M1–M9 in §14), v1.1 addendum `~/Projects/shpmgmt/ShopManager_Build_Payload_v1.1_Addendum.md` (wins where they differ), design PNGs zipped in `~/Projects/shpmgmt/`.
+
+## Commands
+
+    ./gradlew assembleDebug
+    ./gradlew testDebugUnitTest                                   # JVM tests (Room DAO/transaction tests included)
+    ./gradlew testDebugUnitTest --tests "*.SaleTransactionTest"   # single class
+    ./gradlew connectedDebugAndroidTest                           # needs device/emulator (ShopDesignSystemTest)
+    adb connect 127.0.0.1:5555 && ./gradlew installDebug          # test device: vm-curator "Android x86" VM (API 28, 1280x800), must be running
+
+Kotlin + Compose + Hilt + Room via KSP (no kapt). compileSdk 36, minSdk 26. Package `com.archsolutions.shopmanager`.
+
+## Architecture
+
+Single `app` module, layered by package:
+
+- `core/` — `money/Money.kt` (UGX as `Long`), `designsystem/` (theme + reusable components; screens compose these, not raw Material), `locale/LanguageManager` (en/lg/pt/sw/ti via `values-*`), `util/` (`Clock`, `Result`).
+- `data/db/` — `AppDatabase` (single Room DB), `entities/`, `dao/`, `SeedDataLoader`. `data/repo/*Repo` is the only layer features touch; any write spanning tables belongs in a repo method backed by a DAO `@Transaction`. `data/settings/SettingsStore` is DataStore.
+- `domain/` — pure business logic shared by features (`NoteCounter`).
+- `feature/<name>/` — one Compose screen (+ ViewModel) per area: home, sell, stock, suppliers, day, reports, settings.
+- `app/` — `ShopApp`, `AppNavHost`, `MainActivity`, and `DayGate`: a singleton `Flow<DayGateState>` for today's business date (spec 6.3 cases). `DayGateViewModel` loads the seed first, then exposes the state; `AppNavHost` passes it to screens and re-reads the date on resume.
+
+Day locking runs on two layers. The UI shows `feature/day/DayGateLockCard` and greys out actions while the state isn't `Ready`. Every sale, purchase and money-entry write calls `requireOpenDay(dayId)` (`data/repo/DayLock.kt`), which throws `DayNotOpenException`. No day is ever opened implicitly (hub decision 0005).
+
+Adaptive shell: tablet landscape is primary, phone portrait secondary; the same feature screens serve both.
+
+Tests live in `app/src/test` (JVM, in-memory Room) except design-system UI tests in `androidTest`.

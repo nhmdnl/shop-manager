@@ -65,4 +65,35 @@
         <item quantity="one">%1$d inaisha</item>
         <item quantity="other">%1$d zinaisha</item>
     </plurals>
+
+    <!-- Day lifecycle -->
+    <string name="day_open_since">Siku iko wazi tangu %1$s</string>
+    <string name="opening_cash_momo">Taslimu ya kufungua %1$s · Mobile Money %2$s</string>
+    <string name="coins">Sarafu</string>
+    <string name="matches">Inalingana</string>
+    <string name="different_from_yesterday">Tofauti na jana kwa %1$s</string>
+    <string name="greeting_morning_shop">Habari za asubuhi, %1$s</string>
+    <string name="open_day_subtitle">%1$s · fungua siku ili kuanza kuuza</string>
+    <string name="label_yesterday_closed_with">Jana ilifungwa na</string>
+    <string name="label_count_now">Hesabu ulicho nacho sasa</string>
+    <string name="label_cash_in_drawer">Taslimu kwenye droo</string>
+    <string name="label_momo_balance">Salio la Mobile Money</string>
+    <string name="selling_locked_until_open">Mauzo yamefungwa hadi siku ifunguliwe</string>
+    <string name="count_notes">Hesabu noti</string>
+    <string name="count_notes_hint">Gusa + kwa kila noti. Jumla itajaza sehemu ya taslimu.</string>
+    <string name="count_notes_one_by_one">Hesabu noti moja moja</string>
+    <string name="label_optional">Si lazima</string>
+    <string name="total_counted">Jumla iliyohesabiwa</string>
+    <string name="action_done">Sawa</string>
+    <string name="day_not_open">Siku bado haijafunguliwa</string>
+    <string name="day_locked_body">Mauzo, manunuzi na matumizi yamefungwa</string>
+    <string name="open_the_day">Fungua siku</string>
+    <string name="yesterday_open_title">Jana bado iko wazi</string>
+    <string name="yesterday_open_body">Funga %1$s kabla ya kufungua leo</string>
+    <string name="close_date">Funga %1$s</string>
+    <string name="day_closed_at">Siku ilifungwa saa %1$s</string>
+    <string name="selling_opens_tomorrow">Mauzo yatafunguliwa kesho</string>
+    <string name="home_new_sale_hint">Gusa bidhaa, kisha Kamilisha</string>
+    <string name="home_add_purchase_hint">Ingiza bidhaa kutoka kwa msambazaji</string>
+    <string name="locked_action">%1$s, imefungwa</string>
 </resources>

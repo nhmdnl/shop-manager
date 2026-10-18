@@ -36,6 +36,7 @@ import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +47,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -56,6 +60,7 @@ import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.feature.day.DayScreen
+import com.archsolutions.shopmanager.feature.day.OpenDayScreen
 import com.archsolutions.shopmanager.feature.home.HomeScreen
 import com.archsolutions.shopmanager.feature.reports.ReportsScreen
 import com.archsolutions.shopmanager.feature.sell.SellScreen
@@ -73,6 +78,7 @@ import kotlinx.serialization.Serializable
 @Serializable object SuppliersRoute
 @Serializable object ReportsRoute
 @Serializable object SettingsRoute
+@Serializable object OpenDayRoute
 
 enum class NavDestination(
     val route: Any,
@@ -94,11 +100,29 @@ fun AppNavHost(
     isExpanded: Boolean,
     navController: NavHostController = rememberNavController(),
     settingsViewModel: SettingsViewModel = hiltViewModel(),
+    gateViewModel: DayGateViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalShopColors.current
+    val gateState by gateViewModel.state.collectAsStateWithLifecycle()
+
+    // 6.3: re-run the gate whenever the app comes back, so a new day after midnight is noticed.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { gateViewModel.onForeground() }
+
+    if (gateState == DayGateState.Loading) {
+        Box(modifier = modifier.fillMaxSize().background(colors.paper))
+        return
+    }
+
+    LaunchedEffect(gateState) {
+        if (gateViewModel.consumeOpenDayPrompt()) {
+            navController.navigate(OpenDayRoute) { launchSingleTop = true }
+        }
+    }
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val isOpenDay = currentRoute == OpenDayRoute::class.qualifiedName
 
     // Check which top-level item is selected
     fun isSelected(dest: NavDestination): Boolean {
@@ -119,70 +143,107 @@ fun AppNavHost(
     if (isExpanded) {
         // Expanded layout (Tablet): Navigation Rail (104 dp wide) + content
         Row(modifier = modifier.fillMaxSize().background(colors.paper)) {
-            // NavigationRail
-            NavigationRail(
-                modifier = Modifier
-                    .width(104.dp)
-                    .fillMaxHeight()
-                    .border(BorderStroke(1.dp, colors.line)),
-                containerColor = colors.surface,
-                header = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 20.dp),
-                    ) {
-                        // 48 dp green rounded square with shop initial
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(colors.green),
-                            contentAlignment = Alignment.Center,
+            // Open the day is a full-screen task on tablet too (no rail on the design board)
+            if (!isOpenDay) {
+                // NavigationRail
+                NavigationRail(
+                    modifier = Modifier
+                        .width(104.dp)
+                        .fillMaxHeight()
+                        .border(BorderStroke(1.dp, colors.line)),
+                    containerColor = colors.surface,
+                    header = {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 20.dp),
                         ) {
-                            Text(
-                                text = "M",
-                                fontFamily = DisplayFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 24.sp,
-                                color = colors.onGreen,
-                            )
+                            // 48 dp green rounded square with shop initial
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(colors.green),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "M",
+                                    fontFamily = DisplayFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 24.sp,
+                                    color = colors.onGreen,
+                                )
+                            }
                         }
+                    },
+                ) {
+                    // Rail Destinations (Home, Sell, Stock, Day, Suppliers, Reports)
+                    val railItems = listOf(
+                        NavDestination.HOME,
+                        NavDestination.SELL,
+                        NavDestination.STOCK,
+                        NavDestination.DAY,
+                        NavDestination.SUPPLIERS,
+                        NavDestination.REPORTS,
+                    )
+    
+                    railItems.forEach { dest ->
+                        val selected = isSelected(dest)
+                        NavigationRailItem(
+                            selected = selected,
+                            onClick = { navigateTo(dest) },
+                            icon = {
+                                Icon(
+                                    imageVector = dest.icon,
+                                    contentDescription = stringResource(dest.labelResId),
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = stringResource(dest.labelResId),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 13.sp,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                )
+                            },
+                            modifier = Modifier
+                                .height(72.dp)
+                                .padding(vertical = 2.dp),
+                            colors = NavigationRailItemDefaults.colors(
+                                selectedIconColor = colors.green,
+                                selectedTextColor = colors.green,
+                                indicatorColor = colors.greenTint,
+                                unselectedIconColor = colors.muted,
+                                unselectedTextColor = colors.muted,
+                            ),
+                        )
                     }
-                },
-            ) {
-                // Rail Destinations (Home, Sell, Stock, Day, Suppliers, Reports)
-                val railItems = listOf(
-                    NavDestination.HOME,
-                    NavDestination.SELL,
-                    NavDestination.STOCK,
-                    NavDestination.DAY,
-                    NavDestination.SUPPLIERS,
-                    NavDestination.REPORTS,
-                )
-
-                railItems.forEach { dest ->
-                    val selected = isSelected(dest)
+    
+                    Spacer(modifier = Modifier.weight(1f))
+    
+                    // Settings pinned at bottom
+                    val settingsSelected = isSelected(NavDestination.SETTINGS)
                     NavigationRailItem(
-                        selected = selected,
-                        onClick = { navigateTo(dest) },
+                        selected = settingsSelected,
+                        onClick = { navigateTo(NavDestination.SETTINGS) },
                         icon = {
                             Icon(
-                                imageVector = dest.icon,
-                                contentDescription = stringResource(dest.labelResId),
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = stringResource(R.string.nav_settings),
                                 modifier = Modifier.size(24.dp),
                             )
                         },
                         label = {
                             Text(
-                                text = stringResource(dest.labelResId),
+                                text = stringResource(R.string.nav_settings),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 13.sp,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                fontWeight = if (settingsSelected) FontWeight.Bold else FontWeight.Medium,
                             )
                         },
                         modifier = Modifier
                             .height(72.dp)
-                            .padding(vertical = 2.dp),
+                            .padding(bottom = 12.dp),
                         colors = NavigationRailItemDefaults.colors(
                             selectedIconColor = colors.green,
                             selectedTextColor = colors.green,
@@ -192,40 +253,6 @@ fun AppNavHost(
                         ),
                     )
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                // Settings pinned at bottom
-                val settingsSelected = isSelected(NavDestination.SETTINGS)
-                NavigationRailItem(
-                    selected = settingsSelected,
-                    onClick = { navigateTo(NavDestination.SETTINGS) },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = stringResource(R.string.nav_settings),
-                            modifier = Modifier.size(24.dp),
-                        )
-                    },
-                    label = {
-                        Text(
-                            text = stringResource(R.string.nav_settings),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 13.sp,
-                            fontWeight = if (settingsSelected) FontWeight.Bold else FontWeight.Medium,
-                        )
-                    },
-                    modifier = Modifier
-                        .height(72.dp)
-                        .padding(bottom = 12.dp),
-                    colors = NavigationRailItemDefaults.colors(
-                        selectedIconColor = colors.green,
-                        selectedTextColor = colors.green,
-                        indicatorColor = colors.greenTint,
-                        unselectedIconColor = colors.muted,
-                        unselectedTextColor = colors.muted,
-                    ),
-                )
             }
 
             // Main Content Area
@@ -233,6 +260,8 @@ fun AppNavHost(
                 NavContent(
                     navController = navController,
                     settingsViewModel = settingsViewModel,
+                    gateViewModel = gateViewModel,
+                    gateState = gateState,
                     isExpanded = true,
                 )
             }
@@ -247,7 +276,7 @@ fun AppNavHost(
             NavDestination.REPORTS,
         )
 
-        val isFullscreenTask = currentRoute == SettingsRoute::class.qualifiedName
+        val isFullscreenTask = currentRoute == SettingsRoute::class.qualifiedName || isOpenDay
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
@@ -294,6 +323,8 @@ fun AppNavHost(
                 NavContent(
                     navController = navController,
                     settingsViewModel = settingsViewModel,
+                    gateViewModel = gateViewModel,
+                    gateState = gateState,
                     isExpanded = false,
                 )
             }
@@ -305,8 +336,16 @@ fun AppNavHost(
 private fun NavContent(
     navController: NavHostController,
     settingsViewModel: SettingsViewModel,
+    gateViewModel: DayGateViewModel,
+    gateState: DayGateState,
     isExpanded: Boolean,
 ) {
+    val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
+    val today by gateViewModel.today.collectAsStateWithLifecycle()
+    val openDay = { navController.navigate(OpenDayRoute) { launchSingleTop = true } }
+    // DECISION: Close the day arrives in M6; until then the lock card's Close button opens the Day screen.
+    val closeDay = { navController.navigate(DayRoute) { launchSingleTop = true } }
+
     NavHost(
         navController = navController,
         startDestination = HomeRoute,
@@ -314,14 +353,36 @@ private fun NavContent(
         composable<HomeRoute> {
             HomeScreen(
                 isExpanded = isExpanded,
+                shopName = settings.shopName,
+                today = today,
+                gateState = gateState,
+                zoneId = gateViewModel.zoneId,
                 onNavigateToSell = { navController.navigate(SellRoute) },
                 onNavigateToStock = { navController.navigate(StockRoute) },
                 onNavigateToDay = { navController.navigate(DayRoute) },
                 onNavigateToSettings = { navController.navigate(SettingsRoute) },
+                onOpenDay = openDay,
             )
         }
         composable<SellRoute> {
-            SellScreen(isExpanded = isExpanded)
+            SellScreen(
+                isExpanded = isExpanded,
+                gateState = gateState,
+                zoneId = gateViewModel.zoneId,
+                onOpenDay = openDay,
+                onCloseDay = closeDay,
+            )
+        }
+        composable<OpenDayRoute> {
+            OpenDayScreen(
+                isExpanded = isExpanded,
+                onDayStarted = {
+                    // 6.4: Start the day lands on Home, whatever screen Open the day was opened from.
+                    if (!navController.popBackStack<HomeRoute>(inclusive = false)) {
+                        navController.navigate(HomeRoute)
+                    }
+                },
+            )
         }
         composable<StockRoute> {
             StockScreen(isExpanded = isExpanded)

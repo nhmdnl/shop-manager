@@ -89,6 +89,32 @@
     <string name="different_from_yesterday">Different from yesterday by %1$s</string>
     <string name="yesterday_closed_with">Yesterday closed with %1$s</string>
 
+    <!-- Day lifecycle -->
+    <string name="greeting_morning_shop">Good morning, %1$s</string>
+    <string name="open_day_subtitle">%1$s · open the day to start selling</string>
+    <string name="label_yesterday_closed_with">Yesterday closed with</string>
+    <string name="label_count_now">Count what you have now</string>
+    <string name="label_cash_in_drawer">Cash in the drawer</string>
+    <string name="label_momo_balance">Mobile Money balance</string>
+    <string name="selling_locked_until_open">Selling stays locked until the day is open</string>
+    <string name="count_notes">Count notes</string>
+    <string name="count_notes_hint">Tap + for each note. The total fills the cash box.</string>
+    <string name="count_notes_one_by_one">Count notes one by one</string>
+    <string name="label_optional">Optional</string>
+    <string name="total_counted">Total counted</string>
+    <string name="action_done">Done</string>
+    <string name="day_not_open">Day not open yet</string>
+    <string name="day_locked_body">Selling, purchases and expenses are locked</string>
+    <string name="open_the_day">Open the day</string>
+    <string name="yesterday_open_title">Yesterday is still open</string>
+    <string name="yesterday_open_body">Close %1$s before opening today</string>
+    <string name="close_date">Close %1$s</string>
+    <string name="day_closed_at">Day closed at %1$s</string>
+    <string name="selling_opens_tomorrow">Selling opens tomorrow</string>
+    <string name="home_new_sale_hint">Tap products, then Complete</string>
+    <string name="home_add_purchase_hint">Stock in from a supplier</string>
+    <string name="locked_action">%1$s, locked</string>
+
     <!-- Plurals -->
     <plurals name="plurals_items">
         <item quantity="one">%1$d item</item>

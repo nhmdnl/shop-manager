@@ -65,4 +65,35 @@
         <item quantity="one">%1$d em baixo</item>
         <item quantity="other">%1$d em baixo</item>
     </plurals>
+
+    <!-- Day lifecycle -->
+    <string name="day_open_since">Dia aberto desde as %1$s</string>
+    <string name="opening_cash_momo">Dinheiro de abertura %1$s · Mobile Money %2$s</string>
+    <string name="coins">Moedas</string>
+    <string name="matches">Confere</string>
+    <string name="different_from_yesterday">Diferente de ontem em %1$s</string>
+    <string name="greeting_morning_shop">Bom dia, %1$s</string>
+    <string name="open_day_subtitle">%1$s · abra o dia para começar a vender</string>
+    <string name="label_yesterday_closed_with">Ontem fechou com</string>
+    <string name="label_count_now">Conte o que tem agora</string>
+    <string name="label_cash_in_drawer">Dinheiro na gaveta</string>
+    <string name="label_momo_balance">Saldo Mobile Money</string>
+    <string name="selling_locked_until_open">As vendas ficam bloqueadas até o dia ser aberto</string>
+    <string name="count_notes">Contar notas</string>
+    <string name="count_notes_hint">Toque em + para cada nota. O total preenche o campo do dinheiro.</string>
+    <string name="count_notes_one_by_one">Contar notas uma a uma</string>
+    <string name="label_optional">Opcional</string>
+    <string name="total_counted">Total contado</string>
+    <string name="action_done">Concluído</string>
+    <string name="day_not_open">O dia ainda não foi aberto</string>
+    <string name="day_locked_body">Vendas, compras e despesas estão bloqueadas</string>
+    <string name="open_the_day">Abrir o dia</string>
+    <string name="yesterday_open_title">Ontem ainda está aberto</string>
+    <string name="yesterday_open_body">Feche %1$s antes de abrir hoje</string>
+    <string name="close_date">Fechar %1$s</string>
+    <string name="day_closed_at">Dia fechado às %1$s</string>
+    <string name="selling_opens_tomorrow">As vendas abrem amanhã</string>
+    <string name="home_new_sale_hint">Toque nos produtos e depois em Concluir</string>
+    <string name="home_add_purchase_hint">Entrada de stock de um fornecedor</string>
+    <string name="locked_action">%1$s, bloqueado</string>
 </resources>

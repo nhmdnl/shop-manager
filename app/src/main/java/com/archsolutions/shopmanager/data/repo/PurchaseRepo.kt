@@ -44,6 +44,7 @@ class PurchaseRepo @Inject constructor(
         note: String? = null,
     ): Long = db.withTransaction {
         require(items.isNotEmpty()) { "Purchase must contain at least one item" }
+        db.requireOpenDay(dayId)
 
         val now = clock.nowMillis()
         val total = items.sumOf { (it.qty * it.unitCost).toLong() }

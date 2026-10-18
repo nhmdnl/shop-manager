@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.data.repo
 
+import androidx.room.withTransaction
 import com.archsolutions.shopmanager.core.util.AppClock
 import com.archsolutions.shopmanager.data.db.AppDatabase
 import com.archsolutions.shopmanager.data.db.entities.MoneyEntryEntity
@@ -22,6 +23,11 @@ class MoneyRepo @Inject constructor(
     suspend fun getEntriesForDayDirect(dayId: Long): List<MoneyEntryEntity> =
         moneyEntryDao.getEntriesForDayDirect(dayId)
 
+    private suspend fun insertForOpenDay(entry: MoneyEntryEntity): Long = db.withTransaction {
+        db.requireOpenDay(entry.dayId)
+        moneyEntryDao.insertEntry(entry)
+    }
+
     suspend fun addExpense(
         dayId: Long,
         amount: Long,
@@ -30,7 +36,7 @@ class MoneyRepo @Inject constructor(
         note: String? = null,
     ): Long {
         require(amount > 0) { "Amount must be positive" }
-        return moneyEntryDao.insertEntry(
+        return insertForOpenDay(
             MoneyEntryEntity(
                 dayId = dayId,
                 createdAt = clock.nowMillis(),
@@ -51,7 +57,7 @@ class MoneyRepo @Inject constructor(
         note: String? = null,
     ): Long {
         require(amount > 0) { "Amount must be positive" }
-        return moneyEntryDao.insertEntry(
+        return insertForOpenDay(
             MoneyEntryEntity(
                 dayId = dayId,
                 createdAt = clock.nowMillis(),
@@ -71,7 +77,7 @@ class MoneyRepo @Inject constructor(
         note: String? = null,
     ): Long {
         require(amount > 0) { "Amount must be positive" }
-        return moneyEntryDao.insertEntry(
+        return insertForOpenDay(
             MoneyEntryEntity(
                 dayId = dayId,
                 createdAt = clock.nowMillis(),
@@ -90,7 +96,7 @@ class MoneyRepo @Inject constructor(
         note: String? = null,
     ): Long {
         require(amount > 0) { "Amount must be positive" }
-        return moneyEntryDao.insertEntry(
+        return insertForOpenDay(
             MoneyEntryEntity(
                 dayId = dayId,
                 createdAt = clock.nowMillis(),

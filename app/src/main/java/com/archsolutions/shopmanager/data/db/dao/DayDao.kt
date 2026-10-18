@@ -33,13 +33,22 @@ interface DayDao {
     @Query("SELECT * FROM business_day WHERE status = 'CLOSED' ORDER BY date DESC LIMIT 1")
     suspend fun getLatestClosedDayDirect(): BusinessDayEntity?
 
+    // Oldest first: if several past days were left open, the gate closes them in date order.
+    @Query("SELECT * FROM business_day WHERE status = 'OPEN' AND date < :date ORDER BY date ASC LIMIT 1")
+    fun getOpenDayBefore(date: String): Flow<BusinessDayEntity?>
+
+    @Query("SELECT * FROM business_day WHERE status = 'OPEN' AND date < :date ORDER BY date ASC LIMIT 1")
+    suspend fun getOpenDayBeforeDirect(date: String): BusinessDayEntity?
+
     @Query("SELECT * FROM business_day ORDER BY date DESC")
     fun getAllDays(): Flow<List<BusinessDayEntity>>
 
     @Query("SELECT * FROM business_day WHERE date >= :startDate AND date <= :endDate ORDER BY date DESC")
     fun getDaysBetween(startDate: String, endDate: String): Flow<List<BusinessDayEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // ABORT, not REPLACE: date is unique, and REPLACE would delete an existing day's row
+    // and re-insert it under a new id, orphaning its sales, purchases and money entries.
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertDay(day: BusinessDayEntity): Long
 
     @Update
