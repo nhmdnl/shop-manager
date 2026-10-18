@@ -20,6 +20,8 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.sqlite.db.SimpleSQLiteQuery
+import kotlinx.coroutines.flow.first
 
 enum class RestoreResult { OK, NOT_A_BACKUP, TOO_NEW }
 
@@ -41,9 +43,17 @@ class BackupManager @Inject constructor(
 
     /** "Back up now": to wherever the user picked (Storage Access Framework, so Google Drive works too). */
     suspend fun backUpTo(uri: Uri) = withContext(Dispatchers.IO) {
-        val out = context.contentResolver.openOutputStream(uri) ?: error("Can't write $uri")
-        out.use(::writeZip)
+        // Recorded before the copy, so a restore of this backup knows it was backed up (no reminder
+        // straight after restoring); put back if the copy fails.
+        val previous = settingsStore.settings.first().lastBackupAt
         settingsStore.setLastBackupAt(clock.nowMillis())
+        try {
+            val out = context.contentResolver.openOutputStream(uri) ?: error("Can't write $uri")
+            out.use(::writeZip)
+        } catch (e: Exception) {
+            settingsStore.setLastBackupAt(previous)
+            throw e
+        }
     }
 
     /**
@@ -67,7 +77,8 @@ class BackupManager @Inject constructor(
     }
 
     internal fun writeZip(out: OutputStream) {
-        db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() }
+        // Through Room, so it waits its turn with Room's own connections.
+        db.query(SimpleSQLiteQuery("PRAGMA wal_checkpoint(FULL)")).use { it.moveToFirst() }
         ZipOutputStream(out).use { zip ->
             zip.putNextEntry(ZipEntry(MANIFEST))
             Properties().apply {

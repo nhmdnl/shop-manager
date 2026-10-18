@@ -47,6 +47,12 @@ Day locking runs on two layers. The UI shows `feature/day/DayGateLockCard` and g
 
 Gate prompts (Open the day, Yesterday is still open) show once per business date, and `AppNavHost` holds them while Open/Close the day or Day closed is on screen. A prompt pushed over Close the day gets popped with it.
 
+PIN (addendum C4): screens wrap protected actions in `rememberPinGate().run(purpose) { … }` (`feature/pin/PinDialog.kt`). It runs at once when no PIN is set, else after `PinGuard` accepts the PIN; 5 wrong tries lock it for 30 s. The 6-second Undo after a sale skips it on purpose.
+
+Backup/restore (section 11, `data/backup/BackupManager.kt`): a zip of manifest + database (after a WAL checkpoint) + settings file. A restore never replaces files under a live Room/DataStore. It is checked, staged in `files/pending_restore`, the app restarts, and `ShopApp.onCreate` applies it before `super.onCreate()`. `AutoBackupWorker` keeps the last 7 in app storage after each closed day.
+
+Onboarding (7.8): `DayGateViewModel.needsOnboarding`. Installs with days skip it, except a debug install the seed just filled (the seed opens a day). Its last step opens the first day.
+
 Close-day reminder (`app/CloseReminder.kt`, spec 6.7): one unique one-time WorkManager job. `MainActivity` re-plans it with REPLACE on launch and whenever `closeReminderTime` changes; each run re-plans the next with APPEND_OR_REPLACE so it doesn't cancel itself. The worker reaches Hilt objects through `CloseReminderEntryPoint`. A tap arrives as `ACTION_CLOSE_DAY`, and `AppNavHost` opens Close the day only when the gate is `Ready`.
 
 Adaptive shell: tablet landscape is primary, phone portrait secondary; the same feature screens serve both.

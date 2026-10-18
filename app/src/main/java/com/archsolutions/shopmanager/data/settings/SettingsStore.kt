@@ -110,8 +110,9 @@ class SettingsStore(
         }
     }
 
-    suspend fun setLastBackupAt(millis: Long) {
-        dataStore.edit { it[KEY_LAST_BACKUP] = millis }
+    /** Null clears it (no backup yet). */
+    suspend fun setLastBackupAt(millis: Long?) {
+        dataStore.edit { if (millis == null) it.remove(KEY_LAST_BACKUP) else it[KEY_LAST_BACKUP] = millis }
     }
 
     suspend fun setOnboardingDone(done: Boolean) {
