@@ -669,6 +669,7 @@ internal fun SaleSnackbarEffects(viewModel: SellViewModel, hostState: SnackbarHo
     val saveFailed by viewModel.saveFailed.collectAsStateWithLifecycle()
     val undoLabel = stringResource(R.string.action_undo)
     val failedMessage = stringResource(R.string.error_could_not_save)
+    val retryLabel = stringResource(R.string.action_retry)
     val summary = savedSale?.let { sale ->
         val method = payMethodLabel(sale.method)
         if (sale.change != null && sale.change > 0) {
@@ -689,10 +690,12 @@ internal fun SaleSnackbarEffects(viewModel: SellViewModel, hostState: SnackbarHo
         if (result == SnackbarResult.ActionPerformed) viewModel.undoSale(sale.saleId)
         viewModel.savedSaleShown()
     }
+    // States board: "Couldn't save. Try again." with Retry; the cart is kept, so Retry saves it again.
     LaunchedEffect(saveFailed) {
         if (saveFailed) {
-            hostState.showSnackbar(failedMessage)
+            val result = hostState.showSnackbar(failedMessage, actionLabel = retryLabel, duration = SnackbarDuration.Long)
             viewModel.saveFailedShown()
+            if (result == SnackbarResult.ActionPerformed) viewModel.completeSale()
         }
     }
 }

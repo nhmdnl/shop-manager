@@ -22,6 +22,7 @@ import com.archsolutions.shopmanager.data.settings.SettingsStore
 import com.archsolutions.shopmanager.data.settings.ShopSettings
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -49,11 +50,14 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             openCloseDay = intent?.action == CloseReminder.ACTION_CLOSE_DAY
-            // DECISION: asked at launch until onboarding exists (M9); the reminder needs it on API 33+.
+            // New installs are asked on onboarding's last step; installs that were set up before that
+            // step existed are asked here, until they answer (the reminder needs it on API 33+).
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
             ) {
-                askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                lifecycleScope.launch {
+                    if (settingsStore.settings.first().onboardingDone) askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
             }
         }
         // Plans the reminder on every launch and again whenever its time changes in Settings.

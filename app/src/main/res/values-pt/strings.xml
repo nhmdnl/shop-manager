@@ -515,4 +515,40 @@
         <item quantity="one">Sem cópia há 1 dia</item>
         <item quantity="other">Sem cópia há %1$d dias</item>
     </plurals>
+    <!-- Onboarding and product import (M9) -->
+    <string name="step_of">Passo %1$d de %2$d</string>
+    <string name="action_next">Seguinte</string>
+    <string name="onboarding_welcome_title">Bem-vindo ao Shop Manager</string>
+    <string name="onboarding_welcome_sub">Duas perguntas rápidas e já pode vender.</string>
+    <string name="shop_name_placeholder">Por exemplo, Loja da Maria</string>
+    <string name="gloss_swahili">Suaíli</string>
+    <string name="gloss_tigrinya">Tigrínia</string>
+    <string name="gloss_portuguese">Português</string>
+    <string name="onboarding_theme_title">Claro ou escuro?</string>
+    <string name="onboarding_theme_sub">Pode mudar quando quiser nas Definições.</string>
+    <string name="onboarding_money_title">O que há na loja agora?</string>
+    <string name="onboarding_money_sub">Conte a gaveta e veja o saldo do Mobile Money. Isto abre o seu primeiro dia.</string>
+    <string name="import_title">Importar produtos (opcional)</string>
+    <string name="import_sub">De um ficheiro CSV: nome, categoria, preços, stock</string>
+    <string name="import_choose">Escolher ficheiro CSV</string>
+    <string name="import_failed">Não foi possível ler esse ficheiro.</string>
+    <string name="settings_import">Importar produtos</string>
+    <string name="settings_import_choose">Escolher ficheiro</string>
+    <plurals name="plurals_imported">
+        <item quantity="one">%1$d produto adicionado</item>
+        <item quantity="other">%1$d produtos adicionados</item>
+    </plurals>
+    <plurals name="plurals_skipped">
+        <item quantity="one">%1$d linha ignorada</item>
+        <item quantity="other">%1$d linhas ignoradas</item>
+    </plurals>
+    <!-- Past day, read-only (M9) -->
+    <string name="past_day_closed_at">Fechado às %1$s · só leitura</string>
+    <string name="past_day_locked">Bloqueado</string>
+    <string name="total_sales_incl_credit">Vendas totais (incl. crédito)</string>
+    <string name="action_share">Partilhar</string>
+    <string name="past_day_footer">Erros encontrados mais tarde corrigem-se no dia aberto de hoje, não aqui.</string>
+    <string name="action_retry">Tentar de novo</string>
+    <string name="empty_products_hint">Adicione o primeiro produto ou importe um CSV nas Definições.</string>
+    <string name="no_product_match">Nenhum produto corresponde à pesquisa</string>
 </resources>

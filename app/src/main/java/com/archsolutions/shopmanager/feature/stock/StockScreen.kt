@@ -68,6 +68,7 @@ import com.archsolutions.shopmanager.core.money.Money
 import com.archsolutions.shopmanager.core.util.Qty
 import com.archsolutions.shopmanager.feature.day.DayGateLockCard
 import java.time.ZoneId
+import com.archsolutions.shopmanager.core.designsystem.components.NoProductsCard
 
 /** Stock (7.3): tablet = table + Add purchase panel; phone = list (tap = Add purchase, long-press = Edit). */
 @Composable
@@ -177,6 +178,7 @@ private fun StockExpanded(
                 Spacer(modifier = Modifier.height(12.dp))
                 StockFilterChips(state = state, onSelect = viewModel::setFilter)
                 Spacer(modifier = Modifier.height(16.dp))
+                if (state.loaded && state.productCount == 0) NoProductsCard(onAddProduct = onNewProduct)
                 ShopCard(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -424,6 +426,7 @@ private fun StockCompact(
                 Text(text = stringResource(R.string.stock_value), style = MaterialTheme.typography.bodyLarge, color = colors.muted)
                 Text(text = Money.format(state.stockValue), style = amountTextStyle(18.sp), color = colors.ink)
             }
+            if (state.loaded && state.productCount == 0) NoProductsCard(onAddProduct = onNewProduct)
             ShopCard(
                 modifier = Modifier
                     .fillMaxWidth()

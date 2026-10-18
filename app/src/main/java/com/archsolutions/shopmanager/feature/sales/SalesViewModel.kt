@@ -20,12 +20,15 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
+import androidx.lifecycle.SavedStateHandle
+import com.archsolutions.shopmanager.data.repo.DayRepo
 
 enum class SalesFilter { ALL, CASH, MOBILE_MONEY, CREDIT }
 
 data class SalesUiState(
     val loaded: Boolean = false,
     val date: String? = null,
+    val isPastDay: Boolean = false, // opened from a past day's summary, not today's
     val filter: SalesFilter = SalesFilter.ALL,
     val rows: List<SaleRow> = emptyList(),
     // Voided sales stay in the list but count in no total.
@@ -35,16 +38,20 @@ data class SalesUiState(
 
 @HiltViewModel
 class SalesViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     dayGate: DayGate,
+    dayRepo: DayRepo,
     saleRepo: SaleRepo,
     customerRepo: CustomerRepo,
     clock: AppClock,
 ) : ViewModel() {
     private val filter = MutableStateFlow(SalesFilter.ALL)
 
+    // SalesRoute(dayId) from a past day's summary; otherwise the day the gate is on.
+    private val pastDayId = savedStateHandle.get<Long>("dayId")?.takeIf { it > 0 }
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val state: StateFlow<SalesUiState> = dayGate.state
-        .map { it.currentDay }
+    val state: StateFlow<SalesUiState> = (pastDayId?.let(dayRepo::getDayById) ?: dayGate.state.map { it.currentDay })
         .distinctUntilChanged()
         .flatMapLatest { day ->
             if (day == null) {
@@ -56,6 +63,7 @@ class SalesViewModel @Inject constructor(
                     SalesUiState(
                         loaded = true,
                         date = day.date,
+                        isPastDay = pastDayId != null,
                         filter = selected,
                         rows = sales
                             .filter { selected.matches(it.sale.method) }

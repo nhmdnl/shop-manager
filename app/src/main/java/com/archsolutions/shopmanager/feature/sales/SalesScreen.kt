@@ -86,7 +86,7 @@ fun SalesScreen(
                 title = {
                     Column {
                         Text(
-                            text = stringResource(R.string.todays_sales),
+                            text = stringResource(if (state.isPastDay) R.string.label_sales else R.string.todays_sales),
                             fontFamily = DisplayFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = if (isExpanded) 32.sp else 24.sp,

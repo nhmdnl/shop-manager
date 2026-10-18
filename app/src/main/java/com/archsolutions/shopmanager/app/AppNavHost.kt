@@ -98,6 +98,8 @@ import com.archsolutions.shopmanager.feature.backup.rememberBackupActions
 import com.archsolutions.shopmanager.data.backup.AutoBackupWorker
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.platform.LocalContext
+import com.archsolutions.shopmanager.feature.onboarding.OnboardingScreen
+import com.archsolutions.shopmanager.feature.day.PastDayScreen
 
 // Type-safe route objects
 @Serializable object HomeRoute
@@ -110,7 +112,7 @@ import androidx.compose.ui.platform.LocalContext
 @Serializable object OpenDayRoute
 @Serializable object SellGraph // Sell + phone Checkout share one SellViewModel (the cart)
 @Serializable object CheckoutRoute
-@Serializable object SalesRoute
+@Serializable data class SalesRoute(val dayId: Long = 0L) // 0 = the day the gate is on
 @Serializable data class SaleDetailRoute(val id: Long)
 @Serializable data class AddPurchaseRoute(val productId: Long = 0L, val supplierId: Long = 0L) // 0 = none
 @Serializable data class EditProductRoute(val id: Long = 0L) // 0 = new product
@@ -119,6 +121,7 @@ import androidx.compose.ui.platform.LocalContext
 @Serializable data class CloseDayRoute(val date: String)
 @Serializable data class DayClosedRoute(val dayId: Long, val sent: Boolean = false)
 @Serializable data class YesterdayOpenRoute(val date: String)
+@Serializable object OnboardingRoute
 @Serializable data class DaySummaryRoute(val dayId: Long) // a closed day's record, read-only (Reports > Days)
 @Serializable data class SupplierDetailRoute(val id: Long)
 @Serializable data class SupplierEditRoute(val id: Long = 0L) // 0 = new supplier
@@ -154,7 +157,10 @@ fun AppNavHost(
     // 6.3: re-run the gate whenever the app comes back, so a new day after midnight is noticed.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { gateViewModel.onForeground() }
 
-    if (gateState == DayGateState.Loading) {
+    val needsOnboarding by gateViewModel.needsOnboarding.collectAsStateWithLifecycle()
+    val shopSettings by settingsViewModel.settings.collectAsStateWithLifecycle()
+
+    if (gateState == DayGateState.Loading || needsOnboarding == null) {
         Box(modifier = modifier.fillMaxSize().background(colors.paper))
         return
     }
@@ -164,11 +170,19 @@ fun AppNavHost(
     val currentRoute = currentDestination?.route
     // Gate steps are full-screen on every layout (no rail on the design boards).
     val isOpenDay = currentRoute == OpenDayRoute::class.qualifiedName ||
-        currentDestination?.hasRoute(YesterdayOpenRoute::class) == true
+        currentDestination?.hasRoute(YesterdayOpenRoute::class) == true ||
+        currentDestination?.hasRoute(OnboardingRoute::class) == true
     // Hold gate prompts while a day is being opened or closed: Open the day pushed over Close the day
     // was popped along with it, so closing yesterday never led on to opening today.
-    val canPrompt = currentDestination != null && !isOpenDay &&
+    val canPrompt = currentDestination != null && !isOpenDay && needsOnboarding == false &&
         !currentDestination.hasRoute(CloseDayRoute::class) && !currentDestination.hasRoute(DayClosedRoute::class)
+
+    // 7.8: a fresh install starts with onboarding, whose last step opens the first day.
+    LaunchedEffect(needsOnboarding, currentDestination != null) {
+        if (needsOnboarding == true && currentDestination != null && !currentDestination.hasRoute(OnboardingRoute::class)) {
+            navController.navigate(OnboardingRoute) { popUpTo<HomeRoute> { inclusive = true } }
+        }
+    }
 
     LaunchedEffect(gateState, canPrompt) {
         if (!canPrompt) return@LaunchedEffect
@@ -230,7 +244,8 @@ fun AppNavHost(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = "M",
+                                    // The shop initial (it was a fixed "M").
+                                    text = shopSettings.shopName.trim().take(1).uppercase().ifEmpty { "S" },
                                     fontFamily = DisplayFontFamily,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 24.sp,
@@ -460,7 +475,7 @@ private fun NavContent(
                 onOpenDay = openDay,
                 recentSales = recentSales,
                 lowStock = lowStock,
-                onSeeAllSales = { navController.navigate(SalesRoute) },
+                onSeeAllSales = { navController.navigate(SalesRoute()) },
                 onOpenSale = { navController.navigate(SaleDetailRoute(it)) },
                 todaySummary = todaySummary,
                 onDaySummary = { navController.navigate(DayClosedRoute(it)) },
@@ -480,6 +495,7 @@ private fun NavContent(
                     onOpenDay = openDay,
                     onCloseDay = closeDay,
                     onCheckout = { navController.navigate(CheckoutRoute) },
+                    onAddProduct = { navController.navigate(EditProductRoute()) },
                 )
             }
             composable<CheckoutRoute> { entry ->
@@ -502,6 +518,9 @@ private fun NavContent(
                 isExpanded = isExpanded,
                 onBack = { navController.popBackStack() },
             )
+        }
+        composable<OnboardingRoute> {
+            OnboardingScreen(onDone = { navController.navigate(HomeRoute) { popUpTo<OnboardingRoute> { inclusive = true } } })
         }
         composable<OpenDayRoute> {
             OpenDayScreen(
@@ -631,10 +650,11 @@ private fun NavContent(
             )
         }
         composable<DaySummaryRoute> {
-            DayClosedScreen(
-                summarySent = false,
+            PastDayScreen(
+                isExpanded = isExpanded,
                 zoneId = gateViewModel.zoneId,
-                onDone = { navController.popBackStack() },
+                onBack = { navController.popBackStack() },
+                onSales = { navController.navigate(SalesRoute(it)) },
             )
         }
         composable<SettingsRoute> {

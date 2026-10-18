@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 import javax.inject.Inject
+import com.archsolutions.shopmanager.data.repo.DayRepo
+import com.archsolutions.shopmanager.data.settings.SettingsStore
+import kotlinx.coroutines.flow.combine
 
 /** A full-screen step the gate shows once per business date (6.3-1, 6.3-2). */
 sealed interface GatePrompt {
@@ -25,14 +28,18 @@ sealed interface GatePrompt {
 class DayGateViewModel @Inject constructor(
     private val dayGate: DayGate,
     seedDataLoader: SeedDataLoader,
+    private val settingsStore: SettingsStore,
+    dayRepo: DayRepo,
 ) : ViewModel() {
     private val seeded = MutableStateFlow(false)
+    // Debug builds seed a day on a fresh install; that install still gets onboarding.
+    private var freshInstall = false
     private var promptedKey: String? = null
 
     init {
         // The gate must not judge an empty database that the seed is about to fill.
         viewModelScope.launch {
-            seedDataLoader.loadSeedDataIfEmpty()
+            freshInstall = seedDataLoader.loadSeedDataIfEmpty()
             seeded.value = true
         }
     }
@@ -41,6 +48,25 @@ class DayGateViewModel @Inject constructor(
     val state: StateFlow<DayGateState> = seeded
         .flatMapLatest { ready -> if (ready) dayGate.state else flowOf(DayGateState.Loading) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, DayGateState.Loading)
+
+    /**
+     * First run (7.8) until onboarding is done; null while loading. An install that already has days
+     * (from before onboarding existed, or restored) counts as done.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val needsOnboarding: StateFlow<Boolean?> = seeded
+        .flatMapLatest { ready ->
+            if (!ready) {
+                flowOf(null)
+            } else {
+                combine(settingsStore.settings, dayRepo.getFirstOpenedAt()) { settings, firstDay ->
+                    val startedBefore = firstDay != null && !freshInstall
+                    if (!settings.onboardingDone && startedBefore) viewModelScope.launch { settingsStore.setOnboardingDone(true) }
+                    !settings.onboardingDone && !startedBefore
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val today: StateFlow<String> = dayGate.today
 

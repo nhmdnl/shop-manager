@@ -528,4 +528,40 @@
         <item quantity="one">No backup in 1 day</item>
         <item quantity="other">No backup in %1$d days</item>
     </plurals>
+    <!-- Onboarding and product import (M9) -->
+    <string name="step_of">Step %1$d of %2$d</string>
+    <string name="action_next">Next</string>
+    <string name="onboarding_welcome_title">Welcome to Shop Manager</string>
+    <string name="onboarding_welcome_sub">Two quick questions, then you can sell.</string>
+    <string name="shop_name_placeholder">For example, Mary Shop</string>
+    <string name="gloss_swahili">Swahili</string>
+    <string name="gloss_tigrinya">Tigrinya</string>
+    <string name="gloss_portuguese">Portuguese</string>
+    <string name="onboarding_theme_title">Light or dark?</string>
+    <string name="onboarding_theme_sub">You can change this any time in Settings.</string>
+    <string name="onboarding_money_title">What\'s in the shop right now?</string>
+    <string name="onboarding_money_sub">Count the drawer and check your Mobile Money balance. This opens your first day.</string>
+    <string name="import_title">Import products (optional)</string>
+    <string name="import_sub">From a CSV file: name, category, prices, stock</string>
+    <string name="import_choose">Choose CSV file</string>
+    <string name="import_failed">Couldn\'t read that file.</string>
+    <string name="settings_import">Import products</string>
+    <string name="settings_import_choose">Choose file</string>
+    <plurals name="plurals_imported">
+        <item quantity="one">%1$d product added</item>
+        <item quantity="other">%1$d products added</item>
+    </plurals>
+    <plurals name="plurals_skipped">
+        <item quantity="one">%1$d row skipped</item>
+        <item quantity="other">%1$d rows skipped</item>
+    </plurals>
+    <!-- Past day, read-only (M9) -->
+    <string name="past_day_closed_at">Closed at %1$s · read-only</string>
+    <string name="past_day_locked">Locked</string>
+    <string name="total_sales_incl_credit">Total sales (incl. credit)</string>
+    <string name="action_share">Share</string>
+    <string name="past_day_footer">Mistakes found later are corrected on today\'s open day, not here.</string>
+    <string name="action_retry">Retry</string>
+    <string name="empty_products_hint">Add your first product or import a CSV in Settings.</string>
+    <string name="no_product_match">No product matches your search</string>
 </resources>

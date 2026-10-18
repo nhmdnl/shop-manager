@@ -68,6 +68,7 @@ import com.archsolutions.shopmanager.data.db.entities.ProductEntity
 import com.archsolutions.shopmanager.domain.isLowStock
 import com.archsolutions.shopmanager.feature.day.DayGateLockCard
 import java.time.ZoneId
+import com.archsolutions.shopmanager.core.designsystem.components.NoProductsCard
 
 /** Sell (7.2): tablet = product grid + Current sale panel; phone = grid + cart bar, then Checkout. */
 @Composable
@@ -80,6 +81,7 @@ fun SellScreen(
     onCloseDay: () -> Unit,
     onCheckout: () -> Unit,
     modifier: Modifier = Modifier,
+    onAddProduct: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val colors = LocalShopColors.current
@@ -135,6 +137,7 @@ fun SellScreen(
                         onCategory = viewModel::setCategory,
                         onTap = viewModel::addOne,
                         onLongPress = { quantityFor = it },
+                        onAddProduct = onAddProduct,
                     )
                 }
             }
@@ -155,6 +158,7 @@ fun SellScreen(
             snackbarHostState = snackbarHostState,
             onCheckout = onCheckout,
             onLongPress = { quantityFor = it },
+            onAddProduct = onAddProduct,
             modifier = modifier,
         )
     }
@@ -187,6 +191,7 @@ private fun SellCompact(
     snackbarHostState: SnackbarHostState,
     onCheckout: () -> Unit,
     onLongPress: (ProductEntity) -> Unit,
+    onAddProduct: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalShopColors.current
@@ -233,6 +238,7 @@ private fun SellCompact(
                 onCategory = viewModel::setCategory,
                 onTap = viewModel::addOne,
                 onLongPress = onLongPress,
+                onAddProduct = onAddProduct,
             )
         }
     }
@@ -248,6 +254,7 @@ private fun ProductBrowser(
     onCategory: (Long?) -> Unit,
     onTap: (Long) -> Unit,
     onLongPress: (ProductEntity) -> Unit,
+    onAddProduct: () -> Unit,
 ) {
     val colors = LocalShopColors.current
     SearchField(
@@ -259,11 +266,12 @@ private fun ProductBrowser(
     CategoryChips(categories = state.categories, selected = state.categoryId, onSelect = onCategory)
     Spacer(modifier = Modifier.height(16.dp))
     if (state.loaded && state.products.isEmpty()) {
-        Text(
-            text = stringResource(R.string.empty_products),
-            style = MaterialTheme.typography.bodyLarge,
-            color = colors.muted,
-        )
+        // No products at all gets the "add your first one" card; a search with no match just says so.
+        if (state.query.isBlank() && state.categoryId == null) {
+            NoProductsCard(onAddProduct = onAddProduct)
+        } else {
+            Text(text = stringResource(R.string.no_product_match), style = MaterialTheme.typography.bodyLarge, color = colors.muted)
+        }
         return
     }
     val checkStock = stringResource(R.string.check_stock)

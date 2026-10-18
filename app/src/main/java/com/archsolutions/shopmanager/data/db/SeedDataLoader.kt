@@ -28,13 +28,13 @@ class SeedDataLoader @Inject constructor(
     private val settingsStore: SettingsStore,
     @ApplicationContext private val context: Context,
 ) {
-    /** Seeds an empty database, in debug builds only (spec 13). */
-    suspend fun loadSeedDataIfEmpty() {
+    /** Seeds an empty database, in debug builds only (spec 13). True when it seeded just now (a fresh install). */
+    suspend fun loadSeedDataIfEmpty(): Boolean {
         val debuggable = (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
-        if (debuggable) seedIfEmpty()
+        return debuggable && seedIfEmpty()
     }
 
-    internal suspend fun seedIfEmpty() = db.withTransaction {
+    internal suspend fun seedIfEmpty(): Boolean = db.withTransaction {
         val categoryDao = db.categoryDao()
         val productDao = db.productDao()
         val supplierDao = db.supplierDao()
@@ -43,7 +43,7 @@ class SeedDataLoader @Inject constructor(
         val stockMovementDao = db.stockMovementDao()
 
         // Check if data already exists
-        if (categoryDao.getByName("Food") != null) return@withTransaction
+        if (categoryDao.getByName("Food") != null) return@withTransaction false
 
         val now = clock.nowMillis()
         val today = clock.todayDateString()
@@ -153,5 +153,6 @@ class SeedDataLoader @Inject constructor(
                 openingMobile = 40_000L,
             )
         )
+        true
     }
 }

@@ -472,6 +472,7 @@ private fun ShopDataSettingsCard(
     val locale = LocalConfiguration.current.locales[0]
     val pinGate = rememberPinGate()
     val backup = rememberBackupActions(snackbarHostState)
+    val importProducts = rememberProductImport(snackbarHostState)
     var editingName by remember { mutableStateOf(false) }
     var choosingPin by remember { mutableStateOf(false) }
     var confirmingRestore by remember { mutableStateOf(false) }
@@ -493,6 +494,9 @@ private fun ShopDataSettingsCard(
             }
             SettingRow(title = stringResource(R.string.settings_backup), subtitle = lastBackup) {
                 RowChip(text = stringResource(R.string.settings_backup_now), onClick = backup.backUp)
+            }
+            SettingRow(title = stringResource(R.string.settings_import), subtitle = stringResource(R.string.import_sub)) {
+                RowChip(text = stringResource(R.string.settings_import_choose), onClick = importProducts)
             }
             SettingRow(title = stringResource(R.string.settings_restore), subtitle = stringResource(R.string.settings_restore_desc)) {
                 RowChip(text = stringResource(R.string.action_restore), onClick = { pinGate.run(R.string.pin_for_restore) { confirmingRestore = true } })

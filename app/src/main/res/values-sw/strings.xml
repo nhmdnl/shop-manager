@@ -515,4 +515,40 @@
         <item quantity="one">Hakuna nakala kwa siku 1</item>
         <item quantity="other">Hakuna nakala kwa siku %1$d</item>
     </plurals>
+    <!-- Onboarding and product import (M9) -->
+    <string name="step_of">Hatua %1$d kati ya %2$d</string>
+    <string name="action_next">Endelea</string>
+    <string name="onboarding_welcome_title">Karibu Shop Manager</string>
+    <string name="onboarding_welcome_sub">Maswali mawili mafupi, kisha unaweza kuuza.</string>
+    <string name="shop_name_placeholder">Kwa mfano, Duka la Mary</string>
+    <string name="gloss_swahili">Kiswahili</string>
+    <string name="gloss_tigrinya">Kitigrinya</string>
+    <string name="gloss_portuguese">Kireno</string>
+    <string name="onboarding_theme_title">Mwangaza au giza?</string>
+    <string name="onboarding_theme_sub">Unaweza kubadilisha wakati wowote kwenye Mipangilio.</string>
+    <string name="onboarding_money_title">Kuna nini dukani sasa hivi?</string>
+    <string name="onboarding_money_sub">Hesabu droo na angalia salio la Mobile Money. Hii inafungua siku yako ya kwanza.</string>
+    <string name="import_title">Leta bidhaa (si lazima)</string>
+    <string name="import_sub">Kutoka faili la CSV: jina, aina, bei, stoo</string>
+    <string name="import_choose">Chagua faili la CSV</string>
+    <string name="import_failed">Imeshindwa kusoma faili hilo.</string>
+    <string name="settings_import">Leta bidhaa</string>
+    <string name="settings_import_choose">Chagua faili</string>
+    <plurals name="plurals_imported">
+        <item quantity="one">Bidhaa %1$d imeongezwa</item>
+        <item quantity="other">Bidhaa %1$d zimeongezwa</item>
+    </plurals>
+    <plurals name="plurals_skipped">
+        <item quantity="one">Mstari %1$d umerukwa</item>
+        <item quantity="other">Mistari %1$d imerukwa</item>
+    </plurals>
+    <!-- Past day, read-only (M9) -->
+    <string name="past_day_closed_at">Ilifungwa %1$s · kusoma tu</string>
+    <string name="past_day_locked">Imefungwa</string>
+    <string name="total_sales_incl_credit">Jumla ya mauzo (pamoja na mkopo)</string>
+    <string name="action_share">Shiriki</string>
+    <string name="past_day_footer">Makosa yanayogunduliwa baadaye yanarekebishwa kwenye siku ya leo iliyo wazi, si hapa.</string>
+    <string name="action_retry">Jaribu tena</string>
+    <string name="empty_products_hint">Ongeza bidhaa yako ya kwanza au leta CSV kwenye Mipangilio.</string>
+    <string name="no_product_match">Hakuna bidhaa inayolingana na utafutaji</string>
 </resources>
