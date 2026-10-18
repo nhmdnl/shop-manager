@@ -46,47 +46,24 @@ fun <T> ChipRow(
     ) {
         items.forEach { item ->
             val isSelected = item == selectedItem
-            val shape = CircleShape
-            Box(
-                modifier = Modifier
-                    .height(40.dp)
-                    .clip(shape)
-                    .then(
-                        if (isSelected) {
-                            Modifier.background(colors.ink)
-                        } else {
-                            Modifier
-                                .background(colors.surface)
-                                .then(
-                                    Modifier.background(
-                                        color = colors.surface,
-                                        shape = shape,
-                                    )
-                                )
-                        }
-                    )
-                    .clickable { onItemSelected(item) }
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.Center,
+            Surface(
+                onClick = { onItemSelected(item) },
+                shape = CircleShape,
+                color = if (isSelected) colors.ink else colors.surface,
+                border = if (isSelected) null else BorderStroke(1.dp, colors.line),
             ) {
-                Surface(
-                    shape = shape,
-                    color = if (isSelected) colors.ink else colors.surface,
-                    border = if (isSelected) null else BorderStroke(1.dp, colors.line),
+                Box(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .height(40.dp)
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = labelProvider(item),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (isSelected) colors.surface else colors.ink,
-                        )
-                    }
+                    Text(
+                        text = labelProvider(item),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (isSelected) colors.surface else colors.ink,
+                    )
                 }
             }
         }

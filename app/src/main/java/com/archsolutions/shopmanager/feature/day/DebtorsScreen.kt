@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -111,8 +110,7 @@ fun DebtorsScreen(
                 leadingIcon = Icons.Default.Add,
                 modifier = Modifier
                     .navigationBarsPadding()
-                    .padding(16.dp)
-                    .widthIn(max = 720.dp),
+                    .padding(16.dp),
             )
         },
     ) { paddingValues ->
@@ -124,7 +122,7 @@ fun DebtorsScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
-                ShopCard(modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp), padding = 20.dp) {
+                ShopCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(stringResource(R.string.total_owed), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
                         Text(Money.format(state.totalOwed), style = amountTextStyle(34.sp), color = colors.ink)
@@ -137,11 +135,10 @@ fun DebtorsScreen(
                     value = state.query,
                     onValueChange = viewModel::setQuery,
                     placeholder = stringResource(R.string.search_customer),
-                    modifier = Modifier.widthIn(max = 720.dp),
                 )
             }
             item {
-                ShopCard(modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp), padding = 0.dp) {
+                ShopCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
                     Column {
                         if (state.loaded && state.debtors.isEmpty()) {
                             Text(

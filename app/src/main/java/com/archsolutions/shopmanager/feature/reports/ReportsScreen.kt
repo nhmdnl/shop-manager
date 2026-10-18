@@ -94,6 +94,8 @@ import java.time.ZoneOffset
 import java.time.format.TextStyle
 import kotlin.math.abs
 import kotlin.math.ceil
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.material3.Surface
 
 /** Reports (7.6 + addendum): Overview with stats, daily chart, paid-by and top products; Days lists closed days. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -152,12 +154,12 @@ fun ReportsScreen(
                     ReportsTitle()
                     Spacer(modifier = Modifier.width(12.dp))
                     TabSwitch(state.tab, viewModel::setTab, Modifier.width(240.dp))
-                    PeriodChips(state, onPreset, Modifier.weight(1f))
+                    PeriodChips(state, onPreset, Modifier.weight(1f), alignEnd = true)
                     ShareMenu(compact = false, onExport = export)
                 }
             } else {
                 TabSwitch(state.tab, viewModel::setTab, Modifier.fillMaxWidth())
-                PeriodChips(state, onPreset, Modifier.fillMaxWidth())
+                PeriodChips(state, onPreset, Modifier.fillMaxWidth(), alignEnd = false)
             }
             val report = state.report
             when {
@@ -206,7 +208,7 @@ private fun TabSwitch(tab: ReportTab, onTab: (ReportTab) -> Unit, modifier: Modi
 }
 
 @Composable
-private fun PeriodChips(state: ReportsUiState, onPreset: (ReportPreset) -> Unit, modifier: Modifier) {
+private fun PeriodChips(state: ReportsUiState, onPreset: (ReportPreset) -> Unit, modifier: Modifier, alignEnd: Boolean) {
     val labels = mapOf(
         ReportPreset.TODAY to stringResource(R.string.period_today),
         ReportPreset.WEEK to stringResource(R.string.period_week),
@@ -221,7 +223,7 @@ private fun PeriodChips(state: ReportsUiState, onPreset: (ReportPreset) -> Unit,
         onItemSelected = onPreset,
         labelProvider = { labels.getValue(it) },
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, if (alignEnd) Alignment.End else Alignment.Start),
     )
 }
 
@@ -235,7 +237,17 @@ private fun ShareMenu(compact: Boolean, onExport: (ReportExport.Kind) -> Unit, m
                 Icon(Icons.Outlined.IosShare, contentDescription = stringResource(R.string.share_report), tint = colors.ink)
             }
         } else {
-            SecondaryButton(text = stringResource(R.string.share_pdf_csv), onClick = { open = true }, leadingIcon = Icons.Outlined.IosShare)
+            // A pill the height of the period chips (design board), not a full-size button.
+            Surface(onClick = { open = true }, shape = CircleShape, color = colors.surface, border = BorderStroke(1.dp, colors.line)) {
+                Row(
+                    modifier = Modifier.height(40.dp).padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(Icons.Outlined.IosShare, contentDescription = null, tint = colors.ink, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.share_pdf_csv), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = colors.ink)
+                }
+            }
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = colors.surface) {
             DropdownMenuItem(
@@ -274,12 +286,13 @@ private fun TabletOverview(report: ReportData, today: LocalDate?, onDebtors: () 
         if (report.stats.count == 0) {
             NoSalesCard()
         } else {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
+            // Top products runs down beside both the chart and Paid by, as on the design board.
+            Row(modifier = Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Column(modifier = Modifier.weight(1.6f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     DailySalesCard(report, today, chartHeight = 280.dp)
                     PaidByCard(report.paidBy, wide = true, onDebtors = onDebtors)
                 }
-                TopProductsCard(report.top, Modifier.weight(1f))
+                TopProductsCard(report.top, Modifier.weight(1f).fillMaxHeight())
             }
         }
     }
@@ -579,9 +592,21 @@ private fun CustomRangeDialog(state: ReportsUiState, onDismiss: () -> Unit, onPi
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     ) {
+        val locale = LocalConfiguration.current.locales[0]
+        val start = pickerState.selectedStartDateMillis?.utcDate()
+        val end = pickerState.selectedEndDateMillis?.utcDate()
         DateRangePicker(
             state = pickerState,
             title = { Text(stringResource(R.string.pick_dates), modifier = Modifier.padding(start = 24.dp, top = 16.dp)) },
+            // One short line ("10–17 Oct"); the stock headline wrapped onto three.
+            headline = {
+                Text(
+                    text = if (start == null) "–" else DayFormat.range(start, end ?: start, locale),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(start = 24.dp, end = 12.dp, bottom = 12.dp),
+                )
+            },
+            showModeToggle = false,
             modifier = Modifier.weight(1f),
         )
     }
