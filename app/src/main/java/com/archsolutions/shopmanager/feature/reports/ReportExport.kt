@@ -219,8 +219,10 @@ private class ReportPdf(private val context: Context) {
         var x = MARGIN
         cells.forEachIndexed { index, cell ->
             val width = widths[index]
-            val fitted = TextUtils.ellipsize(cell, textPaint, width - 6f, TextUtils.TruncateAt.END).toString()
-            val start = if (index in endAligned) x + width - textPaint.measureText(fitted) else x
+            // A gap after right-aligned columns, or "MoMo difference" runs into "Reason".
+            val gap = if (index in endAligned && index < cells.lastIndex) COLUMN_GAP else 0f
+            val fitted = TextUtils.ellipsize(cell, textPaint, width - gap - 6f, TextUtils.TruncateAt.END).toString()
+            val start = if (index in endAligned) x + width - gap - textPaint.measureText(fitted) else x
             page.canvas.drawText(fitted, start, y + 12f, textPaint)
             x += width
         }
@@ -235,6 +237,7 @@ private class ReportPdf(private val context: Context) {
         const val MARGIN = 40f
         const val CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN
         const val ROW_HEIGHT = 18f
+        const val COLUMN_GAP = 12f
         // Light palette from the design system.
         const val INK = 0xFF1B1A17.toInt()
         const val MUTED = 0xFF5E5A52.toInt()

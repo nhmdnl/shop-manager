@@ -466,4 +466,7 @@
         <item quantity="one">ilifunguliwa upya mara moja</item>
         <item quantity="other">ilifunguliwa upya mara %1$d</item>
     </plurals>
+    <string name="action_decrease">Punguza</string>
+    <string name="action_increase">Ongeza</string>
+    <string name="settings_currency_value">%1$s (shilingi kamili)</string>
 </resources>

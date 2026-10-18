@@ -468,7 +468,7 @@ private fun ShopDataSettingsCard(
                     color = colors.muted,
                 )
                 Text(
-                    text = "$currency (whole shillings)",
+                    text = stringResource(R.string.settings_currency_value, currency),
                     style = MaterialTheme.typography.bodyLarge,
                     color = colors.ink,
                 )

@@ -479,4 +479,7 @@
         <item quantity="one">reopened once</item>
         <item quantity="other">reopened %1$d times</item>
     </plurals>
+    <string name="action_decrease">Decrease</string>
+    <string name="action_increase">Increase</string>
+    <string name="settings_currency_value">%1$s (whole shillings)</string>
 </resources>

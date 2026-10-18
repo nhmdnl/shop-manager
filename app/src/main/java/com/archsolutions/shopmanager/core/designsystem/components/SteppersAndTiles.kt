@@ -31,8 +31,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 
@@ -63,7 +65,7 @@ fun QtyStepper(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.Remove,
-                    contentDescription = "Decrease",
+                    contentDescription = stringResource(R.string.action_decrease),
                     tint = colors.ink,
                     modifier = Modifier.size(18.dp),
                 )
@@ -90,7 +92,7 @@ fun QtyStepper(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Increase",
+                    contentDescription = stringResource(R.string.action_increase),
                     tint = colors.ink,
                     modifier = Modifier.size(18.dp),
                 )

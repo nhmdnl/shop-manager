@@ -466,4 +466,7 @@
         <item quantity="one">reaberto uma vez</item>
         <item quantity="other">reaberto %1$d vezes</item>
     </plurals>
+    <string name="action_decrease">Diminuir</string>
+    <string name="action_increase">Aumentar</string>
+    <string name="settings_currency_value">%1$s (xelins inteiros)</string>
 </resources>
