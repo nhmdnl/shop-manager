@@ -137,6 +137,21 @@ class BalanceCalculatorTest {
         assertEquals(BalanceStatus.BALANCED, BalanceCalculator.status(-500L, allowedDifference = 500L))
     }
 
+    // Checklist 15: a purchase "Not paid yet" raises stock (StockRulesTest) and leaves the money alone.
+    @Test
+    fun `a purchase not paid yet changes neither cash nor mobile money`() {
+        val balance = BalanceCalculator.compute(
+            day = day,
+            sales = emptyList(),
+            entries = emptyList(),
+            purchases = listOf(purchase(82_400L, PurchasePaid.NOT_PAID), purchase(5_000L, PurchasePaid.MOBILE_MONEY)),
+        )
+        assertEquals(day.openingCash, balance.cash.expected)
+        assertEquals(0L, balance.cash.purchasesPaid)
+        assertEquals(day.openingMobile - 5_000L, balance.mobile.expected)
+        assertEquals(87_400L, balance.purchasesTotal)
+    }
+
     @Test
     fun `debtors owe credit sales minus repayments, dated by the oldest unpaid sale`() {
         val joseph = CustomerEntity(id = 1, name = "Joseph K.", phone = null, note = null)

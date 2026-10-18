@@ -144,6 +144,8 @@ enum class NavDestination(
 @Composable
 fun AppNavHost(
     isExpanded: Boolean,
+    // 3.5: medium widths (portrait tablets) keep the rail; screens go two-pane only when expanded.
+    useRail: Boolean = isExpanded,
     openCloseDay: Boolean = false,
     onCloseDayOpened: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
@@ -218,7 +220,7 @@ fun AppNavHost(
         }
     }
 
-    if (isExpanded) {
+    if (useRail) {
         // Expanded layout (Tablet): Navigation Rail (104 dp wide) + content
         Row(modifier = modifier.fillMaxSize().background(colors.paper)) {
             // Open the day is a full-screen task on tablet too (no rail on the design board)
@@ -341,7 +343,7 @@ fun AppNavHost(
                     settingsViewModel = settingsViewModel,
                     gateViewModel = gateViewModel,
                     gateState = gateState,
-                    isExpanded = true,
+                    isExpanded = isExpanded,
                 )
             }
         }

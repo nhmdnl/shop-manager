@@ -69,6 +69,7 @@ class MainActivity : AppCompatActivity() {
             val windowSizeClass = calculateWindowSizeClass(this)
             val settings by settingsStore.settings.collectAsState(initial = ShopSettings())
             val isExpanded = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
+            val useRail = windowSizeClass.widthSizeClass != WindowWidthSizeClass.Compact
             val isTigrinya = settings.language == "ti"
 
             ShopManagerTheme(
@@ -77,6 +78,7 @@ class MainActivity : AppCompatActivity() {
             ) {
                 AppNavHost(
                     isExpanded = isExpanded,
+                    useRail = useRail,
                     openCloseDay = openCloseDay,
                     onCloseDayOpened = { openCloseDay = false },
                 )
