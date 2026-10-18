@@ -5,6 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,11 +54,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
@@ -62,6 +68,11 @@ import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.feature.day.DayScreen
 import com.archsolutions.shopmanager.feature.day.OpenDayScreen
 import com.archsolutions.shopmanager.feature.home.HomeScreen
+import com.archsolutions.shopmanager.feature.home.HomeViewModel
+import com.archsolutions.shopmanager.feature.sales.SaleDetailScreen
+import com.archsolutions.shopmanager.feature.sales.SalesScreen
+import com.archsolutions.shopmanager.feature.sell.CheckoutScreen
+import com.archsolutions.shopmanager.feature.sell.SellViewModel
 import com.archsolutions.shopmanager.feature.reports.ReportsScreen
 import com.archsolutions.shopmanager.feature.sell.SellScreen
 import com.archsolutions.shopmanager.feature.settings.SettingsScreen
@@ -79,6 +90,10 @@ import kotlinx.serialization.Serializable
 @Serializable object ReportsRoute
 @Serializable object SettingsRoute
 @Serializable object OpenDayRoute
+@Serializable object SellGraph // Sell + phone Checkout share one SellViewModel (the cart)
+@Serializable object CheckoutRoute
+@Serializable object SalesRoute
+@Serializable data class SaleDetailRoute(val id: Long)
 
 enum class NavDestination(
     val route: Any,
@@ -276,15 +291,19 @@ fun AppNavHost(
             NavDestination.REPORTS,
         )
 
-        val isFullscreenTask = currentRoute == SettingsRoute::class.qualifiedName || isOpenDay
+        val isFullscreenTask = isOpenDay ||
+            currentRoute == SettingsRoute::class.qualifiedName ||
+            currentRoute == CheckoutRoute::class.qualifiedName
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
             containerColor = colors.paper,
             bottomBar = {
                 if (!isFullscreenTask) {
+                    // 76 dp of items above the system navigation inset, which NavigationBar pads inside itself.
+                    val systemNavInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                     NavigationBar(
-                        modifier = Modifier.height(76.dp),
+                        modifier = Modifier.height(76.dp + systemNavInset),
                         containerColor = colors.surface,
                     ) {
                         bottomNavDestinations.forEach { dest ->
@@ -351,6 +370,9 @@ private fun NavContent(
         startDestination = HomeRoute,
     ) {
         composable<HomeRoute> {
+            val homeViewModel: HomeViewModel = hiltViewModel()
+            val recentSales by homeViewModel.recentSales.collectAsStateWithLifecycle()
+            val lowStock by homeViewModel.lowStock.collectAsStateWithLifecycle()
             HomeScreen(
                 isExpanded = isExpanded,
                 shopName = settings.shopName,
@@ -362,15 +384,43 @@ private fun NavContent(
                 onNavigateToDay = { navController.navigate(DayRoute) },
                 onNavigateToSettings = { navController.navigate(SettingsRoute) },
                 onOpenDay = openDay,
+                recentSales = recentSales,
+                lowStock = lowStock,
+                onSeeAllSales = { navController.navigate(SalesRoute) },
+                onOpenSale = { navController.navigate(SaleDetailRoute(it)) },
             )
         }
-        composable<SellRoute> {
-            SellScreen(
+        navigation<SellGraph>(startDestination = SellRoute) {
+            composable<SellRoute> { entry ->
+                SellScreen(
+                    isExpanded = isExpanded,
+                    gateState = gateState,
+                    zoneId = gateViewModel.zoneId,
+                    viewModel = sellGraphViewModel(navController, entry),
+                    onOpenDay = openDay,
+                    onCloseDay = closeDay,
+                    onCheckout = { navController.navigate(CheckoutRoute) },
+                )
+            }
+            composable<CheckoutRoute> { entry ->
+                CheckoutScreen(
+                    viewModel = sellGraphViewModel(navController, entry),
+                    onBack = { navController.popBackStack() },
+                    onDone = { navController.popBackStack() },
+                )
+            }
+        }
+        composable<SalesRoute> {
+            SalesScreen(
                 isExpanded = isExpanded,
-                gateState = gateState,
-                zoneId = gateViewModel.zoneId,
-                onOpenDay = openDay,
-                onCloseDay = closeDay,
+                onBack = { navController.popBackStack() },
+                onOpenSale = { navController.navigate(SaleDetailRoute(it)) },
+            )
+        }
+        composable<SaleDetailRoute> {
+            SaleDetailScreen(
+                isExpanded = isExpanded,
+                onBack = { navController.popBackStack() },
             )
         }
         composable<OpenDayRoute> {
@@ -404,4 +454,11 @@ private fun NavContent(
             )
         }
     }
+}
+
+/** The cart lives in one SellViewModel scoped to the Sell graph, shared by Sell and Checkout. */
+@Composable
+private fun sellGraphViewModel(navController: NavHostController, entry: NavBackStackEntry): SellViewModel {
+    val graphEntry = remember(entry) { navController.getBackStackEntry<SellGraph>() }
+    return hiltViewModel(graphEntry)
 }

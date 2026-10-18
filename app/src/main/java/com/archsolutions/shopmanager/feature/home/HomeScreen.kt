@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,7 +53,11 @@ import com.archsolutions.shopmanager.core.designsystem.components.SectionLabel
 import com.archsolutions.shopmanager.core.designsystem.components.ShopCard
 import com.archsolutions.shopmanager.core.money.Money
 import com.archsolutions.shopmanager.core.util.DayFormat
+import com.archsolutions.shopmanager.core.util.Qty
+import com.archsolutions.shopmanager.data.db.dao.LowStockItem
 import com.archsolutions.shopmanager.feature.day.DayGateLockCard
+import com.archsolutions.shopmanager.feature.sales.SaleListRow
+import com.archsolutions.shopmanager.feature.sales.SaleRow
 import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,6 +73,10 @@ fun HomeScreen(
     onNavigateToDay: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onOpenDay: () -> Unit,
+    recentSales: List<SaleRow>,
+    lowStock: List<LowStockItem>,
+    onSeeAllSales: () -> Unit,
+    onOpenSale: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalShopColors.current
@@ -184,12 +193,15 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     LowStockCard(
-                        modifier = Modifier.weight(1f),
+                        items = lowStock,
                         onAddPurchase = onNavigateToStock,
+                        modifier = Modifier.weight(1f),
                     )
                     RecentSalesCard(
+                        sales = recentSales,
+                        onSeeAll = onSeeAllSales,
+                        onOpenSale = onOpenSale,
                         modifier = Modifier.weight(1f),
-                        onSeeAll = onNavigateToSell,
                     )
                 }
             } else {
@@ -243,12 +255,15 @@ fun HomeScreen(
                 }
 
                 LowStockCard(
-                    modifier = Modifier.fillMaxWidth(),
+                    items = lowStock,
                     onAddPurchase = onNavigateToStock,
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 RecentSalesCard(
+                    sales = recentSales,
+                    onSeeAll = onSeeAllSales,
+                    onOpenSale = onOpenSale,
                     modifier = Modifier.fillMaxWidth(),
-                    onSeeAll = onNavigateToSell,
                 )
             }
         }
@@ -313,6 +328,7 @@ private fun HomeTile(
 
 @Composable
 private fun LowStockCard(
+    items: List<LowStockItem>,
     onAddPurchase: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -334,22 +350,49 @@ private fun LowStockCard(
                 )
             }
 
-            // In Milestone 1, show sample or empty state
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Check,
-                    contentDescription = null,
-                    tint = colors.green,
-                    modifier = Modifier.size(20.dp),
-                )
-                Text(
-                    text = stringResource(R.string.empty_low_stock),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.muted,
-                )
+            if (items.isEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = null,
+                        tint = colors.green,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.empty_low_stock),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.muted,
+                    )
+                }
+            }
+            items.forEachIndexed { index, item ->
+                if (index > 0) HorizontalDivider(color = colors.line)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = item.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.ink,
+                        )
+                        item.supplierName?.let {
+                            Text(text = it, style = MaterialTheme.typography.bodySmall, color = colors.muted)
+                        }
+                    }
+                    Text(
+                        text = if (item.stockQty < 0) {
+                            stringResource(R.string.check_stock)
+                        } else {
+                            stringResource(R.string.stock_left, Qty.format(item.stockQty))
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.rust,
+                    )
+                }
             }
         }
     }
@@ -357,14 +400,18 @@ private fun LowStockCard(
 
 @Composable
 private fun RecentSalesCard(
+    sales: List<SaleRow>,
     onSeeAll: () -> Unit,
+    onOpenSale: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalShopColors.current
-    ShopCard(modifier = modifier) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    ShopCard(modifier = modifier, padding = 0.dp) {
+        Column {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -378,11 +425,18 @@ private fun RecentSalesCard(
                 )
             }
 
-            Text(
-                text = stringResource(R.string.empty_reports),
-                style = MaterialTheme.typography.bodyMedium,
-                color = colors.muted,
-            )
+            if (sales.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.empty_reports),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.muted,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+            sales.forEachIndexed { index, row ->
+                if (index > 0) HorizontalDivider(color = colors.line)
+                SaleListRow(row = row, onClick = { onOpenSale(row.saleId) })
+            }
         }
     }
 }

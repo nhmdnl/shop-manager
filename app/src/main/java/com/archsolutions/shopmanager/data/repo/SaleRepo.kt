@@ -13,6 +13,7 @@ import com.archsolutions.shopmanager.data.db.entities.StockMovementEntity
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToLong
 
 data class SaleCartItem(
     val productId: Long,
@@ -35,6 +36,8 @@ class SaleRepo @Inject constructor(
 
     fun getSalesForDay(dayId: Long): Flow<List<SaleEntity>> = saleDao.getSalesForDay(dayId)
 
+    fun getSalesWithItemsForDay(dayId: Long): Flow<List<SaleWithItems>> = saleDao.getSalesWithItemsForDay(dayId)
+
     fun getRecentSales(limit: Int = 5): Flow<List<SaleEntity>> = saleDao.getRecentSales(limit)
 
     fun getSalesBetween(startMillis: Long, endMillis: Long): Flow<List<SaleEntity>> =
@@ -54,8 +57,9 @@ class SaleRepo @Inject constructor(
         db.requireOpenDay(dayId)
 
         val now = clock.nowMillis()
-        val total = items.sumOf { (it.qty * it.unitPrice).toLong() }
-        val costTotal = items.sumOf { (it.qty * it.unitCost).toLong() }
+        // Spec 5.1.2: Σ qty × price, rounded to whole UGX once (kg/litre quantities can be fractional).
+        val total = items.sumOf { it.qty * it.unitPrice }.roundToLong()
+        val costTotal = items.sumOf { it.qty * it.unitCost }.roundToLong()
 
         val saleId = saleDao.insertSale(
             SaleEntity(

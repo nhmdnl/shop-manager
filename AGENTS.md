@@ -39,8 +39,8 @@ Single `app` module, layered by package:
 
 - `core/` — `money/Money.kt` (UGX as `Long`), `designsystem/` (theme + reusable components; screens compose these, not raw Material), `locale/LanguageManager` (en/lg/pt/sw/ti via `values-*`), `util/` (`Clock`, `Result`).
 - `data/db/` — `AppDatabase` (single Room DB), `entities/`, `dao/`, `SeedDataLoader`. `data/repo/*Repo` is the only layer features touch; any write spanning tables belongs in a repo method backed by a DAO `@Transaction`. `data/settings/SettingsStore` is DataStore.
-- `domain/` — pure business logic shared by features (`NoteCounter`).
-- `feature/<name>/` — one Compose screen (+ ViewModel) per area: home, sell, stock, suppliers, day, reports, settings.
+- `domain/` — pure business logic shared by features (`NoteCounter`, `Cart.kt`: sale total rounding must stay identical to `SaleRepo.createSale`, quick cash amounts, `isLowStock`).
+- `feature/<name>/` — one Compose screen (+ ViewModel) per area: home, sell, sales (Today's sales, Sale detail), stock, suppliers, day, reports, settings. `SellViewModel` is scoped to the `SellGraph` nav graph so Sell and phone Checkout share one cart, and it persists the cart in `SavedStateHandle`.
 - `app/` — `ShopApp`, `AppNavHost`, `MainActivity`, and `DayGate`: a singleton `Flow<DayGateState>` for today's business date (spec 6.3 cases). `DayGateViewModel` loads the seed first, then exposes the state; `AppNavHost` passes it to screens and re-reads the date on resume.
 
 Day locking runs on two layers. The UI shows `feature/day/DayGateLockCard` and greys out actions while the state isn't `Ready`. Every sale, purchase and money-entry write calls `requireOpenDay(dayId)` (`data/repo/DayLock.kt`), which throws `DayNotOpenException`. No day is ever opened implicitly (hub decision 0005).

@@ -3,6 +3,7 @@ package com.archsolutions.shopmanager.data.repo
 import androidx.room.withTransaction
 import com.archsolutions.shopmanager.core.util.AppClock
 import com.archsolutions.shopmanager.data.db.AppDatabase
+import com.archsolutions.shopmanager.data.db.dao.LowStockItem
 import com.archsolutions.shopmanager.data.db.entities.CategoryEntity
 import com.archsolutions.shopmanager.data.db.entities.MovementType
 import com.archsolutions.shopmanager.data.db.entities.ProductEntity
@@ -29,6 +30,8 @@ class ProductRepo @Inject constructor(
     suspend fun getByIdDirect(id: Long): ProductEntity? = productDao.getByIdDirect(id)
 
     fun getLowStock(): Flow<List<ProductEntity>> = productDao.getLowStock()
+
+    fun getLowStockWithSupplier(): Flow<List<LowStockItem>> = productDao.getLowStockWithSupplier()
 
     fun getByCategory(categoryId: Long): Flow<List<ProductEntity>> = productDao.getByCategory(categoryId)
 

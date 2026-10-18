@@ -39,6 +39,15 @@ sealed interface DayGateState {
     data class Ready(val day: BusinessDayEntity) : DayGateState
 }
 
+/** The day screens list records for: today's, or the earlier day still waiting to be closed. */
+val DayGateState.currentDay: BusinessDayEntity?
+    get() = when (this) {
+        is DayGateState.Ready -> day
+        is DayGateState.TodayClosed -> day
+        is DayGateState.PreviousDayStillOpen -> day
+        DayGateState.Loading, DayGateState.OpenDayRequired, DayGateState.DayNotOpen -> null
+    }
+
 // DECISION: with openDayOnStart off, v1.0 opened the day automatically on the first sale, but the
 // v1.1 addendum (HomeLocked board, which wins) keeps Home locked with an "Open the day" card instead.
 fun evaluateDayGate(

@@ -132,4 +132,65 @@
         <item quantity="one">%1$d low</item>
         <item quantity="other">%1$d low</item>
     </plurals>
+
+    <!-- Sell -->
+    <string name="current_sale">Current sale</string>
+    <string name="each_price">%1$s each</string>
+    <string name="stock_left">%1$s left</string>
+    <string name="check_stock">Check stock</string>
+    <string name="label_payment">Payment</string>
+    <string name="cash_received">Cash received</string>
+    <string name="cash_exact">Exact</string>
+    <string name="change_to_give">Change to give</string>
+    <string name="checkout_title">Checkout</string>
+    <string name="action_edit">Edit</string>
+    <string name="total_with_items">Total · %1$s</string>
+    <string name="label_customer">Customer</string>
+    <string name="who_buys_on_credit">Who is buying on credit?</string>
+    <string name="search_or_add_customer">Search or add customer</string>
+    <string name="owes_amount">Owes %1$s</string>
+    <string name="owes_nothing">Owes nothing</string>
+    <string name="has_credit">Has %1$s in credit</string>
+    <string name="new_customer">New customer</string>
+    <string name="will_owe">%1$s will owe %2$s after this sale</string>
+    <string name="credit_not_counted">Not counted in cash or Mobile Money.</string>
+    <string name="label_name">Name</string>
+    <string name="label_phone_optional">Phone (optional)</string>
+    <string name="phone_placeholder">07XX XXX XXX</string>
+    <string name="phone_reminder_hint">The phone number lets you send a WhatsApp reminder later.</string>
+    <string name="save_and_choose">Save and choose</string>
+    <string name="how_many">How many?</string>
+    <string name="price_each_in_stock">%1$s each · %2$s in stock</string>
+    <string name="line_total">Line total</string>
+    <string name="qty_decimals_hint">For kg and litre items this box accepts decimals, like 0.5.</string>
+    <string name="add_qty_to_sale">Add %1$s to sale</string>
+    <string name="sale_saved">Sale saved</string>
+    <string name="sale_saved_summary">%1$s · %2$s</string>
+    <string name="sale_saved_summary_change">%1$s · %2$s · change %3$s</string>
+    <string name="todays_sales">Today\'s sales</string>
+    <string name="sales_summary">%1$s · %2$s · %3$s</string>
+    <string name="voided_reason">Voided · %1$s</string>
+    <string name="credit_customer">Credit · %1$s</string>
+    <string name="voided_note">Voided sales stay in the list but don\'t count in any total.</string>
+    <string name="filter_all">All</string>
+    <string name="sale_title">Sale %1$s</string>
+    <string name="sale_qty_line">%1$s × %2$s</string>
+    <string name="cash_received_change">Cash received · change</string>
+    <string name="void_this_sale_action">Void this sale</string>
+    <string name="void_this_sale">Void this sale?</string>
+    <string name="void_explain">Stock goes back on the shelf and the sale leaves today\'s totals. It stays in the records, marked voided.</string>
+    <string name="label_reason">Reason</string>
+    <string name="reason_wrong_item">Wrong item</string>
+    <string name="reason_customer_returned">Customer returned</string>
+    <string name="reason_wrong_amount">Wrong amount</string>
+    <string name="reason_other">Other</string>
+    <string name="note_optional">Note (optional)</string>
+    <string name="note_placeholder">What happened</string>
+    <string name="pin_needed">PIN needed (turned on in Settings)</string>
+    <string name="keep_sale">Keep sale</string>
+    <string name="void_sale">Void sale</string>
+    <plurals name="plurals_sales">
+        <item quantity="one">%1$d sale</item>
+        <item quantity="other">%1$d sales</item>
+    </plurals>
 </resources>

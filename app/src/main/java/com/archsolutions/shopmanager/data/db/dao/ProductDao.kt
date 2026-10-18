@@ -8,6 +8,14 @@ import androidx.room.Update
 import com.archsolutions.shopmanager.data.db.entities.ProductEntity
 import kotlinx.coroutines.flow.Flow
 
+/** A low-stock product with its preferred supplier, for the Home card (7.1). */
+data class LowStockItem(
+    val productId: Long,
+    val name: String,
+    val stockQty: Double,
+    val supplierName: String?,
+)
+
 @Dao
 interface ProductDao {
     @Query("SELECT * FROM product WHERE active = 1 ORDER BY name ASC")
@@ -21,6 +29,17 @@ interface ProductDao {
 
     @Query("SELECT * FROM product WHERE active = 1 AND stockQty <= lowStockLevel ORDER BY stockQty ASC, name ASC")
     fun getLowStock(): Flow<List<ProductEntity>>
+
+    @Query("""
+        SELECT p.id AS productId, p.name AS name, p.stockQty AS stockQty, MIN(s.name) AS supplierName
+        FROM product p
+        LEFT JOIN product_supplier ps ON ps.productId = p.id AND ps.isPreferred = 1
+        LEFT JOIN supplier s ON s.id = ps.supplierId
+        WHERE p.active = 1 AND p.stockQty <= p.lowStockLevel
+        GROUP BY p.id
+        ORDER BY p.stockQty ASC, p.name ASC
+    """)
+    fun getLowStockWithSupplier(): Flow<List<LowStockItem>>
 
     @Query("SELECT * FROM product WHERE active = 1 AND categoryId = :categoryId ORDER BY name ASC")
     fun getByCategory(categoryId: Long): Flow<List<ProductEntity>>

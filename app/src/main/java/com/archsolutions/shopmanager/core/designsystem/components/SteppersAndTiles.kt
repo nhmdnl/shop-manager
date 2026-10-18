@@ -106,14 +106,14 @@ fun ProductTile(
     priceFormatted: String,
     stockLeftFormatted: String,
     isLowStock: Boolean,
-    selectedQuantity: Int = 0,
+    selectedQuantity: String? = null,
     onTap: () -> Unit,
     onLongPress: () -> Unit = {},
     height: Dp = 104.dp,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalShopColors.current
-    val isSelected = selectedQuantity > 0
+    val isSelected = selectedQuantity != null
 
     Box(
         modifier = modifier
@@ -170,7 +170,7 @@ fun ProductTile(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = selectedQuantity.toString(),
+                    text = selectedQuantity.orEmpty(),
                     style = com.archsolutions.shopmanager.core.designsystem.amountTextStyle(14.sp),
                     color = colors.onGreen,
                 )

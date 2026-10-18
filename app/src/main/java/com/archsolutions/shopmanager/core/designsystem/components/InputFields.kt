@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -94,6 +95,55 @@ fun SearchField(
                 )
             }
         }
+    }
+}
+
+/** Plain text input with the SearchField look, for names, phone numbers and notes. */
+@Composable
+fun ShopTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    capitalization: KeyboardCapitalization = KeyboardCapitalization.Sentences,
+) {
+    val colors = LocalShopColors.current
+    var isFocused by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(colors.surface)
+            .border(
+                BorderStroke(
+                    width = if (isFocused) 1.5.dp else 1.dp,
+                    color = if (isFocused) colors.green else colors.line,
+                ),
+                RoundedCornerShape(14.dp),
+            )
+            .onFocusChanged { isFocused = it.hasFocus }
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        if (value.isEmpty()) {
+            Text(
+                text = placeholder,
+                style = MaterialTheme.typography.bodyLarge,
+                color = colors.muted,
+            )
+        }
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, capitalization = capitalization),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.ink),
+            cursorBrush = SolidColor(colors.green),
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
