@@ -31,6 +31,7 @@ Constraints, goal and current state live in the hub note above (`Hub/Projects/sh
     ./gradlew connectedDebugAndroidTest                           # needs device/emulator (ShopDesignSystemTest, SaleTapCountTest); uninstalls the app afterwards
     ./gradlew installDebugAndroidTest && adb shell am instrument -w com.archsolutions.shopmanager.test/androidx.test.runner.AndroidJUnitRunner   # same tests, keeps the VM's app data
     adb connect 127.0.0.1:5555 && ./gradlew installDebug          # test device: vm-curator "Android x86" VM (API 28, 1280x800), must be running
+    ./gradlew --offline assembleRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease   # clean build (no demo data: the seed runs only when debuggable); lintVital needs desktop/JVM artifacts missing from the offline cache. Unsigned: sign with apksigner (no release key yet)
 
 Kotlin + Compose + Hilt + Room via KSP (no kapt). compileSdk 36, minSdk 26. Package `com.archsolutions.shopmanager`.
 
