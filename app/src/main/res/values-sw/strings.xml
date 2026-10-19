@@ -461,7 +461,7 @@
     <string name="pdf_col_amount">Kiasi</string>
     <string name="pdf_col_cash_diff">Tofauti ya taslimu</string>
     <string name="pdf_col_momo_diff">Tofauti ya MoMo</string>
-    <string name="pdf_made_on">Imetengenezwa na Shop Manager tarehe %1$s</string>
+    <string name="pdf_made_on">Imetengenezwa na Arch-SME tarehe %1$s</string>
     <plurals name="plurals_reopened">
         <item quantity="one">ilifunguliwa upya mara moja</item>
         <item quantity="other">ilifunguliwa upya mara %1$d</item>
@@ -496,7 +496,7 @@
     <string name="restore_choose">Chagua nakala</string>
     <string name="backup_saved">Nakala imehifadhiwa</string>
     <string name="backup_failed">Imeshindwa kumaliza. Jaribu tena.</string>
-    <string name="backup_not_a_backup">Faili hilo si nakala ya Shop Manager.</string>
+    <string name="backup_not_a_backup">Faili hilo si nakala ya Arch-SME.</string>
     <string name="backup_too_new">Nakala hiyo ni ya toleo jipya la programu. Sasisha programu kwanza.</string>
     <string name="backup_reminder_body">Hifadhi nakala ili simu ikipotea duka lisipotee</string>
     <plurals name="plurals_pin_tries_left">
@@ -518,7 +518,7 @@
     <!-- Onboarding and product import (M9) -->
     <string name="step_of">Hatua %1$d kati ya %2$d</string>
     <string name="action_next">Endelea</string>
-    <string name="onboarding_welcome_title">Karibu Shop Manager</string>
+    <string name="onboarding_welcome_title">Karibu Arch-SME</string>
     <string name="onboarding_welcome_sub">Maswali mawili mafupi, kisha unaweza kuuza.</string>
     <string name="shop_name_placeholder">Kwa mfano, Duka la Mary</string>
     <string name="gloss_swahili">Kiswahili</string>

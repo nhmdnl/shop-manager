@@ -34,6 +34,8 @@ Constraints, goal and current state live in the hub note above (`Hub/Projects/sh
 
 Kotlin + Compose + Hilt + Room via KSP (no kapt). compileSdk 36, minSdk 26. Package `com.archsolutions.shopmanager`.
 
+The app is called **Arch-SME** (`app_name`, user-facing strings, backup file names `arch-sme_backup_*`). Internal ids keep "shopmanager": the package, `shop_manager.db`, the backup manifest's `APP_ID` and the zip's `shop_manager.db` entry, intent actions. Renaming those would lose data or break restores. The launcher icon is the adaptive vector set from the Arch-SME icon kit (`~/Projects/shpmgmt/arch-sme-icon-kit-v3.zip`; with minSdk 26 no density PNGs are needed); `ic_stat_shop` is its monochrome glyph cropped for the status bar.
+
 ## Architecture
 
 Single `app` module, layered by package:

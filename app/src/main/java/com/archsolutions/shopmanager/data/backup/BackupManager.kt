@@ -129,7 +129,7 @@ class BackupManager @Inject constructor(
         exists() && inputStream().use { stream -> ByteArray(16).let { stream.read(it) == 16 && String(it, Charsets.US_ASCII) == "SQLite format 3\u0000" } }
 
     companion object {
-        const val PREFIX = "shopmanager_backup_"
+        const val PREFIX = "arch-sme_backup_"
         const val KEEP = 7
         private const val BACKUP_DIR = "backups"
         internal const val MANIFEST = "manifest.properties"

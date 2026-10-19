@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Shop Manager</string>
+    <string name="app_name" translatable="false">Arch-SME</string>
 
     <!-- Navigation -->
     <string name="nav_home">Home</string>
@@ -474,7 +474,7 @@
     <string name="pdf_col_amount">Amount</string>
     <string name="pdf_col_cash_diff">Cash difference</string>
     <string name="pdf_col_momo_diff">MoMo difference</string>
-    <string name="pdf_made_on">Made with Shop Manager on %1$s</string>
+    <string name="pdf_made_on">Made with Arch-SME on %1$s</string>
     <plurals name="plurals_reopened">
         <item quantity="one">reopened once</item>
         <item quantity="other">reopened %1$d times</item>
@@ -509,7 +509,7 @@
     <string name="restore_choose">Choose backup</string>
     <string name="backup_saved">Backup saved</string>
     <string name="backup_failed">Couldn\'t finish. Try again.</string>
-    <string name="backup_not_a_backup">That file isn\'t a Shop Manager backup.</string>
+    <string name="backup_not_a_backup">That file isn\'t a Arch-SME backup.</string>
     <string name="backup_too_new">That backup comes from a newer version of the app. Update the app first.</string>
     <string name="backup_reminder_body">Back up so a lost phone doesn\'t lose the shop</string>
     <plurals name="plurals_pin_tries_left">
@@ -531,7 +531,7 @@
     <!-- Onboarding and product import (M9) -->
     <string name="step_of">Step %1$d of %2$d</string>
     <string name="action_next">Next</string>
-    <string name="onboarding_welcome_title">Welcome to Shop Manager</string>
+    <string name="onboarding_welcome_title">Welcome to Arch-SME</string>
     <string name="onboarding_welcome_sub">Two quick questions, then you can sell.</string>
     <string name="shop_name_placeholder">For example, Mary Shop</string>
     <string name="gloss_swahili">Swahili</string>
