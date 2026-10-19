@@ -29,6 +29,10 @@ interface PurchaseDao {
     @Query("SELECT * FROM purchase WHERE dayId = :dayId ORDER BY createdAt DESC")
     fun getPurchasesForDay(dayId: Long): Flow<List<PurchaseEntity>>
 
+    @Transaction
+    @Query("SELECT * FROM purchase WHERE dayId = :dayId ORDER BY createdAt DESC")
+    fun getPurchasesWithItemsForDay(dayId: Long): Flow<List<PurchaseWithItems>>
+
     @Query("SELECT * FROM purchase WHERE dayId = :dayId ORDER BY createdAt DESC")
     suspend fun getPurchasesForDayDirect(dayId: Long): List<PurchaseEntity>
 

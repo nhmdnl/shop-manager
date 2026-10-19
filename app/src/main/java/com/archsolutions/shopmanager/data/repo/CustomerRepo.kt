@@ -1,6 +1,7 @@
 package com.archsolutions.shopmanager.data.repo
 
 import com.archsolutions.shopmanager.data.db.AppDatabase
+import com.archsolutions.shopmanager.data.db.dao.CustomerWithOwed
 import com.archsolutions.shopmanager.data.db.entities.CustomerEntity
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -13,6 +14,8 @@ class CustomerRepo @Inject constructor(
     private val customerDao = db.customerDao()
 
     fun getAll(): Flow<List<CustomerEntity>> = customerDao.getAll()
+
+    fun getAllWithOwed(): Flow<List<CustomerWithOwed>> = customerDao.getAllWithOwed()
 
     fun getById(id: Long): Flow<CustomerEntity?> = customerDao.getById(id)
 

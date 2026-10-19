@@ -12,6 +12,7 @@ import com.archsolutions.shopmanager.data.db.dao.DayDao
 import com.archsolutions.shopmanager.data.db.dao.MoneyEntryDao
 import com.archsolutions.shopmanager.data.db.dao.ProductDao
 import com.archsolutions.shopmanager.data.db.dao.PurchaseDao
+import com.archsolutions.shopmanager.data.db.dao.ReportDao
 import com.archsolutions.shopmanager.data.db.dao.SaleDao
 import com.archsolutions.shopmanager.data.db.dao.StockMovementDao
 import com.archsolutions.shopmanager.data.db.dao.SupplierDao
@@ -51,7 +52,7 @@ import javax.inject.Singleton
         StockMovementEntity::class,
         MoneyEntryEntity::class,
     ],
-    version = 1,
+    version = AppDatabase.VERSION,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -65,9 +66,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun purchaseDao(): PurchaseDao
     abstract fun stockMovementDao(): StockMovementDao
     abstract fun moneyEntryDao(): MoneyEntryDao
+    abstract fun reportDao(): ReportDao
 
     companion object {
         const val DATABASE_NAME = "shop_manager.db"
+
+        /** Backups record it; a restore refuses a backup made by a newer schema. */
+        const val VERSION = 1
 
         fun createInMemory(context: Context): AppDatabase =
             Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)

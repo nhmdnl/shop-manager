@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.core.designsystem
 
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Immutable
@@ -32,14 +33,23 @@ val DarkShopColors = ShopColors(
 
 val LocalShopColors = staticCompositionLocalOf { LightShopColors }
 
-fun ShopColors.toMaterial(dark: Boolean) = if (dark) darkColorScheme(
-    primary = green, onPrimary = onGreen, primaryContainer = greenTint, onPrimaryContainer = green,
-    tertiary = rust, onTertiary = paper, tertiaryContainer = rustTint, onTertiaryContainer = rust,
-    background = paper, onBackground = ink, surface = surface, onSurface = ink,
-    surfaceVariant = segmentTrack, onSurfaceVariant = muted, outline = line, outlineVariant = line,
-) else lightColorScheme(
-    primary = green, onPrimary = onGreen, primaryContainer = greenTint, onPrimaryContainer = green,
-    tertiary = rust, onTertiary = surface, tertiaryContainer = rustTint, onTertiaryContainer = rust,
-    background = paper, onBackground = ink, surface = surface, onSurface = ink,
-    surfaceVariant = segmentTrack, onSurfaceVariant = muted, outline = line, outlineVariant = line,
-)
+/**
+ * Every Material 3 role mapped to the shop palette. Unmapped roles fall back to Material's lavender
+ * defaults, which showed up in the date picker, dialogs and menus.
+ */
+fun ShopColors.toMaterial(dark: Boolean): ColorScheme {
+    val base = if (dark) darkColorScheme() else lightColorScheme()
+    return base.copy(
+        primary = green, onPrimary = onGreen, primaryContainer = greenTint, onPrimaryContainer = green,
+        secondary = green, onSecondary = onGreen, secondaryContainer = greenTint, onSecondaryContainer = green,
+        tertiary = rust, onTertiary = surface, tertiaryContainer = rustTint, onTertiaryContainer = rust,
+        error = rust, onError = surface, errorContainer = rustTint, onErrorContainer = rust,
+        background = paper, onBackground = ink, surface = surface, onSurface = ink,
+        surfaceVariant = segmentTrack, onSurfaceVariant = muted, outline = line, outlineVariant = line,
+        surfaceTint = surface, // no green wash on raised surfaces
+        surfaceBright = surface, surfaceDim = paper,
+        surfaceContainerLowest = surface, surfaceContainerLow = surface, surfaceContainer = surface,
+        surfaceContainerHigh = surface, surfaceContainerHighest = segmentTrack,
+        inverseSurface = ink, inverseOnSurface = surface, inversePrimary = greenTint,
+    )
+}

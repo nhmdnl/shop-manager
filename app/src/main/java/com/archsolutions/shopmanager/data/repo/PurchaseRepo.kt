@@ -36,6 +36,9 @@ class PurchaseRepo @Inject constructor(
     fun getPurchasesForDay(dayId: Long): Flow<List<PurchaseEntity>> =
         purchaseDao.getPurchasesForDay(dayId)
 
+    fun getPurchasesWithItemsForDay(dayId: Long): Flow<List<PurchaseWithItems>> =
+        purchaseDao.getPurchasesWithItemsForDay(dayId)
+
     suspend fun savePurchase(
         dayId: Long,
         supplierId: Long?,
@@ -44,6 +47,7 @@ class PurchaseRepo @Inject constructor(
         note: String? = null,
     ): Long = db.withTransaction {
         require(items.isNotEmpty()) { "Purchase must contain at least one item" }
+        db.requireOpenDay(dayId)
 
         val now = clock.nowMillis()
         val total = items.sumOf { (it.qty * it.unitCost).toLong() }
@@ -88,12 +92,14 @@ class PurchaseRepo @Inject constructor(
             }
 
             if (supplierId != null) {
+                // 5.3: refresh this supplier's cost, keeping whether it is the preferred one.
+                val existing = supplierDao.getProductSupplier(item.productId, supplierId)
                 supplierDao.upsertProductSupplier(
                     ProductSupplierEntity(
                         productId = item.productId,
                         supplierId = supplierId,
                         supplierCost = item.unitCost,
-                        isPreferred = false,
+                        isPreferred = existing?.isPreferred ?: false,
                     )
                 )
             }

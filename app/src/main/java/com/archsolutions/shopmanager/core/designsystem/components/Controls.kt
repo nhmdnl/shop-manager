@@ -6,9 +6,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -24,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 
@@ -34,58 +38,74 @@ fun <T> ChipRow(
     onItemSelected: (T) -> Unit,
     modifier: Modifier = Modifier,
     labelProvider: (T) -> String = { it.toString() },
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(8.dp),
 ) {
     val colors = LocalShopColors.current
     Row(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = horizontalArrangement,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         items.forEach { item ->
             val isSelected = item == selectedItem
-            val shape = CircleShape
-            Box(
-                modifier = Modifier
-                    .height(40.dp)
-                    .clip(shape)
-                    .then(
-                        if (isSelected) {
-                            Modifier.background(colors.ink)
-                        } else {
-                            Modifier
-                                .background(colors.surface)
-                                .then(
-                                    Modifier.background(
-                                        color = colors.surface,
-                                        shape = shape,
-                                    )
-                                )
-                        }
-                    )
-                    .clickable { onItemSelected(item) }
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.Center,
+            Surface(
+                onClick = { onItemSelected(item) },
+                shape = CircleShape,
+                color = if (isSelected) colors.ink else colors.surface,
+                border = if (isSelected) null else BorderStroke(1.dp, colors.line),
             ) {
-                Surface(
-                    shape = shape,
-                    color = if (isSelected) colors.ink else colors.surface,
-                    border = if (isSelected) null else BorderStroke(1.dp, colors.line),
+                Box(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .height(40.dp)
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = labelProvider(item),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (isSelected) colors.surface else colors.ink,
-                        )
-                    }
+                    Text(
+                        text = labelProvider(item),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (isSelected) colors.surface else colors.ink,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Equal-width amount chips, so a row of four fits a 400 dp tablet panel without scrolling. */
+@Composable
+fun QuickAmountChips(
+    amounts: List<Long>,
+    selected: Long?,
+    labelFor: (Long) -> String,
+    onSelect: (Long) -> Unit,
+) {
+    val colors = LocalShopColors.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        amounts.forEach { amount ->
+            val isSelected = amount == selected
+            Surface(
+                onClick = { onSelect(amount) },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                shape = CircleShape,
+                color = if (isSelected) colors.ink else colors.surface,
+                border = if (isSelected) null else BorderStroke(1.dp, colors.line),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = labelFor(amount),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isSelected) colors.surface else colors.ink,
+                        maxLines = 1,
+                    )
                 }
             }
         }
@@ -103,13 +123,16 @@ fun <T> SegmentedControl(
     val colors = LocalShopColors.current
     Box(
         modifier = modifier
-            .height(48.dp)
+            .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(colors.segmentTrack)
             .padding(4.dp),
     ) {
+        // As tall as the tallest label, so a label that wraps at large font sizes is not cut.
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             items.forEach { item ->
@@ -117,7 +140,8 @@ fun <T> SegmentedControl(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp)
+                        .fillMaxHeight()
+                        .heightIn(min = 40.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .then(
                             if (isSelected) {
@@ -136,6 +160,8 @@ fun <T> SegmentedControl(
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                         color = if (isSelected) colors.ink else colors.muted,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 4.dp),
                     )
                 }
             }
@@ -146,7 +172,7 @@ fun <T> SegmentedControl(
 @Composable
 fun ShopSwitch(
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
+    onCheckedChange: ((Boolean) -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {

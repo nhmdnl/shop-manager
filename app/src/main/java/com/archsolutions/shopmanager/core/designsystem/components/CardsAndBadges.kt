@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -23,13 +24,14 @@ import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 fun ShopCard(
     modifier: Modifier = Modifier,
     padding: Dp = 16.dp,
+    borderColor: Color? = null,
     content: @Composable () -> Unit,
 ) {
     val colors = LocalShopColors.current
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, colors.line),
+        border = BorderStroke(1.dp, borderColor ?: colors.line),
         colors = CardDefaults.cardColors(
             containerColor = colors.surface,
             contentColor = colors.ink,

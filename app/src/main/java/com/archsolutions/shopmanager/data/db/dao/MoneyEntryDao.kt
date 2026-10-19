@@ -13,6 +13,9 @@ interface MoneyEntryDao {
     @Query("SELECT * FROM money_entry WHERE dayId = :dayId ORDER BY createdAt DESC")
     fun getEntriesForDay(dayId: Long): Flow<List<MoneyEntryEntity>>
 
+    @Query("SELECT * FROM money_entry WHERE type = 'CREDIT_REPAYMENT' ORDER BY createdAt ASC, id ASC")
+    fun getRepayments(): Flow<List<MoneyEntryEntity>>
+
     @Query("SELECT * FROM money_entry WHERE dayId = :dayId ORDER BY createdAt DESC")
     suspend fun getEntriesForDayDirect(dayId: Long): List<MoneyEntryEntity>
 

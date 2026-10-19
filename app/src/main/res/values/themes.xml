@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.ShopManager" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- AppCompat so in-app language changes apply below Android 13 (AppCompatDelegate.setApplicationLocales). -->
+    <style name="Theme.ShopManager" parent="Theme.AppCompat.Light.NoActionBar" />
 </resources>

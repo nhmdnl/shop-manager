@@ -1,7 +1,6 @@
 package com.archsolutions.shopmanager.core.util
 
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -20,8 +19,11 @@ class SystemAppClock @Inject constructor() : AppClock {
 
     override fun nowMillis(): Long = System.currentTimeMillis()
 
-    override fun todayDateString(): String =
-        LocalDate.ofInstant(Instant.ofEpochMilli(nowMillis()), zoneId).format(dateFormatter)
+    override fun todayDateString(): String = dateString(nowMillis())
+
+    // atZone().toLocalDate() instead of LocalDate.ofInstant(), which needs API 34 (minSdk is 26).
+    internal fun dateString(millis: Long): String =
+        Instant.ofEpochMilli(millis).atZone(zoneId).toLocalDate().format(dateFormatter)
 }
 
 @dagger.Module

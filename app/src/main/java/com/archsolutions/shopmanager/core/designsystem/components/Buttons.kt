@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
@@ -38,7 +39,7 @@ fun PrimaryButton(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(height),
+            .heightIn(min = height),
         enabled = enabled,
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
@@ -61,6 +62,7 @@ fun PrimaryButton(
                 text = text,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
             )
         }
     }
@@ -78,7 +80,7 @@ fun SecondaryButton(
     val colors = LocalShopColors.current
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier.height(height),
+        modifier = modifier.heightIn(min = height),
         enabled = enabled,
         shape = RoundedCornerShape(14.dp),
         border = BorderStroke(1.dp, colors.line),
@@ -101,6 +103,7 @@ fun SecondaryButton(
                 text = text,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
                 color = colors.ink,
             )
         }
@@ -119,7 +122,7 @@ fun InkButton(
     val colors = LocalShopColors.current
     Button(
         onClick = onClick,
-        modifier = modifier.height(height),
+        modifier = modifier.heightIn(min = height),
         enabled = enabled,
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
@@ -141,6 +144,7 @@ fun InkButton(
                 text = text,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
                 color = colors.surface,
             )
         }

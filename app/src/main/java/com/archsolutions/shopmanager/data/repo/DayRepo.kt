@@ -28,9 +28,16 @@ class DayRepo @Inject constructor(
 
     fun getLatestDay(): Flow<BusinessDayEntity?> = dayDao.getLatestDay()
 
+    fun getFirstOpenedAt(): Flow<Long?> = dayDao.getFirstOpenedAt()
+
     suspend fun getLatestDayDirect(): BusinessDayEntity? = dayDao.getLatestDayDirect()
 
     suspend fun getLatestClosedDayDirect(): BusinessDayEntity? = dayDao.getLatestClosedDayDirect()
+
+    /** Oldest day before [date] that was never closed — gate case 6.3-1. */
+    fun getOpenDayBefore(date: String): Flow<BusinessDayEntity?> = dayDao.getOpenDayBefore(date)
+
+    suspend fun getOpenDayBeforeDirect(date: String): BusinessDayEntity? = dayDao.getOpenDayBeforeDirect(date)
 
     fun getAllDays(): Flow<List<BusinessDayEntity>> = dayDao.getAllDays()
 
@@ -46,6 +53,10 @@ class DayRepo @Inject constructor(
         openingMobile: Long,
         counts: List<CashCountEntity> = emptyList(),
     ): Long = db.withTransaction {
+        check(dayDao.getDayByDateDirect(date) == null) { "A business day already exists for $date" }
+        // 6.3-1: today cannot be opened while an earlier day is still open.
+        check(dayDao.getOpenDayBeforeDirect(date) == null) { "An earlier business day is still open" }
+
         val now = clock.nowMillis()
         val dayId = dayDao.insertDay(
             BusinessDayEntity(
@@ -78,6 +89,8 @@ class DayRepo @Inject constructor(
         counts: List<CashCountEntity> = emptyList(),
     ) = db.withTransaction {
         val day = dayDao.getDayByIdDirect(dayId) ?: return@withTransaction
+        // A closed day is read-only (6.7); closing it again would overwrite its counts.
+        check(day.status == DayStatus.OPEN) { "Business day $dayId is already closed" }
         val now = clock.nowMillis()
 
         dayDao.updateDay(

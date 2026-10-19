@@ -12,11 +12,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.archsolutions.shopmanager.core.security.Pin
+import com.archsolutions.shopmanager.core.util.AppClock
+import java.time.ZoneId
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsStore: SettingsStore,
+    clock: AppClock,
 ) : ViewModel() {
+
+    val zoneId: ZoneId = clock.zoneId
 
     val settings: StateFlow<ShopSettings> = settingsStore.settings
         .stateIn(
@@ -47,6 +53,24 @@ class SettingsViewModel @Inject constructor(
     fun setOpenDayOnStart(open: Boolean) {
         viewModelScope.launch {
             settingsStore.setOpenDayOnStart(open)
+        }
+    }
+
+    fun setPin(pin: String) {
+        viewModelScope.launch {
+            settingsStore.setPin(enabled = true, hash = Pin.hash(pin))
+        }
+    }
+
+    fun disablePin() {
+        viewModelScope.launch {
+            settingsStore.setPin(enabled = false, hash = "")
+        }
+    }
+
+    fun setCloseReminderTime(time: String) {
+        viewModelScope.launch {
+            settingsStore.setCloseReminderTime(time)
         }
     }
 

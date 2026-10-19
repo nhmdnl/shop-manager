@@ -8,13 +8,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,12 +26,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.core.designsystem.fontScaled
 import com.archsolutions.shopmanager.core.money.Money
 
 @Composable
@@ -81,13 +91,13 @@ fun DayBar(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     SecondaryButton(
-                        text = "Add expense",
+                        text = stringResource(R.string.action_add_expense),
                         onClick = onAddExpense,
                         modifier = Modifier.weight(1f),
                         height = 48.dp,
                     )
                     InkButton(
-                        text = "Close day",
+                        text = stringResource(R.string.action_close_day),
                         onClick = onCloseDay,
                         modifier = Modifier.weight(1f),
                         height = 48.dp,
@@ -98,9 +108,11 @@ fun DayBar(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                // Weighted, so the buttons are measured first and keep their width at large font sizes.
                 Row(
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
@@ -134,18 +146,110 @@ fun DayBar(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     SecondaryButton(
-                        text = "Add expense",
+                        text = stringResource(R.string.action_add_expense),
                         onClick = onAddExpense,
                         height = 48.dp,
                     )
                     InkButton(
-                        text = "Close day",
+                        text = stringResource(R.string.action_close_day),
                         onClick = onCloseDay,
                         height = 48.dp,
                     )
                 }
             }
         }
+    }
+}
+
+/** Takes the DayBar's place while trading is locked (6.3; addendum HomeLocked). */
+@Composable
+fun DayLockCard(
+    title: String,
+    body: String,
+    modifier: Modifier = Modifier,
+    action: (@Composable () -> Unit)? = null,
+) {
+    val colors = LocalShopColors.current
+    ShopCard(
+        modifier = modifier.fillMaxWidth(),
+        padding = 20.dp,
+        borderColor = colors.rust.copy(alpha = 0.3f),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(colors.rustTint),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        contentDescription = null,
+                        tint = colors.rust,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.ink,
+                    )
+                    Text(
+                        text = body,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.muted,
+                    )
+                }
+            }
+            action?.invoke()
+        }
+    }
+}
+
+/** An action that stays visible but disabled while the day is locked (addendum C5). */
+@Composable
+fun LockedActionButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    height: Dp = 56.dp,
+    cornerRadius: Dp = 16.dp,
+) {
+    val colors = LocalShopColors.current
+    val description = stringResource(R.string.locked_action, text)
+    Row(
+        modifier = modifier
+            .heightIn(min = height)
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(colors.segmentTrack)
+            .clearAndSetSemantics {
+                contentDescription = description
+                disabled()
+            }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Lock,
+            contentDescription = null,
+            tint = colors.muted,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.muted,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -206,7 +310,7 @@ fun DenominationRow(
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = Money.format(subtotal, withCode = true),
+            text = Money.format(subtotal, withCode = false),
             style = com.archsolutions.shopmanager.core.designsystem.amountTextStyle(16.sp),
             color = colors.ink,
             textAlign = TextAlign.End,
@@ -219,6 +323,7 @@ fun StepIndicator(
     currentStep: Int,
     totalSteps: Int = 3,
     modifier: Modifier = Modifier,
+    labels: List<String> = emptyList(),
 ) {
     val colors = LocalShopColors.current
     Row(
@@ -241,7 +346,7 @@ fun StepIndicator(
 
             Box(
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(fontScaled(28.dp))
                     .clip(CircleShape)
                     .background(circleBg),
                 contentAlignment = Alignment.Center,
@@ -262,6 +367,16 @@ fun StepIndicator(
                         color = contentColor,
                     )
                 }
+            }
+
+            labels.getOrNull(i - 1)?.let { label ->
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isDone || isCurrent) colors.ink else colors.muted,
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                )
             }
 
             if (i < totalSteps) {
