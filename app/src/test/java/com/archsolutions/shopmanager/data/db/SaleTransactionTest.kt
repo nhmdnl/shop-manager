@@ -1,6 +1,7 @@
 package com.archsolutions.shopmanager.data.db
 
 import android.content.Context
+import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.test.core.app.ApplicationProvider
 import com.archsolutions.shopmanager.core.util.AppClock
 import com.archsolutions.shopmanager.data.db.entities.BusinessDayEntity
@@ -17,6 +18,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -179,4 +181,49 @@ class SaleTransactionTest {
         assertEquals(MovementType.VOID_RETURN, movements[0].type)
         assertEquals(2.0, movements[0].qtyChange, 0.001)
     }
+
+    // Checklist 15: an app killed mid-sale leaves no partial sale. A trigger aborts the second product's
+    // stock movement, after the sale row, its items and the first product's movement and stock are written.
+    @Test
+    fun `a sale that fails half way leaves no partial rows and no stock change`() = runTest {
+        val productDao = db.productDao()
+        val dayId = db.dayDao().insertDay(
+            BusinessDayEntity(date = "2026-09-30", status = DayStatus.OPEN, openedAt = 1000L, openingCash = 100000L, openingMobile = 20000L)
+        )
+        fun product(name: String, stock: Double) = ProductEntity(
+            name = name, categoryId = null, unit = Unit.PCS, sellPrice = 5000L, costPrice = 4200L,
+            stockQty = stock, lowStockLevel = 2.0, createdAt = 1000L, updatedAt = 1000L,
+        )
+        val sugarId = productDao.insert(product("Sugar 1kg", 10.0))
+        val riceId = productDao.insert(product("Rice 1kg", 4.0))
+        db.openHelper.writableDatabase.execSQL(
+            "CREATE TRIGGER crash_mid_sale BEFORE INSERT ON stock_movement WHEN NEW.productId = $riceId " +
+                "BEGIN SELECT RAISE(ABORT, 'simulated crash'); END"
+        )
+
+        val result = runCatching {
+            saleRepo.createSale(
+                dayId = dayId,
+                method = PayMethod.CASH,
+                items = listOf(
+                    SaleCartItem(productId = sugarId, productName = "Sugar 1kg", qty = 3.0, unitPrice = 5000L, unitCost = 4200L),
+                    SaleCartItem(productId = riceId, productName = "Rice 1kg", qty = 1.0, unitPrice = 5000L, unitCost = 4200L),
+                ),
+                cashReceived = 20000L,
+            )
+        }
+
+        assertTrue(result.isFailure)
+        assertEquals(0, count("sale"))
+        assertEquals(0, count("sale_item"))
+        assertEquals(0, count("stock_movement"))
+        assertEquals(10.0, productDao.getByIdDirect(sugarId)!!.stockQty, 0.001)
+        assertEquals(4.0, productDao.getByIdDirect(riceId)!!.stockQty, 0.001)
+    }
+
+    private fun count(table: String): Int =
+        db.query(SimpleSQLiteQuery("SELECT COUNT(*) FROM $table")).use { cursor ->
+            cursor.moveToFirst()
+            cursor.getInt(0)
+        }
 }
