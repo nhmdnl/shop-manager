@@ -6,9 +6,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -24,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 
@@ -119,13 +123,16 @@ fun <T> SegmentedControl(
     val colors = LocalShopColors.current
     Box(
         modifier = modifier
-            .height(48.dp)
+            .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(colors.segmentTrack)
             .padding(4.dp),
     ) {
+        // As tall as the tallest label, so a label that wraps at large font sizes is not cut.
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             items.forEach { item ->
@@ -133,7 +140,8 @@ fun <T> SegmentedControl(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp)
+                        .fillMaxHeight()
+                        .heightIn(min = 40.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .then(
                             if (isSelected) {
@@ -152,6 +160,8 @@ fun <T> SegmentedControl(
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                         color = if (isSelected) colors.ink else colors.muted,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 4.dp),
                     )
                 }
             }
@@ -162,7 +172,7 @@ fun <T> SegmentedControl(
 @Composable
 fun ShopSwitch(
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
+    onCheckedChange: ((Boolean) -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {

@@ -51,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -64,6 +65,7 @@ import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.amountTextStyle
+import com.archsolutions.shopmanager.core.designsystem.fontScaled
 import com.archsolutions.shopmanager.core.designsystem.components.Badge
 import com.archsolutions.shopmanager.core.designsystem.components.BadgeKind
 import com.archsolutions.shopmanager.core.designsystem.components.ChipRow
@@ -87,6 +89,8 @@ import kotlinx.coroutines.launch
 import com.archsolutions.shopmanager.feature.pin.rememberPinGate
 
 private enum class Channel { CASH, MOBILE_MONEY }
+
+private const val MAX_TABLE_FONT_SCALE = 1.25f
 
 /** Close the day (6.6, 7.4). On success: opens the WhatsApp summary if chosen, then [onClosed]. */
 @Composable
@@ -130,7 +134,8 @@ fun CloseDayScreen(
         }
     }
 
-    if (isExpanded) {
+    // Above 125% fonts the side-by-side table has no room for its amounts, so tablets use the stacked layout too.
+    if (isExpanded && LocalDensity.current.fontScale <= MAX_TABLE_FONT_SCALE) {
         Row(modifier = modifier.fillMaxSize()) {
             Scaffold(
                 modifier = Modifier
@@ -252,21 +257,21 @@ private fun CheckTable(state: CloseDayUiState, viewModel: CloseDayViewModel) {
             HorizontalDivider(color = colors.ink, thickness = 1.5.dp, modifier = Modifier.padding(vertical = 4.dp))
             Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.label_should_have), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = colors.ink, modifier = Modifier.weight(1f))
-                Text(Money.format(balance.cash.expected, withCode = false), style = amountTextStyle(24.sp), color = colors.ink, modifier = Modifier.width(190.dp), textAlign = TextAlign.End)
-                Text(Money.format(balance.mobile.expected, withCode = false), style = amountTextStyle(24.sp), color = colors.ink, modifier = Modifier.width(190.dp), textAlign = TextAlign.End)
+                Text(Money.format(balance.cash.expected, withCode = false), style = amountTextStyle(24.sp), color = colors.ink, modifier = Modifier.width(fontScaled(190.dp)), textAlign = TextAlign.End)
+                Text(Money.format(balance.mobile.expected, withCode = false), style = amountTextStyle(24.sp), color = colors.ink, modifier = Modifier.width(fontScaled(190.dp)), textAlign = TextAlign.End)
             }
             HorizontalDivider(color = colors.line)
             Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.label_counted), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = colors.ink, modifier = Modifier.weight(1f))
-                MoneyField(value = state.countedCash, onValueChange = viewModel::setCountedCash, modifier = Modifier.width(182.dp))
+                MoneyField(value = state.countedCash, onValueChange = viewModel::setCountedCash, modifier = Modifier.width(fontScaled(182.dp)))
                 Spacer(modifier = Modifier.width(8.dp))
-                MoneyField(value = state.countedMobile, onValueChange = viewModel::setCountedMobile, modifier = Modifier.width(182.dp))
+                MoneyField(value = state.countedMobile, onValueChange = viewModel::setCountedMobile, modifier = Modifier.width(fontScaled(182.dp)))
             }
             HorizontalDivider(color = colors.line)
             Row(modifier = Modifier.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.label_difference), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = colors.ink, modifier = Modifier.weight(1f))
-                Row(modifier = Modifier.width(190.dp), horizontalArrangement = Arrangement.End) { DifferenceBadge(state.cashDifference, state.cashStatus) }
-                Row(modifier = Modifier.width(190.dp), horizontalArrangement = Arrangement.End) { DifferenceBadge(state.mobileDifference, state.mobileStatus) }
+                Row(modifier = Modifier.width(fontScaled(190.dp)), horizontalArrangement = Arrangement.End) { DifferenceBadge(state.cashDifference, state.cashStatus) }
+                Row(modifier = Modifier.width(fontScaled(190.dp)), horizontalArrangement = Arrangement.End) { DifferenceBadge(state.mobileDifference, state.mobileStatus) }
             }
         }
     }
@@ -278,8 +283,8 @@ private fun TableRow(label: String, cash: String, mobile: String, header: Boolea
     Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.bodyLarge, color = colors.muted, modifier = Modifier.weight(1f))
         val style = if (header) MaterialTheme.typography.labelMedium else amountTextStyle(18.sp)
-        Text(cash, style = style, color = if (header) colors.muted else colors.ink, modifier = Modifier.width(190.dp), textAlign = TextAlign.End)
-        Text(mobile, style = style, color = if (header) colors.muted else colors.ink, modifier = Modifier.width(190.dp), textAlign = TextAlign.End)
+        Text(cash, style = style, color = if (header) colors.muted else colors.ink, modifier = Modifier.width(fontScaled(190.dp)), textAlign = TextAlign.End)
+        Text(mobile, style = style, color = if (header) colors.muted else colors.ink, modifier = Modifier.width(fontScaled(190.dp)), textAlign = TextAlign.End)
     }
 }
 
@@ -295,7 +300,7 @@ private fun TableAmountRow(label: String, cash: Long, mobile: Long, sign: Int) {
                     text = signedAmount(amount, sign),
                     style = amountTextStyle(18.sp),
                     color = if (sign > 0) colors.green else colors.ink,
-                    modifier = Modifier.width(190.dp),
+                    modifier = Modifier.width(fontScaled(190.dp)),
                     textAlign = TextAlign.End,
                 )
             }

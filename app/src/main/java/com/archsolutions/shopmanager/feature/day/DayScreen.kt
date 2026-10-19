@@ -61,6 +61,7 @@ import com.archsolutions.shopmanager.core.designsystem.components.ShopCard
 import com.archsolutions.shopmanager.core.designsystem.components.StatTile
 import com.archsolutions.shopmanager.core.money.Money
 import com.archsolutions.shopmanager.core.util.DayFormat
+import com.archsolutions.shopmanager.data.db.entities.BusinessDayEntity
 import com.archsolutions.shopmanager.data.db.entities.DayStatus
 import com.archsolutions.shopmanager.data.db.entities.MoneyEntryType
 import com.archsolutions.shopmanager.data.db.entities.MoneyMethod
@@ -143,6 +144,15 @@ fun DayScreen(
     }
 }
 
+/** "Day open since 08:00", or "Day closed at 21:05" once today is closed. */
+@Composable
+private fun dayStatusLine(day: BusinessDayEntity, zoneId: ZoneId): String =
+    if (day.status == DayStatus.CLOSED) {
+        stringResource(R.string.day_closed_at, day.closedAt?.let { DayFormat.time(it, zoneId) }.orEmpty())
+    } else {
+        stringResource(R.string.day_open_since, DayFormat.time(day.openedAt, zoneId))
+    }
+
 @Composable
 private fun DayHeader(state: DayUiState, zoneId: ZoneId, canClose: Boolean, onCloseDay: () -> Unit) {
     val colors = LocalShopColors.current
@@ -150,7 +160,7 @@ private fun DayHeader(state: DayUiState, zoneId: ZoneId, canClose: Boolean, onCl
         Column(modifier = Modifier.weight(1f)) {
             state.day?.let { day ->
                 Text(
-                    text = stringResource(R.string.day_open_since, DayFormat.time(day.openedAt, zoneId)),
+                    text = dayStatusLine(day, zoneId),
                     style = MaterialTheme.typography.bodyMedium,
                     color = colors.muted,
                 )
@@ -414,7 +424,7 @@ private fun DayCompact(
                         )
                         state.day?.let {
                             Text(
-                                text = stringResource(R.string.day_open_since, DayFormat.time(it.openedAt, zoneId)),
+                                text = dayStatusLine(it, zoneId),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = colors.muted,
                             )

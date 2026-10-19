@@ -1,11 +1,16 @@
 package com.archsolutions.shopmanager.core.designsystem
 
 import androidx.compose.material3.Typography
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import com.archsolutions.shopmanager.R
 
@@ -118,4 +123,22 @@ fun amountTextStyle(fontSize: androidx.compose.ui.unit.TextUnit = 24.sp, fontWei
         fontSize = fontSize,
         fontFeatureSettings = "tnum",
     )
+}
+
+/** Big digits grow at most this much, as with Android 14's non-linear font scaling, so amounts fit their boxes at 200%. */
+const val MAX_AMOUNT_FONT_SCALE = 1.5f
+
+/** [base] grown with the user's font scale (never shrunk, at most [maxScale]), for fixed-size boxes that hold text, so 200% fonts are not cut. */
+@Composable
+fun fontScaled(base: Dp, maxScale: Float = Float.MAX_VALUE): Dp = base * LocalDensity.current.fontScale.coerceIn(1f, maxScale)
+
+/** Runs [content] with the font scale capped at [maxScale]; below the cap the platform's own scaling is kept. */
+@Composable
+fun CappedFontScale(maxScale: Float = MAX_AMOUNT_FONT_SCALE, content: @Composable () -> Unit) {
+    val density = LocalDensity.current
+    if (density.fontScale <= maxScale) {
+        content()
+    } else {
+        CompositionLocalProvider(LocalDensity provides Density(density.density, maxScale), content = content)
+    }
 }

@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,7 +43,9 @@ import androidx.compose.ui.unit.sp
 import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.core.designsystem.MAX_AMOUNT_FONT_SCALE
 import com.archsolutions.shopmanager.core.designsystem.amountTextStyle
+import com.archsolutions.shopmanager.core.designsystem.fontScaled
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.QtyStepper
 import com.archsolutions.shopmanager.core.designsystem.components.SearchField
@@ -172,6 +176,7 @@ internal fun PurchaseForm(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PurchaseLineRow(
     line: PurchaseLineUi,
@@ -189,7 +194,8 @@ private fun PurchaseLineRow(
             fontWeight = FontWeight.SemiBold,
             color = colors.ink,
         )
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // The line total wraps onto its own line when large fonts leave no room beside the cost box.
+        FlowRow(horizontalArrangement = Arrangement.End, itemVerticalAlignment = Alignment.CenterVertically) {
             QtyStepper(value = line.qty, onValueChange = onQtyChange)
             Text(
                 text = "×",
@@ -197,12 +203,13 @@ private fun PurchaseLineRow(
                 color = colors.muted,
                 modifier = Modifier.padding(horizontal = 6.dp),
             )
-            SmallMoneyField(value = line.unitCost, onValueChange = onCostChange, modifier = Modifier.width(108.dp))
+            SmallMoneyField(value = line.unitCost, onValueChange = onCostChange, modifier = Modifier.width(fontScaled(108.dp, MAX_AMOUNT_FONT_SCALE)))
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = Money.format(line.lineTotal, withCode = false),
                 style = amountTextStyle(16.sp),
                 color = colors.ink,
+                maxLines = 1,
             )
         }
     }

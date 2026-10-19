@@ -75,6 +75,7 @@ import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.amountTextStyle
+import com.archsolutions.shopmanager.core.designsystem.fontScaled
 import com.archsolutions.shopmanager.core.designsystem.components.ChipRow
 import com.archsolutions.shopmanager.core.designsystem.components.dashedBorder
 import com.archsolutions.shopmanager.core.designsystem.components.MoneyField
@@ -142,7 +143,8 @@ internal fun CartLineRow(
             style = amountTextStyle(16.sp),
             color = colors.ink,
             textAlign = TextAlign.End,
-            modifier = Modifier.width(76.dp),
+            maxLines = 1,
+            modifier = Modifier.width(fontScaled(76.dp)),
         )
     }
 }
@@ -175,7 +177,7 @@ private fun PaymentTile(
     val isSelected = method == selected
     Surface(
         onClick = { onSelect(method) },
-        modifier = modifier.height(72.dp),
+        modifier = modifier.height(fontScaled(72.dp)),
         shape = RoundedCornerShape(16.dp),
         color = if (isSelected) colors.greenTint else colors.surface,
         border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) colors.green else colors.line),

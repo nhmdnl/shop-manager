@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.core.designsystem.fontScaled
 import com.archsolutions.shopmanager.core.money.Money
 
 @Composable
@@ -106,9 +108,11 @@ fun DayBar(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                // Weighted, so the buttons are measured first and keep their width at large font sizes.
                 Row(
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
@@ -221,13 +225,14 @@ fun LockedActionButton(
     val description = stringResource(R.string.locked_action, text)
     Row(
         modifier = modifier
-            .height(height)
+            .heightIn(min = height)
             .clip(RoundedCornerShape(cornerRadius))
             .background(colors.segmentTrack)
             .clearAndSetSemantics {
                 contentDescription = description
                 disabled()
-            },
+            }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -243,6 +248,7 @@ fun LockedActionButton(
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
             color = colors.muted,
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -340,7 +346,7 @@ fun StepIndicator(
 
             Box(
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(fontScaled(28.dp))
                     .clip(CircleShape)
                     .background(circleBg),
                 contentAlignment = Alignment.Center,

@@ -48,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -211,9 +212,23 @@ fun AppNavHost(
     }
 
     fun navigateTo(dest: NavDestination) {
+        // Close the day and Day closed are one-off steps: leaving them through the rail drops them
+        // instead of saving them, so a finished day never comes back as a stale Day closed screen.
+        val inDayFlow = navController.currentBackStack.value.any {
+            it.destination.hasRoute(CloseDayRoute::class) || it.destination.hasRoute(DayClosedRoute::class)
+        }
+        // Home is the start destination: go back to it rather than restore a stack saved for it.
+        if (dest == NavDestination.HOME) {
+            if (!navController.popBackStack<HomeRoute>(inclusive = false, saveState = !inDayFlow) &&
+                currentDestination?.hasRoute(HomeRoute::class) != true
+            ) {
+                navController.navigate(HomeRoute) { launchSingleTop = true }
+            }
+            return
+        }
         navController.navigate(dest.route) {
             popUpTo(navController.graph.findStartDestination().id) {
-                saveState = true
+                saveState = !inDayFlow
             }
             launchSingleTop = true
             restoreState = true
@@ -393,10 +408,13 @@ fun AppNavHost(
                                     )
                                 },
                                 label = {
+                                    // One line: a wrapped label pushes the icon out of the fixed-height bar at large fonts.
                                     Text(
                                         text = stringResource(dest.labelResId),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                 },
                                 colors = NavigationBarItemDefaults.colors(

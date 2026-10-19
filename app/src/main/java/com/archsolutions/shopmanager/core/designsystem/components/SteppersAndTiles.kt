@@ -36,7 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
+import com.archsolutions.shopmanager.core.designsystem.CappedFontScale
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.core.designsystem.MAX_AMOUNT_FONT_SCALE
+import com.archsolutions.shopmanager.core.designsystem.fontScaled
 
 @Composable
 fun QtyStepper(
@@ -116,11 +119,12 @@ fun ProductTile(
 ) {
     val colors = LocalShopColors.current
     val isSelected = selectedQuantity != null
+    val badgeSize = fontScaled(28.dp, MAX_AMOUNT_FONT_SCALE)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(height)
+            .height(fontScaled(height))
             .clip(RoundedCornerShape(14.dp))
             .background(if (isSelected) colors.greenTint else colors.surface)
             .border(
@@ -146,6 +150,8 @@ fun ProductTile(
                 color = colors.ink,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                // Keeps the name clear of the quantity badge in the corner.
+                modifier = if (isSelected) Modifier.padding(end = badgeSize + 4.dp) else Modifier,
             )
             Column {
                 Text(
@@ -166,16 +172,18 @@ fun ProductTile(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .size(28.dp)
+                    .size(badgeSize)
                     .clip(CircleShape)
                     .background(colors.green),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = selectedQuantity.orEmpty(),
-                    style = com.archsolutions.shopmanager.core.designsystem.amountTextStyle(14.sp),
-                    color = colors.onGreen,
-                )
+                CappedFontScale {
+                    Text(
+                        text = selectedQuantity.orEmpty(),
+                        style = com.archsolutions.shopmanager.core.designsystem.amountTextStyle(14.sp),
+                        color = colors.onGreen,
+                    )
+                }
             }
         }
     }

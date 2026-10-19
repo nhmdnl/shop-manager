@@ -28,7 +28,8 @@ Constraints, goal and current state live in the hub note above (`Hub/Projects/sh
     ./gradlew assembleDebug
     ./gradlew testDebugUnitTest                                   # JVM tests (Room DAO/transaction tests included)
     ./gradlew testDebugUnitTest --tests "*.SaleTransactionTest"   # single class
-    ./gradlew connectedDebugAndroidTest                           # needs device/emulator (ShopDesignSystemTest)
+    ./gradlew connectedDebugAndroidTest                           # needs device/emulator (ShopDesignSystemTest, SaleTapCountTest); uninstalls the app afterwards
+    ./gradlew installDebugAndroidTest && adb shell am instrument -w com.archsolutions.shopmanager.test/androidx.test.runner.AndroidJUnitRunner   # same tests, keeps the VM's app data
     adb connect 127.0.0.1:5555 && ./gradlew installDebug          # test device: vm-curator "Android x86" VM (API 28, 1280x800), must be running
 
 Kotlin + Compose + Hilt + Room via KSP (no kapt). compileSdk 36, minSdk 26. Package `com.archsolutions.shopmanager`.
@@ -37,7 +38,7 @@ Kotlin + Compose + Hilt + Room via KSP (no kapt). compileSdk 36, minSdk 26. Pack
 
 Single `app` module, layered by package:
 
-- `core/` — `money/Money.kt` (UGX as `Long`), `designsystem/` (theme + reusable components; screens compose these, not raw Material), `locale/LanguageManager` (en/lg/pt/sw/ti via `values-*`), `util/` (`Clock`, `Result`).
+- `core/` — `money/Money.kt` (UGX as `Long`), `designsystem/` (theme + reusable components; screens compose these, not raw Material; buttons take a minimum height, fixed-size boxes that hold text size with `fontScaled()`, and money boxes cap their big digits at 1.5x with `CappedFontScale`, so 200% fonts are not cut; Close the day switches tablets to its stacked layout above 125%), `locale/LanguageManager` (en/lg/pt/sw/ti via `values-*`), `util/` (`Clock`, `Result`).
 - `data/db/` — `AppDatabase` (single Room DB), `entities/`, `dao/`, `SeedDataLoader`. `data/repo/*Repo` is the only layer features touch; any write spanning tables belongs in a repo method backed by a DAO `@Transaction`. `data/settings/SettingsStore` is DataStore.
 - `domain/` — pure business logic shared by features (`NoteCounter`, `Cart.kt`: sale total rounding must stay identical to `SaleRepo.createSale`, quick cash amounts, `isLowStock`; `BalanceCalculator`/`DaySummary` for closing the day; `Debtors`; `Reorder`: 5.6 suggested quantities, the WhatsApp order text and per-supplier low counts). Message texts come in as templates from strings.xml so they stay translatable and testable.
 - `feature/<name>/` — one Compose screen (+ ViewModel) per area: home, sell, sales (Today's sales, Sale detail), stock, suppliers, day, reports, settings. `SellViewModel` is scoped to the `SellGraph` nav graph so Sell and phone Checkout share one cart, and it persists the cart in `SavedStateHandle`.
@@ -45,7 +46,7 @@ Single `app` module, layered by package:
 
 Day locking runs on two layers. The UI shows `feature/day/DayGateLockCard` and greys out actions while the state isn't `Ready`. Every sale, purchase and money-entry write calls `requireOpenDay(dayId)` (`data/repo/DayLock.kt`), which throws `DayNotOpenException`. No day is ever opened implicitly (hub decision 0005).
 
-Gate prompts (Open the day, Yesterday is still open) show once per business date, and `AppNavHost` holds them while Open/Close the day or Day closed is on screen. A prompt pushed over Close the day gets popped with it.
+Gate prompts (Open the day, Yesterday is still open) show once per business date, and `AppNavHost` holds them while Open/Close the day or Day closed is on screen. A prompt pushed over Close the day gets popped with it. Rail/bottom-nav Home always pops back to Home (never restores a saved stack), and leaving Close the day or Day closed through the nav doesn't save that stack, so a finished day can't come back as a stale Day closed screen.
 
 PIN (addendum C4): screens wrap protected actions in `rememberPinGate().run(purpose) { … }` (`feature/pin/PinDialog.kt`). It runs at once when no PIN is set, else after `PinGuard` accepts the PIN; 5 wrong tries lock it for 30 s. The 6-second Undo after a sale skips it on purpose.
 
@@ -57,4 +58,4 @@ Close-day reminder (`app/CloseReminder.kt`, spec 6.7): one unique one-time WorkM
 
 Adaptive shell: tablet landscape is primary, phone portrait secondary; the same feature screens serve both.
 
-Tests live in `app/src/test` (JVM, in-memory Room) except design-system UI tests in `androidTest`.
+Tests live in `app/src/test` (JVM, in-memory Room) except Compose UI tests in `androidTest`: the design system, and `SaleTapCountTest` (checklist 15: phone sale in 3 taps, tablet in 2, driving the real `SellViewModel` on an in-memory DB).

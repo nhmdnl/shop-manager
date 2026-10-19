@@ -12,10 +12,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -46,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -247,7 +251,7 @@ private fun ThemeSettingsCard(
                                     ),
                                     RoundedCornerShape(14.dp),
                                 )
-                                .clickable { onThemeSelected(mode) }
+                                .selectable(selected = isSelected, onClick = { onThemeSelected(mode) }, role = Role.RadioButton)
                                 .padding(12.dp),
                         ) {
                             Row(
@@ -261,9 +265,10 @@ private fun ThemeSettingsCard(
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.ink,
                                 )
+                                // The whole tile is the radio button, so its label is read with it.
                                 RadioButton(
                                     selected = isSelected,
-                                    onClick = { onThemeSelected(mode) },
+                                    onClick = null,
                                     colors = RadioButtonDefaults.colors(
                                         selectedColor = colors.green,
                                         unselectedColor = colors.muted,
@@ -275,15 +280,18 @@ private fun ThemeSettingsCard(
                 }
             } else {
                 // Phone segmented control
+                val light = stringResource(R.string.theme_light)
+                val dark = stringResource(R.string.theme_dark)
+                val system = stringResource(R.string.theme_system)
                 SegmentedControl(
                     items = ThemeMode.entries,
                     selectedItem = currentTheme,
                     onItemSelected = onThemeSelected,
                     labelProvider = { mode ->
                         when (mode) {
-                            ThemeMode.LIGHT -> "Light"
-                            ThemeMode.DARK -> "Dark"
-                            ThemeMode.SYSTEM -> "System"
+                            ThemeMode.LIGHT -> light
+                            ThemeMode.DARK -> dark
+                            ThemeMode.SYSTEM -> system
                         }
                     },
                 )
@@ -308,7 +316,7 @@ private fun LanguageSettingsCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .clickable { onLanguageSelected(code) }
+                        .selectable(selected = isSelected, onClick = { onLanguageSelected(code) }, role = Role.RadioButton)
                         .padding(vertical = 6.dp, horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -321,7 +329,7 @@ private fun LanguageSettingsCard(
                     )
                     RadioButton(
                         selected = isSelected,
-                        onClick = { onLanguageSelected(code) },
+                        onClick = null,
                         colors = RadioButtonDefaults.colors(
                             selectedColor = colors.green,
                             unselectedColor = colors.muted,
@@ -356,41 +364,11 @@ private fun DailyBalanceSettingsCard(
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             SectionLabel(text = stringResource(R.string.settings_daily_balance))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_open_day_on_start),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.ink,
-                    modifier = Modifier.weight(1f),
-                )
-                ShopSwitch(
-                    checked = openDayOnStart,
-                    onCheckedChange = onOpenDayChange,
-                )
-            }
+            SwitchRow(title = stringResource(R.string.settings_open_day_on_start), checked = openDayOnStart, onCheckedChange = onOpenDayChange)
 
             ReminderTimeRow(time = reminderTime, onTimeChange = onReminderTimeChange)
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_carry_closing),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.ink,
-                    modifier = Modifier.weight(1f),
-                )
-                ShopSwitch(
-                    checked = carryClosing,
-                    onCheckedChange = onCarryClosingChange,
-                )
-            }
+            SwitchRow(title = stringResource(R.string.settings_carry_closing), checked = carryClosing, onCheckedChange = onCarryClosingChange)
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
@@ -501,12 +479,12 @@ private fun ShopDataSettingsCard(
             SettingRow(title = stringResource(R.string.settings_restore), subtitle = stringResource(R.string.settings_restore_desc)) {
                 RowChip(text = stringResource(R.string.action_restore), onClick = { pinGate.run(R.string.pin_for_restore) { confirmingRestore = true } })
             }
-            SettingRow(title = stringResource(R.string.settings_pin), subtitle = stringResource(R.string.settings_pin_desc)) {
-                ShopSwitch(
-                    checked = settings.pinEnabled,
-                    onCheckedChange = { on -> if (on) choosingPin = true else pinGate.run(R.string.pin_for_settings, onPinOff) },
-                )
-            }
+            SwitchRow(
+                title = stringResource(R.string.settings_pin),
+                subtitle = stringResource(R.string.settings_pin_desc),
+                checked = settings.pinEnabled,
+                onCheckedChange = { on -> if (on) choosingPin = true else pinGate.run(R.string.pin_for_settings, onPinOff) },
+            )
             if (settings.pinEnabled) {
                 SettingRow(title = stringResource(R.string.settings_change_pin)) {
                     RowChip(text = stringResource(R.string.action_change), onClick = { pinGate.run(R.string.pin_for_settings) { choosingPin = true } })
@@ -581,6 +559,28 @@ private fun SettingRow(title: String, subtitle: String? = null, trailing: @Compo
             }
         }
         trailing()
+    }
+}
+
+/** A Settings row whose whole width toggles the switch, so the switch is read and tapped with its label. */
+@Composable
+private fun SwitchRow(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit, subtitle: String? = null) {
+    val colors = LocalShopColors.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .toggleable(value = checked, onValueChange = onCheckedChange, role = Role.Switch),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyMedium, color = colors.ink)
+            if (subtitle != null) {
+                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = colors.muted)
+            }
+        }
+        ShopSwitch(checked = checked, onCheckedChange = null)
     }
 }
 
