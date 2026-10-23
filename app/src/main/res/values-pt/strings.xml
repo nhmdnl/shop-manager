@@ -224,7 +224,6 @@
 
     <!-- Day: money and debtors -->
     <string name="todays_money">Dinheiro de hoje</string>
-    <string name="close_the_day">Fechar o dia</string>
     <string name="sold_on_credit">Vendido fiado</string>
     <string name="money_in_out_today">Entradas e saídas de hoje</string>
     <string name="kind_sale">Venda</string>
@@ -299,10 +298,13 @@
     <string name="over_amount">A mais %1$s</string>
     <string name="short_by">Em falta</string>
     <string name="over_by">A mais</string>
+    <string name="still_to_count">Faltam contar %1$s</string>
+    <string name="balanced_exact">A gaveta bate certo até ao último xelim</string>
+    <string name="balanced_within">Dentro da diferença permitida de %1$s</string>
+    <string name="pick_reason_to_close">Escolha um motivo para fechar o dia</string>
     <string name="cash_counted">Dinheiro contado</string>
     <string name="momo_counted">Mobile Money contado</string>
     <string name="count_cash">Contar dinheiro</string>
-    <string name="reason_for_difference">Motivo da diferença</string>
     <string name="reason_change_error">Erro no troco</string>
     <string name="reason_not_recorded">Não registado</string>
     <string name="send_summary_whatsapp">Enviar o resumo pelo WhatsApp</string>
@@ -461,7 +463,7 @@
     <string name="pdf_col_amount">Valor</string>
     <string name="pdf_col_cash_diff">Diferença em dinheiro</string>
     <string name="pdf_col_momo_diff">Diferença MoMo</string>
-    <string name="pdf_made_on">Feito com o Shop Manager em %1$s</string>
+    <string name="pdf_made_on">Feito com o Arch-SME em %1$s</string>
     <plurals name="plurals_reopened">
         <item quantity="one">reaberto uma vez</item>
         <item quantity="other">reaberto %1$d vezes</item>
@@ -496,7 +498,7 @@
     <string name="restore_choose">Escolher cópia</string>
     <string name="backup_saved">Cópia guardada</string>
     <string name="backup_failed">Não foi possível terminar. Tente novamente.</string>
-    <string name="backup_not_a_backup">Esse ficheiro não é uma cópia do Shop Manager.</string>
+    <string name="backup_not_a_backup">Esse ficheiro não é uma cópia do Arch-SME.</string>
     <string name="backup_too_new">Essa cópia vem de uma versão mais recente da aplicação. Atualize primeiro.</string>
     <string name="backup_reminder_body">Faça uma cópia para não perder a loja se perder o telemóvel</string>
     <plurals name="plurals_pin_tries_left">
@@ -518,7 +520,7 @@
     <!-- Onboarding and product import (M9) -->
     <string name="step_of">Passo %1$d de %2$d</string>
     <string name="action_next">Seguinte</string>
-    <string name="onboarding_welcome_title">Bem-vindo ao Shop Manager</string>
+    <string name="onboarding_welcome_title">Bem-vindo ao Arch-SME</string>
     <string name="onboarding_welcome_sub">Duas perguntas rápidas e já pode vender.</string>
     <string name="shop_name_placeholder">Por exemplo, Loja da Maria</string>
     <string name="gloss_swahili">Suaíli</string>

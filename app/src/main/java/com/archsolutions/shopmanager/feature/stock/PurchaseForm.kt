@@ -136,7 +136,7 @@ internal fun PurchaseForm(
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.muted,
             )
-            FieldLabel(stringResource(R.string.paid_from))
+            SectionLabel(text = stringResource(R.string.paid_from))
             SegmentedControl(
                 items = PurchasePaid.entries,
                 selectedItem = state.paid,

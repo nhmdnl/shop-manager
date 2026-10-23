@@ -175,7 +175,7 @@ private fun DayHeader(state: DayUiState, zoneId: ZoneId, canClose: Boolean, onCl
         }
         if (canClose) {
             InkButton(
-                text = stringResource(R.string.close_the_day),
+                text = stringResource(R.string.action_close_day),
                 onClick = onCloseDay,
                 leadingIcon = Icons.Outlined.Lock,
             )
@@ -201,7 +201,7 @@ private fun DayStats(state: DayUiState, columns: Int, onDebtors: () -> Unit) {
                     StatTile(
                         label = label,
                         amountFormatted = Money.format(amount, withCode = false),
-                        amountColor = if (credit) colors.rust else null,
+                        amountColor = if (credit && amount > 0) colors.rust else null,
                         modifier = Modifier
                             .weight(1f)
                             .then(if (credit) Modifier.clickable(onClick = onDebtors) else Modifier),
@@ -451,7 +451,7 @@ private fun DayCompact(
                     }
                     if (canClose) {
                         InkButton(
-                            text = stringResource(R.string.close_the_day),
+                            text = stringResource(R.string.action_close_day),
                             onClick = onCloseDay,
                             leadingIcon = Icons.Outlined.Lock,
                             modifier = Modifier.weight(1f),

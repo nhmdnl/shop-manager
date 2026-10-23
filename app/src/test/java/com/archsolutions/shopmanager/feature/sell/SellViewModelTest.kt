@@ -214,6 +214,27 @@ class SellViewModelTest {
         assertEquals(48.0, db.productDao().getByIdDirect(soda)!!.stockQty, 0.0)
     }
 
+    // 5.1.6: stock may go negative; a product at zero still sells and is never blocked.
+    @Test
+    fun `a product with no stock left still sells and goes negative`() = runTest {
+        dayRepo.openDay("2026-09-30", openingCash = 0L, openingMobile = 0L)
+        val bread = insertProduct("Bread loaf", price = 3_300L, stock = 0.0)
+        val viewModel = newViewModel()
+        viewModel.state.first { it.loaded }
+
+        viewModel.addOne(bread)
+        viewModel.addOne(bread)
+        val ready = viewModel.state.first { it.lines.isNotEmpty() && it.lines.single().qty == 2.0 }
+        assertTrue(ready.canComplete)
+
+        viewModel.completeSale()
+        val saved = viewModel.savedSale.first { it != null }!!
+
+        assertEquals(6_600L, saved.total)
+        assertEquals(-2.0, db.productDao().getByIdDirect(bread)!!.stockQty, 0.0)
+        assertEquals(-2.0, db.stockMovementDao().getSumQuantityChanges(bread), 0.0)
+    }
+
     @Test
     fun `the cart survives the process being killed`() = runTest {
         dayRepo.openDay("2026-09-30", openingCash = 0L, openingMobile = 0L)

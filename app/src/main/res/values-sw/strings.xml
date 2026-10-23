@@ -224,7 +224,6 @@
 
     <!-- Day: money and debtors -->
     <string name="todays_money">Pesa za leo</string>
-    <string name="close_the_day">Funga siku</string>
     <string name="sold_on_credit">Imeuzwa kwa mkopo</string>
     <string name="money_in_out_today">Pesa zilizoingia na kutoka leo</string>
     <string name="kind_sale">Mauzo</string>
@@ -299,10 +298,13 @@
     <string name="over_amount">Ziada %1$s</string>
     <string name="short_by">Upungufu wa</string>
     <string name="over_by">Ziada ya</string>
+    <string name="still_to_count">%1$s bado hazijahesabiwa</string>
+    <string name="balanced_exact">Droo inalingana hadi shilingi ya mwisho</string>
+    <string name="balanced_within">Ndani ya tofauti inayoruhusiwa ya %1$s</string>
+    <string name="pick_reason_to_close">Chagua sababu ili kufunga siku</string>
     <string name="cash_counted">Taslimu iliyohesabiwa</string>
     <string name="momo_counted">Mobile Money iliyohesabiwa</string>
     <string name="count_cash">Hesabu taslimu</string>
-    <string name="reason_for_difference">Sababu ya tofauti</string>
     <string name="reason_change_error">Kosa la chenji</string>
     <string name="reason_not_recorded">Haikurekodiwa</string>
     <string name="send_summary_whatsapp">Tuma muhtasari kwenye WhatsApp</string>
@@ -461,7 +463,7 @@
     <string name="pdf_col_amount">Kiasi</string>
     <string name="pdf_col_cash_diff">Tofauti ya taslimu</string>
     <string name="pdf_col_momo_diff">Tofauti ya MoMo</string>
-    <string name="pdf_made_on">Imetengenezwa na Shop Manager tarehe %1$s</string>
+    <string name="pdf_made_on">Imetengenezwa na Arch-SME tarehe %1$s</string>
     <plurals name="plurals_reopened">
         <item quantity="one">ilifunguliwa upya mara moja</item>
         <item quantity="other">ilifunguliwa upya mara %1$d</item>
@@ -496,7 +498,7 @@
     <string name="restore_choose">Chagua nakala</string>
     <string name="backup_saved">Nakala imehifadhiwa</string>
     <string name="backup_failed">Imeshindwa kumaliza. Jaribu tena.</string>
-    <string name="backup_not_a_backup">Faili hilo si nakala ya Shop Manager.</string>
+    <string name="backup_not_a_backup">Faili hilo si nakala ya Arch-SME.</string>
     <string name="backup_too_new">Nakala hiyo ni ya toleo jipya la programu. Sasisha programu kwanza.</string>
     <string name="backup_reminder_body">Hifadhi nakala ili simu ikipotea duka lisipotee</string>
     <plurals name="plurals_pin_tries_left">
@@ -518,7 +520,7 @@
     <!-- Onboarding and product import (M9) -->
     <string name="step_of">Hatua %1$d kati ya %2$d</string>
     <string name="action_next">Endelea</string>
-    <string name="onboarding_welcome_title">Karibu Shop Manager</string>
+    <string name="onboarding_welcome_title">Karibu Arch-SME</string>
     <string name="onboarding_welcome_sub">Maswali mawili mafupi, kisha unaweza kuuza.</string>
     <string name="shop_name_placeholder">Kwa mfano, Duka la Mary</string>
     <string name="gloss_swahili">Kiswahili</string>

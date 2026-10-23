@@ -185,9 +185,9 @@ fun ShopSwitch(
         colors = SwitchDefaults.colors(
             checkedThumbColor = colors.surface,
             checkedTrackColor = colors.green,
-            uncheckedThumbColor = colors.surface,
+            uncheckedThumbColor = colors.fieldBorder,
             uncheckedTrackColor = colors.segmentTrack,
-            uncheckedBorderColor = colors.line,
+            uncheckedBorderColor = colors.fieldBorder,
         ),
     )
 }

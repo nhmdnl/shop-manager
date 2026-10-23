@@ -10,6 +10,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.archsolutions.shopmanager.app.DayGate
@@ -39,6 +44,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.time.ZoneId
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /** Checklist 15: a phone sale takes 3 taps, a tablet sale 2 (cash, nothing typed). */
 @RunWith(AndroidJUnit4::class)
@@ -48,7 +55,12 @@ class SaleTapCountTest {
     val composeRule = createComposeRule()
 
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private val db = AppDatabase.createInMemory(context)
+    private val queryExecutor = Executors.newFixedThreadPool(4)
+    private val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+        .allowMainThreadQueries()
+        .setQueryExecutor(queryExecutor)
+        .build()
+    private val viewModelStore = ViewModelStore()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val clock = object : AppClock {
         override fun nowMillis(): Long = System.currentTimeMillis()
@@ -58,7 +70,12 @@ class SaleTapCountTest {
 
     @After
     fun tearDown() {
+        // Stop every query before closing the DB. The ViewModel's flows re-read products and customers after the
+        // sale; a read landing after close() failed the test now and then ("connection pool has been closed").
+        viewModelStore.clear()
         scope.cancel()
+        queryExecutor.shutdown()
+        queryExecutor.awaitTermination(5, TimeUnit.SECONDS)
         db.close()
     }
 
@@ -69,7 +86,10 @@ class SaleTapCountTest {
             ProductEntity(name = "Sugar 1kg", categoryId = null, sellPrice = 5_000, costPrice = 4_200, stockQty = 34.0, lowStockLevel = 15.0, createdAt = 0L, updatedAt = 0L)
         )
         val settings = SettingsStore(PreferenceDataStoreFactory.create(scope = scope, produceFile = { File(context.cacheDir, "taps_${System.nanoTime()}.preferences_pb") }))
-        val viewModel = SellViewModel(ProductRepo(db, clock), CustomerRepo(db), SaleRepo(db, clock), DayGate(dayRepo, settings, clock), SavedStateHandle())
+        val factory = viewModelFactory {
+            initializer { SellViewModel(ProductRepo(db, clock), CustomerRepo(db), SaleRepo(db, clock), DayGate(dayRepo, settings, clock), SavedStateHandle()) }
+        }
+        val viewModel = ViewModelProvider(viewModelStore, factory)[SellViewModel::class.java]
         viewModel to dayRepo.getDayByIdDirect(dayId)!!
     }
 

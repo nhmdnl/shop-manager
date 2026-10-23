@@ -6,11 +6,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -57,6 +63,7 @@ import com.archsolutions.shopmanager.app.DayGateState
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.components.DayBar
+import com.archsolutions.shopmanager.core.designsystem.components.FitOrStackRow
 import com.archsolutions.shopmanager.core.designsystem.components.InkButton
 import com.archsolutions.shopmanager.core.designsystem.components.LockedActionButton
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
@@ -90,6 +97,7 @@ fun HomeScreen(
     onNavigateToStock: () -> Unit,
     onAddExpense: () -> Unit,
     onCloseDay: () -> Unit,
+    onDayDetails: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onOpenDay: () -> Unit,
     recentSales: List<SaleRow>,
@@ -167,6 +175,7 @@ fun HomeScreen(
                     onAddExpense = onAddExpense,
                     onCloseDay = onCloseDay,
                     isCompact = !isExpanded,
+                    onDetails = onDayDetails,
                 )
             } else if (gateState is DayGateState.TodayClosed) {
                 DayClosedBar(
@@ -188,9 +197,9 @@ fun HomeScreen(
             backupReminder?.let { BackupReminderCard(reminder = it, onBackUp = onBackUp) }
 
             if (isExpanded) {
-                // Tablet: two big tiles (150 dp tall, radius 24)
+                // Tablet: two big tiles (at least 150 dp tall, radius 24), equal height when large fonts grow one
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
                     horizontalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     if (tradingOpen) {
@@ -253,21 +262,19 @@ fun HomeScreen(
                         leadingIcon = Icons.Default.Add,
                     )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
+                    // Side by side while both labels fit on one line (8 dp padding fits them on a 360 dp phone); stacked otherwise ("Add purch / ase").
+                    FitOrStackRow(modifier = Modifier.fillMaxWidth(), spacing = 12.dp) {
                         SecondaryButton(
                             text = stringResource(R.string.action_add_purchase),
                             onClick = onNavigateToStock,
-                            modifier = Modifier.weight(1f),
                             leadingIcon = Icons.Outlined.Inventory2,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                         )
                         SecondaryButton(
                             text = stringResource(R.string.action_add_expense),
                             onClick = onAddExpense,
-                            modifier = Modifier.weight(1f),
                             leadingIcon = Icons.Outlined.ReceiptLong,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                         )
                     }
                 } else {
@@ -286,18 +293,9 @@ fun HomeScreen(
                         )
                         todaySummary?.let { TodayCard(summary = it, onSeeSales = onSeeAllSales) }
                     } else {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            LockedActionButton(
-                                text = stringResource(R.string.action_add_purchase),
-                                modifier = Modifier.weight(1f),
-                            )
-                            LockedActionButton(
-                                text = stringResource(R.string.action_add_expense),
-                                modifier = Modifier.weight(1f),
-                            )
+                        FitOrStackRow(modifier = Modifier.fillMaxWidth(), spacing = 12.dp) {
+                            LockedActionButton(text = stringResource(R.string.action_add_purchase))
+                            LockedActionButton(text = stringResource(R.string.action_add_expense))
                         }
                     }
                 }
@@ -354,7 +352,8 @@ private fun HomeTile(
     val contentColor = if (primary) colors.onGreen else colors.ink
     Surface(
         modifier = modifier
-            .height(150.dp)
+            .heightIn(min = 150.dp)
+            .fillMaxHeight()
             .clip(RoundedCornerShape(24.dp))
             .clickable { onClick() },
         color = if (primary) colors.green else colors.surface,
@@ -397,6 +396,7 @@ private fun HomeTile(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LowStockCard(
     items: List<LowStockItem>,
@@ -406,10 +406,12 @@ private fun LowStockCard(
     val colors = LocalShopColors.current
     ShopCard(modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(
+            // The link drops below the label when large fonts leave no room beside it.
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 SectionLabel(text = stringResource(R.string.label_low_stock))
                 Text(
@@ -469,6 +471,7 @@ private fun LowStockCard(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RecentSalesCard(
     sales: List<SaleRow>,
@@ -479,12 +482,13 @@ private fun RecentSalesCard(
     val colors = LocalShopColors.current
     ShopCard(modifier = modifier, padding = 0.dp) {
         Column {
-            Row(
+            FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 SectionLabel(text = stringResource(R.string.recent_sales))
                 Text(

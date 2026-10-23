@@ -1,9 +1,11 @@
 package com.archsolutions.shopmanager.core.designsystem.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Lock
@@ -29,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -39,6 +43,7 @@ import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.fontScaled
+import com.archsolutions.shopmanager.core.designsystem.noteColor
 import com.archsolutions.shopmanager.core.money.Money
 
 @Composable
@@ -49,12 +54,30 @@ fun DayBar(
     onCloseDay: () -> Unit,
     modifier: Modifier = Modifier,
     isCompact: Boolean = false,
+    // Phones have no Day tab (3.5): on the compact bar, the top row opens Today's money.
+    onDetails: (() -> Unit)? = null,
 ) {
     val colors = LocalShopColors.current
     ShopCard(modifier = modifier.fillMaxWidth()) {
         if (isCompact) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .then(
+                            if (onDetails != null) {
+                                Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable(
+                                        onClickLabel = stringResource(R.string.todays_money),
+                                        role = Role.Button,
+                                        onClick = onDetails,
+                                    )
+                            } else {
+                                Modifier
+                            }
+                        ),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -72,7 +95,7 @@ fun DayBar(
                             modifier = Modifier.size(24.dp),
                         )
                     }
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = openedSince,
                             style = MaterialTheme.typography.titleMedium,
@@ -85,22 +108,23 @@ fun DayBar(
                             color = colors.muted,
                         )
                     }
+                    if (onDetails != null) {
+                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.muted)
+                    }
                 }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
+                val buttonPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                FitOrStackRow(modifier = Modifier.fillMaxWidth(), spacing = 8.dp) {
                     SecondaryButton(
                         text = stringResource(R.string.action_add_expense),
                         onClick = onAddExpense,
-                        modifier = Modifier.weight(1f),
                         height = 48.dp,
+                        contentPadding = buttonPadding,
                     )
                     InkButton(
                         text = stringResource(R.string.action_close_day),
                         onClick = onCloseDay,
-                        modifier = Modifier.weight(1f),
                         height = 48.dp,
+                        contentPadding = buttonPadding,
                     )
                 }
             }
@@ -293,10 +317,11 @@ fun DenominationRow(
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // In the note's own colour (50,000 golden, 2,000 blue, …) so each pile from the drawer finds its row.
         Text(
             text = Money.format(denomination, withCode = false),
             style = com.archsolutions.shopmanager.core.designsystem.amountTextStyle(16.sp),
-            color = colors.ink,
+            color = colors.noteColor(denomination),
             modifier = Modifier.width(110.dp),
         )
 

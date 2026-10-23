@@ -71,7 +71,7 @@ fun SearchField(
             .border(
                 BorderStroke(
                     width = if (isFocused) 1.5.dp else 1.dp,
-                    color = if (isFocused) colors.green else colors.line,
+                    color = if (isFocused) colors.green else colors.fieldBorder,
                 ),
                 RoundedCornerShape(14.dp),
             )
@@ -133,7 +133,7 @@ fun ShopTextField(
             .border(
                 BorderStroke(
                     width = if (isFocused) 1.5.dp else 1.dp,
-                    color = if (isFocused) colors.green else colors.line,
+                    color = if (isFocused) colors.green else colors.fieldBorder,
                 ),
                 RoundedCornerShape(14.dp),
             )
@@ -186,7 +186,7 @@ fun MoneyField(
                     .border(
                         BorderStroke(
                             width = if (isFocused) 2.dp else 1.dp,
-                            color = if (isFocused) colors.green else colors.line,
+                            color = if (isFocused) colors.green else colors.fieldBorder,
                         ),
                         RoundedCornerShape(14.dp),
                     )
@@ -270,7 +270,7 @@ fun SmallMoneyField(
                 .border(
                     BorderStroke(
                         width = if (isFocused) 1.5.dp else 1.dp,
-                        color = if (isFocused) colors.green else colors.line,
+                        color = if (isFocused) colors.green else colors.fieldBorder,
                     ),
                     RoundedCornerShape(12.dp),
                 )
@@ -351,7 +351,7 @@ fun <T> ShopDropdown(
             onClick = { expanded = true },
             shape = RoundedCornerShape(14.dp),
             color = colors.surface,
-            border = BorderStroke(1.dp, colors.line),
+            border = BorderStroke(1.dp, colors.fieldBorder),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),

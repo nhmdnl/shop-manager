@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -299,7 +300,7 @@ private fun StockTableRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             StockQtyText(qty = product.stockQty, low = row.isLow, size = 20)
-            if (row.isLow) Badge(text = stringResource(R.string.low_badge), kind = BadgeKind.Warn)
+            if (row.isLow && product.stockQty >= 0) Badge(text = stringResource(R.string.low_badge), kind = BadgeKind.Warn)
         }
         Text(
             text = stringResource(R.string.alert_below, Qty.format(product.lowStockLevel)),
@@ -312,19 +313,23 @@ private fun StockTableRow(
             shape = CircleShape,
             color = colors.surface,
             border = BorderStroke(1.dp, if (inPurchase) colors.green else colors.line),
-            modifier = Modifier.width(128.dp),
+            // Grows past 128 dp with large fonts instead of wrapping to "Purchas e".
+            modifier = Modifier.widthIn(min = 128.dp),
         ) {
             Row(
-                modifier = Modifier.padding(vertical = 10.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = colors.green, modifier = Modifier.size(18.dp))
+                // Ink until the product is in the purchase: green stays for the panel's Save purchase.
+                val purchaseColor = if (inPurchase) colors.green else colors.ink
+                Icon(Icons.Default.Add, contentDescription = null, tint = purchaseColor, modifier = Modifier.size(18.dp))
                 Text(
                     text = stringResource(R.string.action_purchase),
                     style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.green,
+                    color = purchaseColor,
                 )
             }
         }
@@ -464,7 +469,7 @@ private fun StockCompact(
                                     color = colors.muted,
                                 )
                             }
-                            if (row.isLow) Badge(text = stringResource(R.string.low_badge), kind = BadgeKind.Warn)
+                            if (row.isLow && row.product.stockQty >= 0) Badge(text = stringResource(R.string.low_badge), kind = BadgeKind.Warn)
                             StockQtyText(qty = row.product.stockQty, low = row.isLow, size = 22)
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,

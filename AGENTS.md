@@ -31,8 +31,11 @@ Constraints, goal and current state live in the hub note above (`Hub/Projects/sh
     ./gradlew connectedDebugAndroidTest                           # needs device/emulator (ShopDesignSystemTest, SaleTapCountTest); uninstalls the app afterwards
     ./gradlew installDebugAndroidTest && adb shell am instrument -w com.archsolutions.shopmanager.test/androidx.test.runner.AndroidJUnitRunner   # same tests, keeps the VM's app data
     adb connect 127.0.0.1:5555 && ./gradlew installDebug          # test device: vm-curator "Android x86" VM (API 28, 1280x800), must be running
+    ./gradlew --offline assembleRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease   # clean build (no demo data: the seed runs only when debuggable); lintVital needs desktop/JVM artifacts missing from the offline cache. Unsigned: sign with apksigner (no release key yet)
 
 Kotlin + Compose + Hilt + Room via KSP (no kapt). compileSdk 36, minSdk 26. Package `com.archsolutions.shopmanager`.
+
+The app is called **Arch-SME** (`app_name`, user-facing strings, backup file names `arch-sme_backup_*`). Internal ids keep "shopmanager": the package, `shop_manager.db`, the backup manifest's `APP_ID` and the zip's `shop_manager.db` entry, intent actions. Renaming those would lose data or break restores. The launcher icon is the adaptive vector set from the Arch-SME icon kit (`~/Projects/shpmgmt/arch-sme-icon-kit-v3.zip`; with minSdk 26 no density PNGs are needed); `ic_stat_shop` is its monochrome glyph cropped for the status bar.
 
 ## Architecture
 
