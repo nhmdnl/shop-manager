@@ -7,6 +7,7 @@ All notable changes to Arch-SME. The format follows [Keep a Changelog](https://k
 ### Added
 - A translation sheet: `tools/translation_sheet.py` exports every string to a spreadsheet, with where it appears and the marks to keep, and imports the translator's sheet back.
 - README with screenshots, and the license texts of the bundled fonts.
+- The code is released under the MIT License.
 
 ## [1.0.0] - not released yet
 

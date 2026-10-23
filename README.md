@@ -111,6 +111,8 @@ Version 1.0 is feature complete. See [CHANGELOG.md](CHANGELOG.md). Before the fi
 
 ## Licenses
 
+The app's code is under the [MIT License](LICENSE).
+
 The bundled fonts are under the SIL Open Font License 1.1; their license texts are in [`licenses/`](licenses):
 - [Bricolage Grotesque](https://github.com/ateliertriay/bricolage) for display text and amounts.
 - [DM Sans](https://github.com/googlefonts/dm-fonts) for body text.
