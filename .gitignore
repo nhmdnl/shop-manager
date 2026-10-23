@@ -14,3 +14,9 @@
 .cxx
 local.properties
 .kotlin
+
+# Local working notes and translator sheets (not published)
+AGENTS.md
+CLAUDE.md
+.claude/
+/translations/
