@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -134,7 +135,8 @@ enum class NavDestination(
     val showInCompactBottomBar: Boolean = true,
 ) {
     HOME(HomeRoute, R.string.nav_home, Icons.Outlined.Home),
-    SELL(SellRoute, R.string.nav_sell, Icons.Outlined.ShoppingCart),
+    // The graph, not SellRoute: a tab switch saves the stack under the graph, so only it restores the cart.
+    SELL(SellGraph, R.string.nav_sell, Icons.Outlined.ShoppingCart),
     STOCK(StockRoute(), R.string.nav_stock, Icons.Outlined.Inventory2),
     DAY(DayRoute, R.string.nav_day, Icons.Outlined.AccountBalanceWallet, showInCompactBottomBar = false),
     SUPPLIERS(SuppliersRoute, R.string.nav_suppliers, Icons.Outlined.LocalShipping),
@@ -205,34 +207,11 @@ fun AppNavHost(
 
     // Check which top-level item is selected
     // hasRoute, not route strings: routes with arguments (StockRoute) carry them in the string.
+    // The hierarchy covers Sell, whose tab route is its graph.
     fun isSelected(dest: NavDestination): Boolean {
         val destination = currentDestination ?: return false
-        return destination.hasRoute(dest.route::class) ||
+        return destination.hierarchy.any { it.hasRoute(dest.route::class) } ||
             (dest == NavDestination.SUPPLIERS && destination.hasRoute(SupplierDetailRoute::class))
-    }
-
-    fun navigateTo(dest: NavDestination) {
-        // Close the day and Day closed are one-off steps: leaving them through the rail drops them
-        // instead of saving them, so a finished day never comes back as a stale Day closed screen.
-        val inDayFlow = navController.currentBackStack.value.any {
-            it.destination.hasRoute(CloseDayRoute::class) || it.destination.hasRoute(DayClosedRoute::class)
-        }
-        // Home is the start destination: go back to it rather than restore a stack saved for it.
-        if (dest == NavDestination.HOME) {
-            if (!navController.popBackStack<HomeRoute>(inclusive = false, saveState = !inDayFlow) &&
-                currentDestination?.hasRoute(HomeRoute::class) != true
-            ) {
-                navController.navigate(HomeRoute) { launchSingleTop = true }
-            }
-            return
-        }
-        navController.navigate(dest.route) {
-            popUpTo(navController.graph.findStartDestination().id) {
-                saveState = !inDayFlow
-            }
-            launchSingleTop = true
-            restoreState = true
-        }
     }
 
     if (useRail) {
@@ -286,7 +265,7 @@ fun AppNavHost(
                         val selected = isSelected(dest)
                         NavigationRailItem(
                             selected = selected,
-                            onClick = { navigateTo(dest) },
+                            onClick = { navController.navigateToTab(dest) },
                             icon = {
                                 Icon(
                                     imageVector = dest.icon,
@@ -321,7 +300,7 @@ fun AppNavHost(
                     val settingsSelected = isSelected(NavDestination.SETTINGS)
                     NavigationRailItem(
                         selected = settingsSelected,
-                        onClick = { navigateTo(NavDestination.SETTINGS) },
+                        onClick = { navController.navigateToTab(NavDestination.SETTINGS) },
                         icon = {
                             Icon(
                                 imageVector = Icons.Outlined.Settings,
@@ -359,6 +338,7 @@ fun AppNavHost(
                     gateViewModel = gateViewModel,
                     gateState = gateState,
                     isExpanded = isExpanded,
+                    onTab = navController::navigateToTab,
                 )
             }
         }
@@ -399,7 +379,7 @@ fun AppNavHost(
                             val selected = isSelected(dest)
                             NavigationBarItem(
                                 selected = selected,
-                                onClick = { navigateTo(dest) },
+                                onClick = { navController.navigateToTab(dest) },
                                 icon = {
                                     Icon(
                                         imageVector = dest.icon,
@@ -437,6 +417,7 @@ fun AppNavHost(
                     gateViewModel = gateViewModel,
                     gateState = gateState,
                     isExpanded = false,
+                    onTab = navController::navigateToTab,
                 )
             }
         }
@@ -450,6 +431,8 @@ private fun NavContent(
     gateViewModel: DayGateViewModel,
     gateState: DayGateState,
     isExpanded: Boolean,
+    // Home's tiles open tabs the way the rail does, or a stack saved for that tab comes back stale later.
+    onTab: (NavDestination) -> Unit,
 ) {
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
     val today by gateViewModel.today.collectAsStateWithLifecycle()
@@ -462,7 +445,7 @@ private fun NavContent(
     }
     // 7.5: tablets open Stock with the Add purchase panel on this supplier; phones the full-screen form.
     val recordPurchase = { supplierId: Long ->
-        if (isExpanded) navController.navigate(StockRoute(supplierId)) else navController.navigate(AddPurchaseRoute(supplierId = supplierId))
+        if (isExpanded) navController.openStockForSupplier(supplierId) else navController.navigate(AddPurchaseRoute(supplierId = supplierId))
     }
 
     NavHost(
@@ -485,12 +468,13 @@ private fun NavContent(
                 today = today,
                 gateState = gateState,
                 zoneId = gateViewModel.zoneId,
-                onNavigateToSell = { navController.navigate(SellRoute) },
-                onNavigateToStock = { navController.navigate(StockRoute()) },
+                onNavigateToSell = { onTab(NavDestination.SELL) },
+                onNavigateToStock = { onTab(NavDestination.STOCK) },
                 onAddExpense = {
-                    if (isExpanded) navController.navigate(DayRoute) else navController.navigate(RecordMoneyRoute())
+                    if (isExpanded) onTab(NavDestination.DAY) else navController.navigate(RecordMoneyRoute())
                 },
                 onCloseDay = closeDay,
+                onDayDetails = { onTab(NavDestination.DAY) },
                 onNavigateToSettings = { navController.navigate(SettingsRoute) },
                 onOpenDay = openDay,
                 recentSales = recentSales,
@@ -684,6 +668,44 @@ private fun NavContent(
                 onNavigateBack = if (!isExpanded) { { navController.popBackStack() } } else null,
             )
         }
+    }
+}
+
+/** Rail, bottom bar and Home's tiles: each tab keeps its own saved back stack. */
+internal fun NavHostController.navigateToTab(dest: NavDestination) {
+    // Close the day and Day closed are one-off steps: leaving them through the rail drops them
+    // instead of saving them, so a finished day never comes back as a stale Day closed screen.
+    val inDayFlow = currentBackStack.value.any {
+        it.destination.hasRoute(CloseDayRoute::class) || it.destination.hasRoute(DayClosedRoute::class)
+    }
+    // Home is the start destination: go back to it rather than restore a stack saved for it.
+    if (dest == NavDestination.HOME) {
+        if (!popBackStack<HomeRoute>(inclusive = false, saveState = !inDayFlow) &&
+            currentDestination?.hasRoute(HomeRoute::class) != true
+        ) {
+            navigate(HomeRoute) { launchSingleTop = true }
+        }
+        return
+    }
+    navigate(dest.route) {
+        popUpTo(graph.findStartDestination().id) {
+            saveState = !inDayFlow
+        }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+/**
+ * Tablet Record purchase (7.5) switches to the Stock tab. Pushed onto Suppliers instead, Stock sat in the
+ * Suppliers stack, and tapping Suppliers in the rail restored that same stack, so the tap did nothing.
+ */
+internal fun NavHostController.openStockForSupplier(supplierId: Long) {
+    // Stock's saved stack has its own supplier, or none; drop it so this one is preselected.
+    clearBackStack<StockRoute>()
+    navigate(StockRoute(supplierId)) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
     }
 }
 

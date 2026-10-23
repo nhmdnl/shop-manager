@@ -90,6 +90,7 @@ fun HomeScreen(
     onNavigateToStock: () -> Unit,
     onAddExpense: () -> Unit,
     onCloseDay: () -> Unit,
+    onDayDetails: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onOpenDay: () -> Unit,
     recentSales: List<SaleRow>,
@@ -167,6 +168,7 @@ fun HomeScreen(
                     onAddExpense = onAddExpense,
                     onCloseDay = onCloseDay,
                     isCompact = !isExpanded,
+                    onDetails = onDayDetails,
                 )
             } else if (gateState is DayGateState.TodayClosed) {
                 DayClosedBar(

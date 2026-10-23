@@ -1,6 +1,7 @@
 package com.archsolutions.shopmanager.core.designsystem.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Lock
@@ -29,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,12 +52,30 @@ fun DayBar(
     onCloseDay: () -> Unit,
     modifier: Modifier = Modifier,
     isCompact: Boolean = false,
+    // Phones have no Day tab (3.5): on the compact bar, the top row opens Today's money.
+    onDetails: (() -> Unit)? = null,
 ) {
     val colors = LocalShopColors.current
     ShopCard(modifier = modifier.fillMaxWidth()) {
         if (isCompact) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .then(
+                            if (onDetails != null) {
+                                Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable(
+                                        onClickLabel = stringResource(R.string.todays_money),
+                                        role = Role.Button,
+                                        onClick = onDetails,
+                                    )
+                            } else {
+                                Modifier
+                            }
+                        ),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -72,7 +93,7 @@ fun DayBar(
                             modifier = Modifier.size(24.dp),
                         )
                     }
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = openedSince,
                             style = MaterialTheme.typography.titleMedium,
@@ -84,6 +105,9 @@ fun DayBar(
                             style = MaterialTheme.typography.bodyMedium,
                             color = colors.muted,
                         )
+                    }
+                    if (onDetails != null) {
+                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.muted)
                     }
                 }
                 Row(
