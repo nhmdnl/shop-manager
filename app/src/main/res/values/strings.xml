@@ -334,10 +334,13 @@
     <string name="over_amount">Over %1$s</string>
     <string name="short_by">Short by</string>
     <string name="over_by">Over by</string>
+    <string name="still_to_count">%1$s still to count</string>
+    <string name="balanced_exact">The drawer matches to the shilling</string>
+    <string name="balanced_within">Within the allowed difference of %1$s</string>
+    <string name="pick_reason_to_close">Pick a reason to close the day</string>
     <string name="cash_counted">Cash counted</string>
     <string name="momo_counted">Mobile Money counted</string>
     <string name="count_cash">Count cash</string>
-    <string name="reason_for_difference">Reason for the difference</string>
     <string name="reason_change_error">Change error</string>
     <string name="reason_not_recorded">Not recorded</string>
     <string name="send_summary_whatsapp">Send the summary on WhatsApp</string>

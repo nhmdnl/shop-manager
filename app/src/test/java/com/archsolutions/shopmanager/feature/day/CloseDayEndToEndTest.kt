@@ -31,6 +31,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -118,9 +119,29 @@ class CloseDayEndToEndTest {
         // Short needs a reason before the day can close.
         assertTrue(counted.needsReason)
         assertFalse(counted.canClose)
+        // While counting, a short drawer is "still to count", not a warning; the button stays tappable.
+        assertEquals(900L, counted.cashStillToCount)
+        assertFalse(counted.showReason)
+        assertTrue(counted.canTapClose)
+
+        // Tapping Close the day asks for the reason instead of closing.
+        assertFalse(viewModel.requestClose())
+        val asked = viewModel.state.first { it.reasonAsked }
+        assertNull(asked.cashStillToCount)
+        assertTrue(asked.showReason)
+
+        // Over shows at once; counting again goes back to "still to count".
+        viewModel.setCountedCash(197_000L)
+        val over = viewModel.state.first { it.countedCash == 197_000L }
+        assertEquals(BalanceStatus.OVER, over.cashStatus)
+        assertTrue(over.showReason)
+        viewModel.setCountedCash(195_000L)
+        assertEquals(900L, viewModel.state.first { it.countedCash == 195_000L }.cashStillToCount)
+        assertFalse(viewModel.requestClose())
 
         viewModel.setReason("Change error")
         assertTrue(viewModel.state.first { it.reason != null }.canClose)
+        assertTrue(viewModel.requestClose())
         viewModel.closeDay()
         viewModel.state.first { it.closed }
 

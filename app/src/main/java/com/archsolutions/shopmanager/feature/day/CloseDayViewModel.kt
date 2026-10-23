@@ -77,6 +77,8 @@ data class CloseDayUiState(
     val notesCounted: Boolean = false,
     val reason: String? = null,
     val reasonNote: String = "",
+    /** Close the day was tapped while a reason was still missing. */
+    val reasonAsked: Boolean = false,
     val sendSummary: Boolean = true,
     val debtorsTotal: Long = 0L,
     val debtorsCount: Int = 0,
@@ -94,9 +96,24 @@ data class CloseDayUiState(
     val needsReason: Boolean
         get() = listOf(cashStatus, mobileStatus).any { it == BalanceStatus.SHORT || it == BalanceStatus.OVER }
 
+    /**
+     * A short drawer while the count may still be going on: "still to count" instead of a warning, until
+     * Close the day is tapped or a reason is picked.
+     */
+    val cashStillToCount: Long?
+        get() = cashDifference?.takeIf { cashStatus == BalanceStatus.SHORT && !reasonAsked && reason == null }?.let { -it }
+
+    /** Short or Over with the reason chips: at once for Over and for Mobile Money, for a short drawer only once asked. */
+    val showReason: Boolean
+        get() = needsReason &&
+            (cashStillToCount == null || mobileStatus == BalanceStatus.SHORT || mobileStatus == BalanceStatus.OVER)
+
+    /** Close the day can be tapped; it closes, or asks for the reason first. */
+    val canTapClose: Boolean
+        get() = day?.status == DayStatus.OPEN && countedCash != null && countedMobile != null && !closing
+
     val canClose: Boolean
-        get() = day?.status == DayStatus.OPEN && countedCash != null && countedMobile != null &&
-            (!needsReason || reason != null) && !closing
+        get() = canTapClose && (!needsReason || reason != null)
 
     /** StepIndicator: 1 Check, 2 Count, 3 Close (ready). */
     val step: Int
@@ -115,6 +132,7 @@ private data class CloseInputs(
     val notesCounted: Boolean = false,
     val reason: String? = null,
     val reasonNote: String = "",
+    val reasonAsked: Boolean = false,
     val sendSummary: Boolean = true,
     val closing: Boolean = false,
     val closed: Boolean = false,
@@ -160,6 +178,7 @@ class CloseDayViewModel @Inject constructor(
             notesCounted = input.notesCounted,
             reason = input.reason,
             reasonNote = input.reasonNote,
+            reasonAsked = input.reasonAsked,
             sendSummary = input.sendSummary,
             debtorsTotal = owing.sumOf { it.owed },
             debtorsCount = owing.size,
@@ -169,19 +188,19 @@ class CloseDayViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CloseDayUiState())
 
-    fun setCountedCash(amount: Long?) = inputs.update { it.copy(countedCash = amount, notesCounted = false) }
+    fun setCountedCash(amount: Long?) = inputs.update { it.copy(countedCash = amount, notesCounted = false, reasonAsked = false) }
 
-    fun setCountedMobile(amount: Long?) = inputs.update { it.copy(countedMobile = amount) }
+    fun setCountedMobile(amount: Long?) = inputs.update { it.copy(countedMobile = amount, reasonAsked = false) }
 
     /** The note counter fills Cash counted, as on Open the day. */
     fun setNoteCount(denomination: Long, count: Int) = inputs.update {
         val notes = it.notes + (denomination to count.coerceAtLeast(0))
-        it.copy(notes = notes, notesCounted = true, countedCash = NoteCounter.total(notes, it.coins))
+        it.copy(notes = notes, notesCounted = true, countedCash = NoteCounter.total(notes, it.coins), reasonAsked = false)
     }
 
     fun setCoins(amount: Long?) = inputs.update {
         val coins = amount ?: 0L
-        it.copy(coins = coins, notesCounted = true, countedCash = NoteCounter.total(it.notes, coins))
+        it.copy(coins = coins, notesCounted = true, countedCash = NoteCounter.total(it.notes, coins), reasonAsked = false)
     }
 
     fun setReason(reason: String) = inputs.update { it.copy(reason = reason) }
@@ -189,6 +208,17 @@ class CloseDayViewModel @Inject constructor(
     fun setReasonNote(note: String) = inputs.update { it.copy(reasonNote = note) }
 
     fun setSendSummary(send: Boolean) = inputs.update { it.copy(sendSummary = send) }
+
+    /** Close the day tapped: true when it can close now, false when it first shows the difference and asks for a reason. */
+    fun requestClose(): Boolean {
+        val current = state.value
+        if (!current.canTapClose) return false
+        if (current.needsReason && current.reason == null) {
+            inputs.update { it.copy(reasonAsked = true) }
+            return false
+        }
+        return true
+    }
 
     fun closeDay() {
         val current = state.value

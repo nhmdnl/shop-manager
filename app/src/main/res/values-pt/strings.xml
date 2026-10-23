@@ -298,10 +298,13 @@
     <string name="over_amount">A mais %1$s</string>
     <string name="short_by">Em falta</string>
     <string name="over_by">A mais</string>
+    <string name="still_to_count">Faltam contar %1$s</string>
+    <string name="balanced_exact">A gaveta bate certo até ao último xelim</string>
+    <string name="balanced_within">Dentro da diferença permitida de %1$s</string>
+    <string name="pick_reason_to_close">Escolha um motivo para fechar o dia</string>
     <string name="cash_counted">Dinheiro contado</string>
     <string name="momo_counted">Mobile Money contado</string>
     <string name="count_cash">Contar dinheiro</string>
-    <string name="reason_for_difference">Motivo da diferença</string>
     <string name="reason_change_error">Erro no troco</string>
     <string name="reason_not_recorded">Não registado</string>
     <string name="send_summary_whatsapp">Enviar o resumo pelo WhatsApp</string>

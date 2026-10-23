@@ -1,8 +1,15 @@
 package com.archsolutions.shopmanager.feature.day
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,13 +19,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -49,12 +62,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -65,7 +82,6 @@ import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.amountTextStyle
-import com.archsolutions.shopmanager.core.designsystem.fontScaled
 import com.archsolutions.shopmanager.core.designsystem.components.Badge
 import com.archsolutions.shopmanager.core.designsystem.components.BadgeKind
 import com.archsolutions.shopmanager.core.designsystem.components.ChipRow
@@ -77,6 +93,7 @@ import com.archsolutions.shopmanager.core.designsystem.components.SegmentedContr
 import com.archsolutions.shopmanager.core.designsystem.components.ShopCard
 import com.archsolutions.shopmanager.core.designsystem.components.ShopTextField
 import com.archsolutions.shopmanager.core.designsystem.components.StepIndicator
+import com.archsolutions.shopmanager.core.designsystem.fontScaled
 import com.archsolutions.shopmanager.core.money.Money
 import com.archsolutions.shopmanager.core.util.DayFormat
 import com.archsolutions.shopmanager.core.util.WhatsApp
@@ -85,8 +102,9 @@ import com.archsolutions.shopmanager.domain.ChannelBalance
 import com.archsolutions.shopmanager.domain.DayBalance
 import com.archsolutions.shopmanager.domain.DaySummary
 import com.archsolutions.shopmanager.domain.SummaryTemplates
-import kotlinx.coroutines.launch
 import com.archsolutions.shopmanager.feature.pin.rememberPinGate
+import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 private enum class Channel { CASH, MOBILE_MONEY }
 
@@ -105,7 +123,8 @@ fun CloseDayScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val closeFailed by viewModel.closeFailed.collectAsStateWithLifecycle()
     val pinGate = rememberPinGate()
-    val closeDay = { pinGate.run(R.string.pin_for_close) { viewModel.closeDay() } }
+    // The first tap on a short or over day shows the difference and asks for a reason instead of closing.
+    val closeDay: () -> Unit = { if (viewModel.requestClose()) pinGate.run(R.string.pin_for_close) { viewModel.closeDay() } }
     val colors = LocalShopColors.current
     val snackbarHostState = remember { SnackbarHostState() }
     val failedMessage = stringResource(R.string.error_could_not_save)
@@ -177,14 +196,16 @@ fun CloseDayScreen(
                         title = stringResource(R.string.count_cash),
                         optional = false,
                         showHint = false,
+                        target = state.countTarget(),
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                ReasonAndSend(state = state, viewModel = viewModel, label = stringResource(R.string.reason_for_difference))
+                CountResultBand(state = state, viewModel = viewModel)
+                SendSummaryRow(state = state, viewModel = viewModel)
                 PrimaryButton(
                     text = stringResource(R.string.action_close_day),
                     onClick = closeDay,
-                    enabled = state.canClose,
+                    enabled = state.canTapClose,
                     height = 64.dp,
                     leadingIcon = Icons.Outlined.Lock,
                     modifier = Modifier.padding(top = 12.dp),
@@ -270,7 +291,14 @@ private fun CheckTable(state: CloseDayUiState, viewModel: CloseDayViewModel) {
             HorizontalDivider(color = colors.line)
             Row(modifier = Modifier.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.label_difference), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = colors.ink, modifier = Modifier.weight(1f))
-                Row(modifier = Modifier.width(fontScaled(190.dp)), horizontalArrangement = Arrangement.End) { DifferenceBadge(state.cashDifference, state.cashStatus) }
+                Row(modifier = Modifier.width(fontScaled(190.dp)), horizontalArrangement = Arrangement.End) {
+                    val stillToCount = state.cashStillToCount
+                    if (stillToCount != null) {
+                        Badge(text = stringResource(R.string.still_to_count, Money.format(stillToCount, withCode = false)), kind = BadgeKind.Muted)
+                    } else {
+                        DifferenceBadge(state.cashDifference, state.cashStatus)
+                    }
+                }
                 Row(modifier = Modifier.width(fontScaled(190.dp)), horizontalArrangement = Arrangement.End) { DifferenceBadge(state.mobileDifference, state.mobileStatus) }
             }
         }
@@ -378,32 +406,146 @@ private fun InfoCard(
 
 // Reason chips (required when a channel is Short or Over), an "Other" note, and the WhatsApp checkbox.
 @Composable
-private fun ReasonAndSend(state: CloseDayUiState, viewModel: CloseDayViewModel, label: String) {
-    val colors = LocalShopColors.current
+private fun ReasonAndSend(state: CloseDayUiState, viewModel: CloseDayViewModel, label: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (state.showReason) {
+            SectionLabel(text = label)
+            ReasonChips(state = state, viewModel = viewModel)
+        }
+        SendSummaryRow(state = state, viewModel = viewModel)
+    }
+}
+
+@Composable
+private fun ReasonChips(state: CloseDayUiState, viewModel: CloseDayViewModel) {
     val reasons = listOf(
         stringResource(R.string.reason_change_error),
         stringResource(R.string.reason_not_recorded),
         stringResource(R.string.reason_other),
     )
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (state.needsReason) {
-            SectionLabel(text = label)
-            ChipRow(items = reasons, selectedItem = state.reason.orEmpty(), onItemSelected = viewModel::setReason)
-            if (state.reason == reasons.last()) {
-                ShopTextField(value = state.reasonNote, onValueChange = viewModel::setReasonNote, placeholder = stringResource(R.string.note_placeholder))
+        ChipRow(items = reasons, selectedItem = state.reason.orEmpty(), onItemSelected = viewModel::setReason)
+        if (state.reason == reasons.last()) {
+            ShopTextField(value = state.reasonNote, onValueChange = viewModel::setReasonNote, placeholder = stringResource(R.string.note_placeholder))
+        }
+    }
+}
+
+@Composable
+private fun SendSummaryRow(state: CloseDayUiState, viewModel: CloseDayViewModel) {
+    val colors = LocalShopColors.current
+    Row(
+        modifier = Modifier.clickable { viewModel.setSendSummary(!state.sendSummary) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(
+            checked = state.sendSummary,
+            onCheckedChange = viewModel::setSendSummary,
+            colors = CheckboxDefaults.colors(checkedColor = colors.green, checkmarkColor = colors.onGreen),
+        )
+        Text(stringResource(R.string.send_summary_whatsapp), style = MaterialTheme.typography.bodyLarge, color = colors.ink)
+    }
+}
+
+private enum class BandKind { NONE, BALANCED, DIFFERENCE }
+
+/**
+ * Tablet count panel (6.6): "Balanced" once the drawer matches, or what is short or over with the reason
+ * chips once they apply. Nothing while a short drawer is still being counted.
+ */
+@Composable
+private fun CountResultBand(state: CloseDayUiState, viewModel: CloseDayViewModel) {
+    val colors = LocalShopColors.current
+    val kind = when {
+        state.showReason -> BandKind.DIFFERENCE
+        state.countedCash != null && state.cashStatus == BalanceStatus.BALANCED -> BandKind.BALANCED
+        else -> BandKind.NONE
+    }
+    AnimatedContent(
+        targetState = kind,
+        transitionSpec = {
+            (fadeIn(tween(220)) + slideInVertically(tween(220)) { it / 8 }) togetherWith fadeOut(tween(120))
+        },
+        label = "count result",
+    ) { shown ->
+        when (shown) {
+            BandKind.NONE -> Spacer(modifier = Modifier.fillMaxWidth())
+            BandKind.BALANCED -> ResultBand(icon = Icons.Default.Check, tint = colors.green, onTint = colors.onGreen, background = colors.greenTint) {
+                Text(stringResource(R.string.status_balanced), fontFamily = DisplayFontFamily, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = colors.green)
+                Text(
+                    text = if (state.cashDifference == 0L) {
+                        stringResource(R.string.balanced_exact)
+                    } else {
+                        stringResource(R.string.balanced_within, Money.format(state.allowedDifference))
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.green,
+                )
+            }
+            BandKind.DIFFERENCE -> ResultBand(
+                icon = Icons.Default.PriorityHigh,
+                tint = colors.rust,
+                onTint = colors.rustTint,
+                background = colors.rustTint,
+                // Full band width, so all three reasons fit next to each other.
+                footer = { ReasonChips(state = state, viewModel = viewModel) },
+            ) {
+                val channels = buildList {
+                    if (state.cashStillToCount == null) {
+                        add(Triple(stringResource(R.string.label_cash), state.cashStatus, state.cashDifference))
+                    }
+                    add(Triple(stringResource(R.string.label_mobile_money), state.mobileStatus, state.mobileDifference))
+                }
+                channels.forEach { (channel, status, difference) ->
+                    if (difference == null || status == null || status == BalanceStatus.BALANCED) return@forEach
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = channel + " · " + stringResource(if (status == BalanceStatus.SHORT) R.string.short_by else R.string.over_by),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = colors.rust,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(Money.format(abs(difference)), style = amountTextStyle(20.sp), color = colors.rust)
+                    }
+                }
+                Text(stringResource(R.string.pick_reason_to_close), style = MaterialTheme.typography.bodyMedium, color = colors.rust)
             }
         }
-        Row(
-            modifier = Modifier.clickable { viewModel.setSendSummary(!state.sendSummary) },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Checkbox(
-                checked = state.sendSummary,
-                onCheckedChange = viewModel::setSendSummary,
-                colors = CheckboxDefaults.colors(checkedColor = colors.green, checkmarkColor = colors.onGreen),
-            )
-            Text(stringResource(R.string.send_summary_whatsapp), style = MaterialTheme.typography.bodyLarge, color = colors.ink)
+    }
+}
+
+@Composable
+private fun ResultBand(
+    icon: ImageVector,
+    tint: Color,
+    onTint: Color,
+    background: Color,
+    footer: (@Composable () -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(background)
+            .padding(16.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(tint),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = onTint, modifier = Modifier.size(22.dp))
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) { content() }
         }
+        footer?.invoke()
     }
 }
 
@@ -423,6 +565,15 @@ private fun CloseDayCompact(
     var channel by rememberSaveable { mutableStateOf(Channel.CASH) }
     var showCounter by rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    // Close the day tapped on a short day: show the channel that is off, then scroll the reason chips into view.
+    val reasonInView = remember { BringIntoViewRequester() }
+    LaunchedEffect(state.reasonAsked) {
+        if (state.reasonAsked) {
+            val cashOff = state.cashStatus == BalanceStatus.SHORT || state.cashStatus == BalanceStatus.OVER
+            channel = if (cashOff) Channel.CASH else Channel.MOBILE_MONEY
+            reasonInView.bringIntoView()
+        }
+    }
     val channelLabels = mapOf(
         Channel.CASH to stringResource(R.string.label_cash),
         Channel.MOBILE_MONEY to stringResource(R.string.label_mobile_money),
@@ -454,7 +605,7 @@ private fun CloseDayCompact(
             InkButton(
                 text = stringResource(R.string.action_close_day),
                 onClick = onClose,
-                enabled = state.canClose,
+                enabled = state.canTapClose,
                 height = 64.dp,
                 leadingIcon = Icons.Outlined.Lock,
                 modifier = Modifier
@@ -502,8 +653,17 @@ private fun CloseDayCompact(
                 }
                 val difference = if (isCash) state.cashDifference else state.mobileDifference
                 val status = if (isCash) state.cashStatus else state.mobileStatus
-                if (difference != null && status != null) StatusRow(difference = difference, status = status)
-                ReasonAndSend(state = state, viewModel = viewModel, label = stringResource(R.string.label_reason))
+                val stillToCount = if (isCash) state.cashStillToCount else null
+                when {
+                    stillToCount != null -> StillToCountRow(stillToCount)
+                    difference != null && status != null -> StatusRow(difference = difference, status = status)
+                }
+                ReasonAndSend(
+                    state = state,
+                    viewModel = viewModel,
+                    label = stringResource(R.string.label_reason),
+                    modifier = Modifier.bringIntoViewRequester(reasonInView),
+                )
                 if (balance.creditSales > 0) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -545,6 +705,7 @@ private fun CloseDayCompact(
                     title = stringResource(R.string.count_cash),
                     optional = false,
                     showHint = false,
+                    target = state.countTarget(),
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 PrimaryButton(
@@ -592,6 +753,27 @@ private fun CheckLine(label: String, value: String) {
         }
         HorizontalDivider(color = colors.line)
     }
+}
+
+/** Phone: a short drawer while counting, before Close the day asks for a reason. */
+@Composable
+private fun StillToCountRow(amount: Long) {
+    val colors = LocalShopColors.current
+    Text(
+        text = stringResource(R.string.still_to_count, Money.format(amount)),
+        style = MaterialTheme.typography.bodyLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = colors.muted,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(colors.segmentTrack)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+    )
+}
+
+private fun CloseDayUiState.countTarget(): CountTarget? = balance?.let {
+    CountTarget(expected = it.cash.expected, stillToCount = cashStillToCount, over = cashStatus == BalanceStatus.OVER)
 }
 
 @Composable

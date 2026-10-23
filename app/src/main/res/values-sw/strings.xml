@@ -298,10 +298,13 @@
     <string name="over_amount">Ziada %1$s</string>
     <string name="short_by">Upungufu wa</string>
     <string name="over_by">Ziada ya</string>
+    <string name="still_to_count">%1$s bado hazijahesabiwa</string>
+    <string name="balanced_exact">Droo inalingana hadi shilingi ya mwisho</string>
+    <string name="balanced_within">Ndani ya tofauti inayoruhusiwa ya %1$s</string>
+    <string name="pick_reason_to_close">Chagua sababu ili kufunga siku</string>
     <string name="cash_counted">Taslimu iliyohesabiwa</string>
     <string name="momo_counted">Mobile Money iliyohesabiwa</string>
     <string name="count_cash">Hesabu taslimu</string>
-    <string name="reason_for_difference">Sababu ya tofauti</string>
     <string name="reason_change_error">Kosa la chenji</string>
     <string name="reason_not_recorded">Haikurekodiwa</string>
     <string name="send_summary_whatsapp">Tuma muhtasari kwenye WhatsApp</string>

@@ -43,6 +43,7 @@ import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.fontScaled
+import com.archsolutions.shopmanager.core.designsystem.noteColor
 import com.archsolutions.shopmanager.core.money.Money
 
 @Composable
@@ -316,10 +317,11 @@ fun DenominationRow(
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // In the note's own colour (50,000 golden, 2,000 blue, …) so each pile from the drawer finds its row.
         Text(
             text = Money.format(denomination, withCode = false),
             style = com.archsolutions.shopmanager.core.designsystem.amountTextStyle(16.sp),
-            color = colors.ink,
+            color = colors.noteColor(denomination),
             modifier = Modifier.width(110.dp),
         )
 
