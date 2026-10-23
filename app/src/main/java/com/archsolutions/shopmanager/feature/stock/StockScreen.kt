@@ -321,13 +321,15 @@ private fun StockTableRow(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = colors.green, modifier = Modifier.size(18.dp))
+                // Ink until the product is in the purchase: green stays for the panel's Save purchase.
+                val purchaseColor = if (inPurchase) colors.green else colors.ink
+                Icon(Icons.Default.Add, contentDescription = null, tint = purchaseColor, modifier = Modifier.size(18.dp))
                 Text(
                     text = stringResource(R.string.action_purchase),
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.green,
+                    color = purchaseColor,
                 )
             }
         }

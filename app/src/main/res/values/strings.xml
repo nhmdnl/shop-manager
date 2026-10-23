@@ -19,7 +19,7 @@
     <string name="action_complete_sale">Complete sale</string>
     <string name="action_save">Save</string>
     <string name="action_start_day">Start the day</string>
-    <string name="action_close_day">Close day</string>
+    <string name="action_close_day">Close the day</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_clear">Clear</string>
     <string name="action_undo">Undo</string>
@@ -260,7 +260,6 @@
 
     <!-- Day: money and debtors -->
     <string name="todays_money">Today\'s money</string>
-    <string name="close_the_day">Close the day</string>
     <string name="sold_on_credit">Sold on credit</string>
     <string name="money_in_out_today">Money in and out today</string>
     <string name="kind_sale">Sale</string>

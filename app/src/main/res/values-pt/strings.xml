@@ -224,7 +224,6 @@
 
     <!-- Day: money and debtors -->
     <string name="todays_money">Dinheiro de hoje</string>
-    <string name="close_the_day">Fechar o dia</string>
     <string name="sold_on_credit">Vendido fiado</string>
     <string name="money_in_out_today">Entradas e saídas de hoje</string>
     <string name="kind_sale">Venda</string>

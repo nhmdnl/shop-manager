@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -110,21 +111,19 @@ fun DayBar(
                         Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.muted)
                     }
                 }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
+                val buttonPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                FitOrStackRow(modifier = Modifier.fillMaxWidth(), spacing = 8.dp) {
                     SecondaryButton(
                         text = stringResource(R.string.action_add_expense),
                         onClick = onAddExpense,
-                        modifier = Modifier.weight(1f),
                         height = 48.dp,
+                        contentPadding = buttonPadding,
                     )
                     InkButton(
                         text = stringResource(R.string.action_close_day),
                         onClick = onCloseDay,
-                        modifier = Modifier.weight(1f),
                         height = 48.dp,
+                        contentPadding = buttonPadding,
                     )
                 }
             }

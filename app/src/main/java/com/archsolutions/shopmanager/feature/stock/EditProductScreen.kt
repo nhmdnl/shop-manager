@@ -174,7 +174,7 @@ fun EditProductScreen(
                     )
                 }
             }
-            FieldLabel(stringResource(R.string.label_unit))
+            SectionLabel(text = stringResource(R.string.label_unit))
             SegmentedControl(
                 items = ProductUnit.entries,
                 selectedItem = form.unit,

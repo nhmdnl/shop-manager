@@ -224,7 +224,6 @@
 
     <!-- Day: money and debtors -->
     <string name="todays_money">Pesa za leo</string>
-    <string name="close_the_day">Funga siku</string>
     <string name="sold_on_credit">Imeuzwa kwa mkopo</string>
     <string name="money_in_out_today">Pesa zilizoingia na kutoka leo</string>
     <string name="kind_sale">Mauzo</string>

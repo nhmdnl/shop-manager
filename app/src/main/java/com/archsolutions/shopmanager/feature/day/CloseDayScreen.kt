@@ -217,7 +217,7 @@ private fun CloseDayHeader(state: CloseDayUiState, onBack: () -> Unit) {
                 Text(DayFormat.date(it.date, "EEEE, d MMMM", locale), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
             }
             Text(
-                text = stringResource(R.string.close_the_day),
+                text = stringResource(R.string.action_close_day),
                 fontFamily = DisplayFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 32.sp,
@@ -340,7 +340,7 @@ private fun InfoCards(state: CloseDayUiState, onDebtors: () -> Unit) {
         InfoCard(
             title = stringResource(R.string.label_owed_to_shop),
             amount = Money.format(state.debtorsTotal),
-            amountColor = colors.rust,
+            amountColor = if (state.debtorsTotal > 0) colors.rust else null,
             caption = listOfNotNull(
                 pluralStringResource(R.plurals.plurals_customers, state.debtorsCount, state.debtorsCount),
                 state.firstDebtorName,
@@ -441,7 +441,7 @@ private fun CloseDayCompact(
                 },
                 title = {
                     Column {
-                        Text(stringResource(R.string.close_the_day), fontFamily = DisplayFontFamily, fontWeight = FontWeight.Bold, fontSize = 24.sp, color = colors.ink)
+                        Text(stringResource(R.string.action_close_day), fontFamily = DisplayFontFamily, fontWeight = FontWeight.Bold, fontSize = 24.sp, color = colors.ink)
                         state.day?.let {
                             Text(DayFormat.date(it.date, "EEEE, d MMM", locale), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
                         }
