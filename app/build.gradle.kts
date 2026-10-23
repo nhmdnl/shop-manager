@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
@@ -15,12 +17,30 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Release signing reads storeFile, storePassword, keyAlias and keyPassword from the properties file named by the
+    // `arch.signing` Gradle property (set in the user's ~/.gradle/gradle.properties, never in the repo).
+    // Without it the release APK is built unsigned.
+    val signing = providers.gradleProperty("arch.signing").orNull?.let { path ->
+        Properties().apply { file(path).inputStream().use { load(it) } }
+    }
+    signingConfigs {
+        if (signing != null) {
+            create("release") {
+                storeFile = file(signing.getProperty("storeFile"))
+                storePassword = signing.getProperty("storePassword")
+                keyAlias = signing.getProperty("keyAlias")
+                keyPassword = signing.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

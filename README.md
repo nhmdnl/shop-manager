@@ -72,7 +72,7 @@ The UI tests check that a phone sale takes 3 taps and a tablet sale 2.
 ./gradlew assembleRelease
 ```
 
-The APK in `app/build/outputs/apk/release/` is unsigned. Sign it with `apksigner` and your own key before installing.
+To sign it, point the `arch.signing` Gradle property at a properties file that holds `storeFile`, `storePassword`, `keyAlias` and `keyPassword`. Set the property in your own `~/.gradle/gradle.properties`, never in the repo. Without it the APK in `app/build/outputs/apk/release/` is built unsigned.
 
 ## How it is built
 
@@ -102,12 +102,17 @@ uv run --with openpyxl tools/translation_sheet.py import ti translations/Arch-SM
 
 The import refuses a sheet where a placeholder such as `%1$s` went missing.
 
+## Install
+
+Download `arch-sme-1.0.0.apk` from the [latest release](https://github.com/nhmdnl/shop-manager/releases/latest). Open it on the tablet or phone, and allow installing from that source when Android asks. It needs Android 8.0 or newer.
+
+The first start walks through setting up the shop and opening the first day. Updates install over the top and keep the shop's data.
+
 ## Status
 
-Version 1.0 is feature complete. See [CHANGELOG.md](CHANGELOG.md). Before the first release:
+Version 1.0.0 is the first release. See [CHANGELOG.md](CHANGELOG.md). Still to do:
 - Check performance on a low-end tablet.
 - Finish the Luganda and Tigrinya translations.
-- Sign the release build.
 
 ## Licenses
 
