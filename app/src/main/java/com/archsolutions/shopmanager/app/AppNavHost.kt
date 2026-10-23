@@ -47,9 +47,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -376,6 +380,7 @@ fun AppNavHost(
                 if (!isFullscreenTask) {
                     // 76 dp of items above the system navigation inset, which NavigationBar pads inside itself.
                     val systemNavInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    val labelSize = rememberNavBarLabelSize(bottomNavDestinations.map { stringResource(it.labelResId) })
                     NavigationBar(
                         modifier = Modifier.height(76.dp + systemNavInset),
                         containerColor = colors.surface,
@@ -397,6 +402,7 @@ fun AppNavHost(
                                     Text(
                                         text = stringResource(dest.labelResId),
                                         style = MaterialTheme.typography.labelSmall,
+                                        fontSize = labelSize,
                                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -426,6 +432,31 @@ fun AppNavHost(
                 )
             }
         }
+    }
+}
+
+/**
+ * One font size for every bottom-bar label: the theme's size when the widest label fits its item, else the
+ * largest that does ("Sup…" at 200%), never below the 100% size. Longer labels then end in an ellipsis.
+ */
+@Composable
+private fun rememberNavBarLabelSize(labels: List<String>): TextUnit {
+    // Bold, the selected weight, is the widest.
+    val style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+    val density = LocalDensity.current
+    val windowWidth = LocalWindowInfo.current.containerSize.width
+    val measurer = rememberTextMeasurer()
+    return remember(labels, style, density, windowWidth) {
+        // NavigationBar spaces its items 8 dp apart; 4 dp more keeps neighbouring labels from touching.
+        val itemWidth = with(density) { (windowWidth - 8.dp.roundToPx() * (labels.size - 1)) / labels.size - 4.dp.roundToPx() }
+        val full = style.fontSize.value
+        val floor = full / density.fontScale.coerceAtLeast(1f)
+        val fits = { size: Float ->
+            labels.all { label ->
+                measurer.measure(label, style.copy(fontSize = size.sp), maxLines = 1, softWrap = false).size.width <= itemWidth
+            }
+        }
+        (generateSequence(full) { it - 0.5f }.takeWhile { it > floor }.firstOrNull(fits) ?: floor).sp
     }
 }
 
