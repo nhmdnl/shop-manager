@@ -4,14 +4,9 @@ All notable changes to Arch-SME. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
-### Added
-- A translation sheet: `tools/translation_sheet.py` exports every string to a spreadsheet, with where it appears and the marks to keep, and imports the translator's sheet back.
-- README with screenshots, and the license texts of the bundled fonts.
-- The code is released under the MIT License.
+## [1.0.0] - 2026-10-23
 
-## [1.0.0] - not released yet
-
-The first complete version, for one shop on an Android tablet or phone, fully offline.
+The first release, for one shop on an Android tablet or phone, fully offline.
 
 ### Added
 - **Selling:**
@@ -46,6 +41,8 @@ The first complete version, for one shop on an Android tablet or phone, fully of
   - Light and dark themes.
   - Layouts hold at 200% font size.
 - **Languages:** English, Kiswahili and Portuguese; drafts of Luganda and Tigrinya. Amounts always use Latin digits with commas.
+- A translation sheet: `tools/translation_sheet.py` exports every string to a spreadsheet, with where it appears and the marks to keep, and imports the translator's sheet back.
+- Signed release builds, a README with screenshots, and the MIT License.
 
 ### Changed
 - The app is named Arch-SME, with a new adaptive launcher icon.
@@ -72,5 +69,5 @@ The first complete version, for one shop on an Android tablet or phone, fully of
   - Card links wrap under their titles.
 - Backups record their own time.
 
-[Unreleased]: https://github.com/nhmdnl/shop-manager/compare/master...develop
-[1.0.0]: https://github.com/nhmdnl/shop-manager/tree/master
+[Unreleased]: https://github.com/nhmdnl/shop-manager/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/nhmdnl/shop-manager/releases/tag/v1.0.0
