@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.BarChart
@@ -277,7 +278,9 @@ fun AppNavHost(
                                 Text(
                                     text = stringResource(dest.labelResId),
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontSize = 13.sp,
+                                    // One line at any font size or language: shrinks only when the label would wrap ("Supplier s").
+                                    maxLines = 1,
+                                    autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = 13.sp),
                                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                 )
                             },
@@ -312,7 +315,9 @@ fun AppNavHost(
                             Text(
                                 text = stringResource(R.string.nav_settings),
                                 style = MaterialTheme.typography.labelSmall,
-                                fontSize = 13.sp,
+                                // One line at any font size or language: shrinks only when the label would wrap ("Supplier s").
+                                maxLines = 1,
+                                autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = 13.sp),
                                 fontWeight = if (settingsSelected) FontWeight.Bold else FontWeight.Medium,
                             )
                         },

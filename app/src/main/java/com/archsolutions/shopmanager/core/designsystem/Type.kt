@@ -5,41 +5,33 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.googlefonts.Font
-import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import com.archsolutions.shopmanager.R
 
-val fontProvider = GoogleFont.Provider(
-    providerAuthority = "com.google.android.gms.fonts",
-    providerPackage = "com.google.android.gms",
-    certificates = R.array.com_google_android_gms_fonts_certs,
-)
-
-val BricolageGrotesqueFont = GoogleFont("Bricolage Grotesque")
-val DmSansFont = GoogleFont("DM Sans")
-val NotoSansEthiopicFont = GoogleFont("Noto Sans Ethiopic")
-
+// Bundled static fonts (Google Fonts, OFL): downloadable fonts need Play services and a network,
+// so an offline shop tablet fell back to Roboto. Static files, not variable ones: Android 8/9 space
+// variable fonts wrongly ("Mob ile").
 val DisplayFontFamily = FontFamily(
-    Font(googleFont = BricolageGrotesqueFont, fontProvider = fontProvider, weight = FontWeight.SemiBold),
-    Font(googleFont = BricolageGrotesqueFont, fontProvider = fontProvider, weight = FontWeight.Bold),
+    Font(R.font.bricolage_grotesque_600, FontWeight.SemiBold),
+    Font(R.font.bricolage_grotesque_700, FontWeight.Bold),
 )
 
 val BodyFontFamily = FontFamily(
-    Font(googleFont = DmSansFont, fontProvider = fontProvider, weight = FontWeight.Normal),
-    Font(googleFont = DmSansFont, fontProvider = fontProvider, weight = FontWeight.Medium),
-    Font(googleFont = DmSansFont, fontProvider = fontProvider, weight = FontWeight.SemiBold),
-    Font(googleFont = DmSansFont, fontProvider = fontProvider, weight = FontWeight.Bold),
+    Font(R.font.dm_sans_400, FontWeight.Normal),
+    Font(R.font.dm_sans_500, FontWeight.Medium),
+    Font(R.font.dm_sans_600, FontWeight.SemiBold),
+    Font(R.font.dm_sans_700, FontWeight.Bold),
 )
 
 val EthiopicFontFamily = FontFamily(
-    Font(googleFont = NotoSansEthiopicFont, fontProvider = fontProvider, weight = FontWeight.Normal),
-    Font(googleFont = NotoSansEthiopicFont, fontProvider = fontProvider, weight = FontWeight.SemiBold),
-    Font(googleFont = NotoSansEthiopicFont, fontProvider = fontProvider, weight = FontWeight.Bold),
+    Font(R.font.noto_sans_ethiopic_400, FontWeight.Normal),
+    Font(R.font.noto_sans_ethiopic_600, FontWeight.SemiBold),
+    Font(R.font.noto_sans_ethiopic_700, FontWeight.Bold),
 )
 
 fun getShopTypography(isTigrinya: Boolean = false): Typography {

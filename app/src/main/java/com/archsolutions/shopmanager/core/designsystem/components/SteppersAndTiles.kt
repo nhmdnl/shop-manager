@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -159,12 +160,23 @@ fun ProductTile(
                     style = com.archsolutions.shopmanager.core.designsystem.amountTextStyle(17.sp),
                     color = colors.ink,
                 )
-                Text(
-                    text = stockLeftFormatted,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isLowStock) colors.rust else colors.muted,
-                    fontWeight = if (isLowStock) FontWeight.SemiBold else FontWeight.Normal,
-                )
+                // Low stock gets a warning mark as well as rust, so it doesn't rest on colour alone.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isLowStock) {
+                        Icon(
+                            imageVector = Icons.Outlined.WarningAmber,
+                            contentDescription = stringResource(R.string.low_badge),
+                            tint = colors.rust,
+                            modifier = Modifier.padding(end = 3.dp).size(fontScaled(13.dp)),
+                        )
+                    }
+                    Text(
+                        text = stockLeftFormatted,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isLowStock) colors.rust else colors.muted,
+                        fontWeight = if (isLowStock) FontWeight.SemiBold else FontWeight.Normal,
+                    )
+                }
             }
         }
 

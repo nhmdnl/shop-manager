@@ -6,11 +6,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -190,9 +193,9 @@ fun HomeScreen(
             backupReminder?.let { BackupReminderCard(reminder = it, onBackUp = onBackUp) }
 
             if (isExpanded) {
-                // Tablet: two big tiles (150 dp tall, radius 24)
+                // Tablet: two big tiles (at least 150 dp tall, radius 24), equal height when large fonts grow one
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
                     horizontalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     if (tradingOpen) {
@@ -356,7 +359,8 @@ private fun HomeTile(
     val contentColor = if (primary) colors.onGreen else colors.ink
     Surface(
         modifier = modifier
-            .height(150.dp)
+            .heightIn(min = 150.dp)
+            .fillMaxHeight()
             .clip(RoundedCornerShape(24.dp))
             .clickable { onClick() },
         color = if (primary) colors.green else colors.surface,
