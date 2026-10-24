@@ -31,3 +31,4 @@ plugins {
 
 rootProject.name = "Shop Manager"
 include(":app")
+include(":cloud-contract")
