@@ -9,12 +9,19 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,16 +33,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.archsolutions.shopmanager.BuildConfig
 import com.archsolutions.shopmanager.R
+import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.ShopTextField
 
 /** Sign in with an SMS code and link this tablet. Both purposes (link, restore) call [onDone] for now. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CloudSignInScreen(
     onDone: () -> Unit,
@@ -49,7 +59,29 @@ fun CloudSignInScreen(
         if (state.step == SignInStep.DONE || state.left) onDone()
     }
 
-    Scaffold(modifier = modifier.fillMaxSize(), containerColor = colors.paper) { padding ->
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = colors.paper,
+        topBar = {
+            TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = onDone) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = colors.ink)
+                    }
+                },
+                title = {
+                    Text(
+                        text = stringResource(R.string.cloud_signin_title),
+                        fontFamily = DisplayFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 26.sp,
+                        color = colors.ink,
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.paper),
+            )
+        },
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
