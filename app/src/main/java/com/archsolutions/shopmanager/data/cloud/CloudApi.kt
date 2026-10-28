@@ -19,7 +19,10 @@ import com.archsolutions.cloud.contract.VerifyRequest
 import com.archsolutions.cloud.contract.VerifyResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.serializer
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import okhttp3.HttpUrl
@@ -125,11 +128,18 @@ class CloudApi(
         return CloudException(parsed?.code, code, retryAfter, parsed?.message ?: "HTTP $code")
     }
 
-    private suspend inline fun <reified T> Response.decode(): T = use {
-        withContext(Dispatchers.IO) { ArchJson.decodeFromString<T>(it.body!!.string()) }
-    }
+    private suspend inline fun <reified T> Response.decode(): T = decode(ArchJson.serializersModule.serializer<T>())
 
-    private suspend fun <T> Response.decode(serializer: kotlinx.serialization.KSerializer<T>): T = use {
-        withContext(Dispatchers.IO) { ArchJson.decodeFromString(serializer, it.body!!.string()) }
+    /** A 2xx body that is not the contract's JSON (a captive portal's HTML, say) becomes a [CloudException]. */
+    private suspend fun <T> Response.decode(serializer: KSerializer<T>): T = use {
+        withContext(Dispatchers.IO) {
+            try {
+                ArchJson.decodeFromString(serializer, it.body!!.string())
+            } catch (e: SerializationException) {
+                throw CloudException(null, it.code, null, "Unexpected response from the server")
+            } catch (e: IllegalArgumentException) {
+                throw CloudException(null, it.code, null, "Unexpected response from the server")
+            }
+        }
     }
 }

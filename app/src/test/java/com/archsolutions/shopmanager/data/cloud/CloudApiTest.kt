@@ -84,6 +84,13 @@ class CloudApiTest {
         assertNull(e.retryAfterSeconds)
     }
 
+    @Test fun `200 with html body maps to CloudException with null code`() {
+        server.enqueue(MockResponse().setBody("<html>Please sign in to the WiFi</html>"))
+        val e = assertThrows(CloudException::class.java) { runBlocking { api.status() } }
+        assertNull(e.code)
+        assertEquals(200, e.http)
+    }
+
     @Test fun `upload sends multipart file and sha header`() {
         server.enqueue(MockResponse().setResponseCode(201).setBody("""{"backupId":"b1"}"""))
         val zip = tmp.newFile("b.zip").apply { writeBytes(byteArrayOf(1, 2, 3, 4)) }
