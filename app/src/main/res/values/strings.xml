@@ -566,4 +566,5 @@
     <string name="action_retry">Retry</string>
     <string name="empty_products_hint">Add your first product or import a CSV in Settings.</string>
     <string name="no_product_match">No product matches your search</string>
+    <string name="cloud_default_shop_name">My shop</string>
 </resources>

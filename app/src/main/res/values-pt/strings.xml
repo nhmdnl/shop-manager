@@ -553,4 +553,5 @@
     <string name="action_retry">Tentar de novo</string>
     <string name="empty_products_hint">Adicione o primeiro produto ou importe um CSV nas Definições.</string>
     <string name="no_product_match">Nenhum produto corresponde à pesquisa</string>
+    <string name="cloud_default_shop_name">A minha loja</string>
 </resources>

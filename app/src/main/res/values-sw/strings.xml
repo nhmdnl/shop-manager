@@ -553,4 +553,5 @@
     <string name="action_retry">Jaribu tena</string>
     <string name="empty_products_hint">Ongeza bidhaa yako ya kwanza au leta CSV kwenye Mipangilio.</string>
     <string name="no_product_match">Hakuna bidhaa inayolingana na utafutaji</string>
+    <string name="cloud_default_shop_name">Duka langu</string>
 </resources>
