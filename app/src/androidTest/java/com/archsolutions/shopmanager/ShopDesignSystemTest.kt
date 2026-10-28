@@ -106,9 +106,18 @@ class ShopDesignSystemTest {
             val ok = node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(results)
             assertTrue("'$label' gave no text layout", ok == true && results.isNotEmpty())
             results.forEach {
-                assertFalse("'$label' has visual overflow", it.hasVisualOverflow)
+                // Not hasVisualOverflow / didOverflowWidth: both are `size.width < multiParagraph.width`, and a
+                // wrap-content single line is measured narrower than the width it was laid out in, so they fire on
+                // every short label (device logs: "Done" size 75 vs layout width 294, fully visible in the screenshot).
+                // Instead: nothing ellipsised, no line wider than the box the text got, and no cut height.
                 assertFalse("'$label' overflows its height", it.didOverflowHeight)
-                assertFalse("'$label' overflows its width", it.didOverflowWidth)
+                for (line in 0 until it.lineCount) {
+                    assertFalse("'$label' line $line is ellipsised", it.isLineEllipsized(line))
+                    assertTrue(
+                        "'$label' line $line is wider than its box: ${it.getLineRight(line) - it.getLineLeft(line)} vs ${it.size.width}",
+                        it.getLineRight(line) - it.getLineLeft(line) <= it.size.width + 0.5f,
+                    )
+                }
             }
             val b = Rect(node.positionInRoot, node.size.toSize())
             assertTrue("'$label' sticks out of the phone width: $b vs $phone", b.left >= phone.left - 0.5f && b.right <= phone.right + 0.5f)
@@ -118,13 +127,14 @@ class ShopDesignSystemTest {
     private fun text(resId: Int) = InstrumentationRegistry.getInstrumentation().targetContext.getString(resId)
 
     private fun shown(resId: Int) {
-        composeTestRule.onNodeWithText(text(resId)).assertIsDisplayed()
+        // ignoreCase: SectionLabel shows its text in capitals ("ARCH-SME CLOUD"), still an exact whole-text match.
+        composeTestRule.onNodeWithText(text(resId), ignoreCase = true).assertIsDisplayed()
         assertNothingClipped()
     }
 
     /** The screens scroll, so a node below the fold is scrolled to first; it must then fit the phone box. */
     private fun shownScrolled(resId: Int) {
-        composeTestRule.onNodeWithText(text(resId)).performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText(text(resId), ignoreCase = true).performScrollTo().assertIsDisplayed()
         assertNothingClipped()
     }
 
@@ -225,5 +235,26 @@ class ShopDesignSystemTest {
         pay(PayUiState(plans = plans, loading = false, phase = PayPhase.FAILED))
         shownScrolled(R.string.cloud_pay_failed)
         shownScrolled(R.string.cloud_pay_retry)
+    }
+
+    // Controls: the helper must still catch text that is really cut, or the 200% checks above prove nothing.
+    @Test
+    fun helperCatchesEllipsisedText() {
+        phoneAt200 {
+            androidx.compose.foundation.layout.Column {
+                androidx.compose.material3.Text("A rather long single line of text", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            }
+        }
+        val e = runCatching { assertNothingClipped() }.exceptionOrNull()
+        assertTrue("ellipsis not caught: $e", e is AssertionError)
+    }
+
+    @Test
+    fun helperCatchesLineWiderThanBox() {
+        phoneAt200 {
+            androidx.compose.material3.Text("A line that cannot wrap and is far wider than the phone box", softWrap = false)
+        }
+        val e = runCatching { assertNothingClipped() }.exceptionOrNull()
+        assertTrue("wide word not caught: $e", e is AssertionError)
     }
 }
