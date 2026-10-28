@@ -45,6 +45,9 @@ android {
         release {
             // Set `arch.cloud.url` in ~/.gradle/gradle.properties; blank hides every cloud screen and makes no network call.
             val cloudUrl = providers.gradleProperty("arch.cloud.url").getOrElse("")
+            require(cloudUrl.isBlank() || cloudUrl.startsWith("https://")) {
+                "arch.cloud.url must start with https:// in a release build (got \"$cloudUrl\"); leave it blank to ship without cloud."
+            }
             buildConfigField("String", "CLOUD_BASE_URL", "\"$cloudUrl\"")
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false

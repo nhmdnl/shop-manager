@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -169,7 +170,7 @@ private fun ErrorText(error: SignInError, minutes: Int) {
         SignInError.PHONE -> stringResource(R.string.cloud_error_phone)
         SignInError.CODE_WRONG -> stringResource(R.string.cloud_error_code_wrong)
         SignInError.CODE_EXPIRED -> stringResource(R.string.cloud_error_code_expired)
-        SignInError.TOO_MANY -> stringResource(R.string.cloud_error_too_many, minutes)
+        SignInError.TOO_MANY -> pluralStringResource(R.plurals.cloud_error_too_many, minutes, minutes)
         SignInError.OFFLINE -> stringResource(R.string.cloud_error_offline)
         SignInError.OTHER -> stringResource(R.string.cloud_error_other)
     }

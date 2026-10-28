@@ -591,7 +591,10 @@
     <string name="cloud_error_phone">Check the phone number and try again.</string>
     <string name="cloud_error_code_wrong">That code is wrong. Try again.</string>
     <string name="cloud_error_code_expired">That code has expired. Send a new code.</string>
-    <string name="cloud_error_too_many">Too many tries. Wait %1$d minutes and try again.</string>
+    <plurals name="cloud_error_too_many">
+        <item quantity="one">Too many tries. Wait %1$d minute and try again.</item>
+        <item quantity="other">Too many tries. Wait %1$d minutes and try again.</item>
+    </plurals>
     <string name="cloud_error_offline">No internet. Connect and try again.</string>
     <string name="cloud_error_other">Something went wrong. Try again.</string>
     <string name="cloud_card_title">Arch-SME Cloud</string>
@@ -621,7 +624,7 @@
     <string name="cloud_pay_button">Pay</string>
     <string name="cloud_pay_waiting">Check your phone and enter your Mobile Money PIN</string>
     <string name="cloud_pay_paid">Paid. Thank you! Your plan is updated.</string>
-    <string name="cloud_pay_failed">The payment did not go through. Try again.</string>
+    <string name="cloud_pay_failed">Check your phone first. If the payment went through, your plan will update here by itself. Try again only if it did not.</string>
     <string name="cloud_pay_still_waiting">Still waiting. Your plan updates when the payment arrives.</string>
     <string name="cloud_pay_done">Done</string>
     <string name="cloud_price_month">%1$s a month</string>

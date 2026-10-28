@@ -578,7 +578,10 @@
     <string name="cloud_error_phone">Verifique o número de telefone e tente de novo.</string>
     <string name="cloud_error_code_wrong">Esse código está errado. Tente de novo.</string>
     <string name="cloud_error_code_expired">Esse código expirou. Envie um novo código.</string>
-    <string name="cloud_error_too_many">Demasiadas tentativas. Espere %1$d minutos e tente de novo.</string>
+    <plurals name="cloud_error_too_many">
+        <item quantity="one">Demasiadas tentativas. Espere %1$d minuto e tente de novo.</item>
+        <item quantity="other">Demasiadas tentativas. Espere %1$d minutos e tente de novo.</item>
+    </plurals>
     <string name="cloud_error_offline">Sem internet. Ligue-se e tente de novo.</string>
     <string name="cloud_error_other">Algo correu mal. Tente de novo.</string>
     <string name="cloud_card_title">Arch-SME Cloud</string>
@@ -608,7 +611,7 @@
     <string name="cloud_pay_button">Pagar</string>
     <string name="cloud_pay_waiting">Verifique o seu telemóvel e introduza o PIN do Mobile Money</string>
     <string name="cloud_pay_paid">Pago. Obrigado! O seu plano foi atualizado.</string>
-    <string name="cloud_pay_failed">O pagamento não foi concluído. Tente novamente.</string>
+    <string name="cloud_pay_failed">Verifique primeiro o seu telemóvel. Se o pagamento foi concluído, o seu plano será atualizado aqui sozinho. Tente novamente só se não foi.</string>
     <string name="cloud_pay_still_waiting">Ainda à espera. O seu plano atualiza quando o pagamento chegar.</string>
     <string name="cloud_pay_done">Concluído</string>
     <string name="cloud_price_month">%1$s por mês</string>

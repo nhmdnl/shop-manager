@@ -1,9 +1,10 @@
 package com.archsolutions.shopmanager
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -72,7 +73,7 @@ class ShopDesignSystemTest {
         composeTestRule.onNodeWithText("UGX 195,900").assertIsDisplayed()
     }
 
-    // --- Arch-SME Cloud screens at 200% fonts on a 390 x 844 dp phone ---
+    // --- Arch-SME Cloud screens at 200% fonts on a 390 dp wide phone box ---
     // assertIsDisplayed fails when a node is laid out outside the phone box or cut off by its parent.
 
     private fun phoneAt200(content: @Composable () -> Unit) {
@@ -81,7 +82,8 @@ class ShopDesignSystemTest {
             CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale = 2f)) {
                 ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
                     Box(Modifier.fillMaxSize()) {
-                        Box(Modifier.requiredSize(390.dp, 844.dp).testTag(PHONE_TAG)) { content() }
+                        // 390 dp wide, as tall as the screen shows: a taller box would sit partly off screen on the 1280x800 VM.
+                        Box(Modifier.requiredWidth(390.dp).fillMaxHeight().testTag(PHONE_TAG)) { content() }
                     }
                 }
             }
@@ -101,7 +103,8 @@ class ShopDesignSystemTest {
         nodes.forEach { node ->
             val label = node.config.getOrNull(SemanticsProperties.Text)?.joinToString { it.text } ?: "node ${node.id}"
             val results = mutableListOf<TextLayoutResult>()
-            node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(results)
+            val ok = node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(results)
+            assertTrue("'$label' gave no text layout", ok == true && results.isNotEmpty())
             results.forEach {
                 assertFalse("'$label' has visual overflow", it.hasVisualOverflow)
                 assertFalse("'$label' overflows its height", it.didOverflowHeight)

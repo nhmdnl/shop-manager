@@ -13,9 +13,6 @@ All notable changes to Arch-SME. The format follows [Keep a Changelog](https://k
   - Builds without a cloud address show none of this and make no network calls.
 - The app now asks for internet access, used only by the cloud features.
 
-### Fixed
-- Cloud screen titles no longer get cut off at 200% fonts, and the privacy and terms links wrap to a second line when they do not fit.
-
 ## [1.0.0] - 2026-10-23
 
 The first release, for one shop on an Android tablet or phone, fully offline.

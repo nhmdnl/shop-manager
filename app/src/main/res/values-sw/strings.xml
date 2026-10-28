@@ -578,7 +578,10 @@
     <string name="cloud_error_phone">Angalia namba ya simu kisha ujaribu tena.</string>
     <string name="cloud_error_code_wrong">Msimbo huo si sahihi. Jaribu tena.</string>
     <string name="cloud_error_code_expired">Msimbo huo umeisha muda. Tuma msimbo mpya.</string>
-    <string name="cloud_error_too_many">Umejaribu mara nyingi. Subiri dakika %1$d kisha ujaribu tena.</string>
+    <plurals name="cloud_error_too_many">
+        <item quantity="one">Umejaribu mara nyingi. Subiri dakika %1$d kisha ujaribu tena.</item>
+        <item quantity="other">Umejaribu mara nyingi. Subiri dakika %1$d kisha ujaribu tena.</item>
+    </plurals>
     <string name="cloud_error_offline">Hakuna intaneti. Unganisha kisha ujaribu tena.</string>
     <string name="cloud_error_other">Kuna tatizo. Jaribu tena.</string>
     <string name="cloud_card_title">Arch-SME Cloud</string>
@@ -608,7 +611,7 @@
     <string name="cloud_pay_button">Lipa</string>
     <string name="cloud_pay_waiting">Angalia simu yako na uweke PIN yako ya Mobile Money</string>
     <string name="cloud_pay_paid">Umelipa. Asante! Mpango wako umesasishwa.</string>
-    <string name="cloud_pay_failed">Malipo hayakukamilika. Jaribu tena.</string>
+    <string name="cloud_pay_failed">Angalia simu yako kwanza. Ikiwa malipo yalikamilika, mpango wako utasasishwa hapa wenyewe. Jaribu tena tu kama hayakukamilika.</string>
     <string name="cloud_pay_still_waiting">Bado tunasubiri. Mpango wako utasasishwa malipo yakifika.</string>
     <string name="cloud_pay_done">Imekamilika</string>
     <string name="cloud_price_month">%1$s kwa mwezi</string>
