@@ -67,6 +67,7 @@ import com.archsolutions.shopmanager.core.designsystem.components.SegmentedContr
 import com.archsolutions.shopmanager.core.designsystem.components.ShopCard
 import com.archsolutions.shopmanager.core.designsystem.components.ShopSwitch
 import com.archsolutions.shopmanager.core.locale.LanguageManager
+import com.archsolutions.shopmanager.feature.cloud.CloudSettingsCard
 import java.util.Locale
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -88,6 +89,9 @@ fun SettingsScreen(
     isExpanded: Boolean,
     onNavigateBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    onCloudSignIn: () -> Unit = {},
+    onCloudPay: () -> Unit = {},
+    onCloudRestore: () -> Unit = {},
 ) {
     val colors = LocalShopColors.current
     val settings by viewModel.settings.collectAsState()
@@ -171,6 +175,7 @@ fun SettingsScreen(
                         onPinSet = viewModel::setPin,
                         onPinOff = viewModel::disablePin,
                     )
+                    CloudSettingsCard(onSignIn = onCloudSignIn, onPay = onCloudPay, onRestore = onCloudRestore)
                 }
             }
         } else {
@@ -210,6 +215,7 @@ fun SettingsScreen(
                     onPinSet = viewModel::setPin,
                     onPinOff = viewModel::disablePin,
                 )
+                CloudSettingsCard(onSignIn = onCloudSignIn, onPay = onCloudPay, onRestore = onCloudRestore)
             }
         }
     }

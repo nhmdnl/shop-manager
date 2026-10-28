@@ -38,4 +38,7 @@ object CloudModule {
 abstract class CloudAccountModule {
     @Binds
     abstract fun bindCloudAccount(repo: CloudRepo): CloudAccount
+
+    @Binds
+    abstract fun bindCloudLink(repo: CloudRepo): CloudLink
 }

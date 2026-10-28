@@ -581,4 +581,24 @@
     <string name="cloud_error_too_many">Demasiadas tentativas. Espere %1$d minutos e tente de novo.</string>
     <string name="cloud_error_offline">Sem internet. Ligue-se e tente de novo.</string>
     <string name="cloud_error_other">Algo correu mal. Tente de novo.</string>
+    <string name="cloud_card_title">Arch-SME Cloud</string>
+    <string name="cloud_line_replaced">Este tablet foi substituído</string>
+    <string name="cloud_line_paused">Nuvem em pausa, pague para retomar</string>
+    <string name="cloud_line_waiting">A aguardar internet</string>
+    <string name="cloud_line_last">Última cópia na nuvem: %1$s</string>
+    <string name="cloud_yesterday">ontem %1$s</string>
+    <string name="cloud_line_none">Ainda sem cópia na nuvem</string>
+    <string name="cloud_plan_trial">Teste grátis até %1$s</string>
+    <string name="cloud_plan_active">Cloud Backup até %1$s</string>
+    <string name="cloud_plan_grace">Pague até %1$s para manter a nuvem</string>
+    <string name="cloud_sign_in">Entrar</string>
+    <string name="cloud_back_up_now">Copiar agora</string>
+    <string name="cloud_pay">Pagar</string>
+    <string name="cloud_restore">Restaurar da nuvem</string>
+    <string name="cloud_unlink">Desligar</string>
+    <string name="cloud_unlink_title">Desligar este tablet?</string>
+    <string name="cloud_unlink_body">As cópias na nuvem param. Os dados da loja neste tablet ficam como estão.</string>
+    <string name="cloud_notice_ends_soon">O seu plano Cloud termina em breve. Toque para pagar.</string>
+    <string name="cloud_notice_grace">O seu pagamento está atrasado. Toque para pagar e manter a nuvem.</string>
+    <string name="cloud_notice_paused">A nuvem está em pausa. Toque para pagar e retomar.</string>
 </resources>

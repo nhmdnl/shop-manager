@@ -581,4 +581,24 @@
     <string name="cloud_error_too_many">Umejaribu mara nyingi. Subiri dakika %1$d kisha ujaribu tena.</string>
     <string name="cloud_error_offline">Hakuna intaneti. Unganisha kisha ujaribu tena.</string>
     <string name="cloud_error_other">Kuna tatizo. Jaribu tena.</string>
+    <string name="cloud_card_title">Arch-SME Cloud</string>
+    <string name="cloud_line_replaced">Kompyuta kibao hii imebadilishwa</string>
+    <string name="cloud_line_paused">Wingu limesimamishwa, lipa ili kuendelea</string>
+    <string name="cloud_line_waiting">Inasubiri intaneti</string>
+    <string name="cloud_line_last">Nakala ya mwisho ya wingu: %1$s</string>
+    <string name="cloud_yesterday">jana %1$s</string>
+    <string name="cloud_line_none">Bado hakuna nakala ya wingu</string>
+    <string name="cloud_plan_trial">Jaribio la bure hadi %1$s</string>
+    <string name="cloud_plan_active">Cloud Backup hadi %1$s</string>
+    <string name="cloud_plan_grace">Lipa kabla ya %1$s ili kuweka wingu</string>
+    <string name="cloud_sign_in">Ingia</string>
+    <string name="cloud_back_up_now">Hifadhi nakala sasa</string>
+    <string name="cloud_pay">Lipa</string>
+    <string name="cloud_restore">Rejesha kutoka wingu</string>
+    <string name="cloud_unlink">Tenganisha</string>
+    <string name="cloud_unlink_title">Tenganisha kompyuta kibao hii?</string>
+    <string name="cloud_unlink_body">Nakala za wingu zinakoma. Data ya duka lako kwenye kompyuta kibao hii inabaki kama ilivyo.</string>
+    <string name="cloud_notice_ends_soon">Mpango wako wa Cloud unaisha hivi karibuni. Gusa ulipe.</string>
+    <string name="cloud_notice_grace">Malipo yako yamechelewa. Gusa ulipe ili uweke wingu lako.</string>
+    <string name="cloud_notice_paused">Wingu limesimamishwa. Gusa ulipe ili kuendelea.</string>
 </resources>

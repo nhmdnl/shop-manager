@@ -63,6 +63,8 @@ import com.archsolutions.shopmanager.app.DayGateState
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.components.DayBar
+import com.archsolutions.shopmanager.feature.cloud.CloudNotice
+import com.archsolutions.shopmanager.feature.cloud.CloudPlanBanner
 import com.archsolutions.shopmanager.core.designsystem.components.FitOrStackRow
 import com.archsolutions.shopmanager.core.designsystem.components.InkButton
 import com.archsolutions.shopmanager.core.designsystem.components.LockedActionButton
@@ -110,6 +112,8 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     backupReminder: BackupReminder? = null,
     onBackUp: () -> Unit = {},
+    cloudNotice: CloudNotice? = null,
+    onCloudNotice: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val colors = LocalShopColors.current
@@ -164,6 +168,8 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            cloudNotice?.let { CloudPlanBanner(notice = it, onClick = onCloudNotice) }
+
             if (gateState is DayGateState.Ready) {
                 DayBar(
                     openedSince = stringResource(R.string.day_open_since, DayFormat.time(gateState.day.openedAt, zoneId)),

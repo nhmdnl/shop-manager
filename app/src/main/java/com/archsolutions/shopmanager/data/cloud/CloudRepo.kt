@@ -40,6 +40,13 @@ interface CloudAccount {
     suspend fun link(ticket: String, phone: String, replace: Boolean, ownerName: String?, consent: Boolean): LinkOutcome
 }
 
+/** What the Settings card and Home banner need from the cloud link; a fake in their tests. */
+interface CloudLink {
+    val state: Flow<CloudState>
+    suspend fun refreshStatus(): ShopStatus?
+    suspend fun unlink()
+}
+
 @Singleton
 class CloudRepo @Inject constructor(
     private val store: CloudStore,
@@ -47,9 +54,9 @@ class CloudRepo @Inject constructor(
     private val settings: SettingsStore,
     private val clock: AppClock,
     @param:ApplicationContext private val context: Context,
-) : CloudAccount {
+) : CloudAccount, CloudLink {
 
-    val state: Flow<CloudState> = if (api == null) {
+    override val state: Flow<CloudState> = if (api == null) {
         flowOf(CloudState.Off)
     } else {
         store.snapshot.map { s ->
@@ -94,7 +101,7 @@ class CloudRepo @Inject constructor(
     }
 
     /** Tells the server (best effort: offline is fine), then forgets the link on this tablet. */
-    suspend fun unlink() {
+    override suspend fun unlink() {
         if (api != null) {
             try {
                 call { it.unlink() }
@@ -106,7 +113,7 @@ class CloudRepo @Inject constructor(
     }
 
     /** Fetches the plan status and caches it for the card; null when offline, refused or Off. */
-    suspend fun refreshStatus(): ShopStatus? {
+    override suspend fun refreshStatus(): ShopStatus? {
         if (api == null) return null
         return try {
             call { it.status() }.also { store.saveStatus(it) }

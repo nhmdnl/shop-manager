@@ -91,6 +91,7 @@ import com.archsolutions.shopmanager.feature.sell.SellViewModel
 import com.archsolutions.shopmanager.feature.reports.ReportsScreen
 import com.archsolutions.shopmanager.feature.sell.SellScreen
 import com.archsolutions.shopmanager.feature.cloud.CloudSignInScreen
+import com.archsolutions.shopmanager.feature.cloud.CloudViewModel
 import com.archsolutions.shopmanager.feature.settings.SettingsScreen
 import com.archsolutions.shopmanager.feature.settings.SettingsViewModel
 import com.archsolutions.shopmanager.feature.stock.AddPurchaseScreen
@@ -500,6 +501,8 @@ private fun NavContent(
             val backupReminderViewModel: BackupReminderViewModel = hiltViewModel()
             val backupReminder by backupReminderViewModel.reminder.collectAsStateWithLifecycle()
             val homeSnackbar = remember { SnackbarHostState() }
+            val cloudViewModel: CloudViewModel = hiltViewModel()
+            val cloudNotice by cloudViewModel.notice.collectAsStateWithLifecycle()
             val backup = rememberBackupActions(homeSnackbar)
             HomeScreen(
                 isExpanded = isExpanded,
@@ -525,6 +528,8 @@ private fun NavContent(
                 onReopenDay = { dayId -> pinGate.run(R.string.pin_for_reopen) { homeViewModel.reopenDay(dayId) } },
                 backupReminder = backupReminder,
                 onBackUp = backup.backUp,
+                cloudNotice = cloudNotice,
+                onCloudNotice = { }, // Task 6 opens Pay here
                 snackbarHostState = homeSnackbar,
             )
         }
@@ -708,6 +713,9 @@ private fun NavContent(
                 viewModel = settingsViewModel,
                 isExpanded = isExpanded,
                 onNavigateBack = if (!isExpanded) { { navController.popBackStack() } } else null,
+                onCloudSignIn = { navController.navigate(CloudSignInRoute()) },
+                onCloudPay = { }, // Task 6 opens Pay here
+                onCloudRestore = { }, // Task 7 opens Restore here
             )
         }
     }
