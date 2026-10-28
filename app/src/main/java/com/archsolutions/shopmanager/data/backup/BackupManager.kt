@@ -76,6 +76,21 @@ class BackupManager @Inject constructor(
         input.use { stageRestore(it) }
     }
 
+    /** The newest automatic copy kept on this device, or null when there is none. */
+    fun newestAutoBackup(): File? =
+        (context.getExternalFilesDir(BACKUP_DIR) ?: File(context.filesDir, BACKUP_DIR))
+            .listFiles { f -> f.name.startsWith(PREFIX) && f.name.endsWith(".zip") }
+            ?.maxByOrNull { it.name }
+
+    /** Stages a restore from a backup file already on this device (the cloud download, an automatic copy). */
+    suspend fun restoreFromFile(file: File): RestoreResult = withContext(Dispatchers.IO) {
+        try {
+            file.inputStream().use { stageRestore(it) }
+        } catch (e: IOException) {
+            RestoreResult.NOT_A_BACKUP
+        }
+    }
+
     internal fun writeZip(out: OutputStream) {
         // Through Room, so it waits its turn with Room's own connections.
         db.query(SimpleSQLiteQuery("PRAGMA wal_checkpoint(FULL)")).use { it.moveToFirst() }

@@ -5,6 +5,9 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.archsolutions.shopmanager.data.backup.BackupManager
+import com.archsolutions.shopmanager.data.cloud.CloudStore
+import com.archsolutions.shopmanager.data.cloud.FakeTokenCipher
+import com.archsolutions.shopmanager.data.cloud.cloudDataStoreFile
 import com.archsolutions.shopmanager.data.backup.PendingRestore
 import com.archsolutions.shopmanager.data.backup.RestoreResult
 import com.archsolutions.shopmanager.data.db.entities.ProductEntity
@@ -14,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -21,6 +25,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.util.zip.ZipInputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -88,5 +94,39 @@ class BackupRestoreTest {
             RestoreResult.TOO_NEW,
             manager(store).stageRestore(zipOf("manifest.properties" to newer, "shop_manager.db" to sqliteHeader)),
         )
+    }
+
+    @Test
+    fun `backup zip never contains the cloud datastore`() = runTest {
+        val store = SettingsStore(PreferenceDataStoreFactory.create(scope = backgroundScope, produceFile = { tmpFolder.newFile("d.preferences_pb") }))
+        // The real files a running app has: the shop settings and the cloud link.
+        BackupManager.settingsFile(context).apply { parentFile?.mkdirs() }.writeText("settings")
+        val cloud = CloudStore(
+            PreferenceDataStoreFactory.create(scope = backgroundScope, produceFile = { cloudDataStoreFile(context) }),
+            FakeTokenCipher(),
+        )
+        cloud.saveLink("tok-123", "shop-1", "0700111222")
+        assertTrue(cloudDataStoreFile(context).exists())
+
+        val zip = ByteArrayOutputStream().also { manager(store).writeZip(it) }.toByteArray()
+
+        val names = ZipInputStream(ByteArrayInputStream(zip)).use { z -> generateSequence { z.nextEntry }.map { it.name }.toSet() }
+        assertEquals(setOf("manifest.properties", "shop_manager.db", "shop_settings.preferences_pb"), names)
+    }
+
+    @Test
+    fun `restoreFromFile stages a valid zip`() = runTest {
+        val store = SettingsStore(PreferenceDataStoreFactory.create(scope = backgroundScope, produceFile = { tmpFolder.newFile("e.preferences_pb") }))
+        db.productDao().insert(product("Sugar 1kg"))
+        val file: File = tmpFolder.newFile("backup.zip")
+        file.outputStream().use { manager(store).writeZip(it) }
+        db.productDao().insert(product("Bread"))
+
+        assertEquals(RestoreResult.OK, manager(store).restoreFromFile(file))
+
+        db.close()
+        PendingRestore.applyIfPending(context)
+        db = openDb()
+        assertEquals(listOf("Sugar 1kg"), db.productDao().getAllActive().first().map { it.name })
     }
 }
