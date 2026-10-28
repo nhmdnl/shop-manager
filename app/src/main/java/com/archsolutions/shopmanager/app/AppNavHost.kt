@@ -90,6 +90,7 @@ import com.archsolutions.shopmanager.feature.sell.CheckoutScreen
 import com.archsolutions.shopmanager.feature.sell.SellViewModel
 import com.archsolutions.shopmanager.feature.reports.ReportsScreen
 import com.archsolutions.shopmanager.feature.sell.SellScreen
+import com.archsolutions.shopmanager.feature.cloud.CloudPayScreen
 import com.archsolutions.shopmanager.feature.cloud.CloudSignInScreen
 import com.archsolutions.shopmanager.feature.cloud.CloudViewModel
 import com.archsolutions.shopmanager.feature.settings.SettingsScreen
@@ -134,6 +135,7 @@ import com.archsolutions.shopmanager.feature.day.PastDayScreen
 @Serializable data class DaySummaryRoute(val dayId: Long) // a closed day's record, read-only (Reports > Days)
 @Serializable data class SupplierDetailRoute(val id: Long)
 @Serializable data class SupplierEditRoute(val id: Long = 0L) // 0 = new supplier
+@Serializable object CloudPayRoute
 @Serializable data class CloudSignInRoute(val purpose: String = "LINK") // LINK or RESTORE; both go back for now
 
 enum class NavDestination(
@@ -375,7 +377,8 @@ fun AppNavHost(
             destination?.hasRoute(DayClosedRoute::class) == true ||
             destination?.hasRoute(DaySummaryRoute::class) == true ||
             destination?.hasRoute(SupplierEditRoute::class) == true ||
-            destination?.hasRoute(CloudSignInRoute::class) == true
+            destination?.hasRoute(CloudSignInRoute::class) == true ||
+            destination?.hasRoute(CloudPayRoute::class) == true
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
@@ -529,7 +532,7 @@ private fun NavContent(
                 backupReminder = backupReminder,
                 onBackUp = backup.backUp,
                 cloudNotice = cloudNotice,
-                onCloudNotice = { }, // Task 6 opens Pay here
+                onCloudNotice = { navController.navigate(CloudPayRoute) },
                 snackbarHostState = homeSnackbar,
             )
         }
@@ -705,6 +708,9 @@ private fun NavContent(
                 onSales = { navController.navigate(SalesRoute(it)) },
             )
         }
+        composable<CloudPayRoute> {
+            CloudPayScreen(onDone = { navController.popBackStack() })
+        }
         composable<CloudSignInRoute> {
             CloudSignInScreen(onDone = { navController.popBackStack() })
         }
@@ -714,7 +720,7 @@ private fun NavContent(
                 isExpanded = isExpanded,
                 onNavigateBack = if (!isExpanded) { { navController.popBackStack() } } else null,
                 onCloudSignIn = { navController.navigate(CloudSignInRoute()) },
-                onCloudPay = { }, // Task 6 opens Pay here
+                onCloudPay = { navController.navigate(CloudPayRoute) },
                 onCloudRestore = { }, // Task 7 opens Restore here
             )
         }

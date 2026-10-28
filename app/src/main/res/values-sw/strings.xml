@@ -601,4 +601,16 @@
     <string name="cloud_notice_ends_soon">Mpango wako wa Cloud unaisha hivi karibuni. Gusa ulipe.</string>
     <string name="cloud_notice_grace">Malipo yako yamechelewa. Gusa ulipe ili uweke wingu lako.</string>
     <string name="cloud_notice_paused">Wingu limesimamishwa. Gusa ulipe ili kuendelea.</string>
+    <string name="cloud_pay_title">Lipia Cloud</string>
+    <string name="cloud_pay_load_failed">Mipango haikupakiwa. Angalia intaneti yako ujaribu tena.</string>
+    <string name="cloud_pay_retry">Jaribu tena</string>
+    <string name="cloud_pay_number">Namba ya Mobile Money</string>
+    <string name="cloud_pay_button">Lipa</string>
+    <string name="cloud_pay_waiting">Angalia simu yako na uweke PIN yako ya Mobile Money</string>
+    <string name="cloud_pay_paid">Umelipa. Asante! Mpango wako umesasishwa.</string>
+    <string name="cloud_pay_failed">Malipo hayakukamilika. Jaribu tena.</string>
+    <string name="cloud_pay_still_waiting">Bado tunasubiri. Mpango wako utasasishwa malipo yakifika.</string>
+    <string name="cloud_pay_done">Imekamilika</string>
+    <string name="cloud_price_month">%1$s kwa mwezi</string>
+    <string name="cloud_price_week">%1$s kwa wiki</string>
 </resources>

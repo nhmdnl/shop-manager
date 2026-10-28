@@ -5,6 +5,7 @@ import android.os.Build
 import com.archsolutions.cloud.contract.CONSENT_VERSION
 import com.archsolutions.cloud.contract.ErrorCode
 import com.archsolutions.cloud.contract.LinkRequest
+import com.archsolutions.cloud.contract.PaymentRequest
 import com.archsolutions.cloud.contract.ShopStatus
 import com.archsolutions.cloud.contract.VerifyResponse
 import com.archsolutions.shopmanager.R
@@ -54,7 +55,7 @@ class CloudRepo @Inject constructor(
     private val settings: SettingsStore,
     private val clock: AppClock,
     @param:ApplicationContext private val context: Context,
-) : CloudAccount, CloudLink {
+) : CloudAccount, CloudLink, CloudPayments {
 
     override val state: Flow<CloudState> = if (api == null) {
         flowOf(CloudState.Off)
@@ -122,6 +123,18 @@ class CloudRepo @Inject constructor(
         } catch (_: CloudException) {
             null
         }
+    }
+
+    override suspend fun plans() = call { it.plans() }
+
+    override suspend fun pay(request: PaymentRequest) = call { it.pay(request) }
+
+    override suspend fun payment(id: String) = call { it.payment(id) }
+
+    override suspend fun signInPhone(): String? = store.snapshot.first().phone
+
+    override suspend fun refreshPlanStatus() {
+        refreshStatus()
     }
 
     /**

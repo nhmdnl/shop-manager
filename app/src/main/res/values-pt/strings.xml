@@ -601,4 +601,16 @@
     <string name="cloud_notice_ends_soon">O seu plano Cloud termina em breve. Toque para pagar.</string>
     <string name="cloud_notice_grace">O seu pagamento está atrasado. Toque para pagar e manter a nuvem.</string>
     <string name="cloud_notice_paused">A nuvem está em pausa. Toque para pagar e retomar.</string>
+    <string name="cloud_pay_title">Pagar a Cloud</string>
+    <string name="cloud_pay_load_failed">Não foi possível carregar os planos. Verifique a internet e tente novamente.</string>
+    <string name="cloud_pay_retry">Tentar novamente</string>
+    <string name="cloud_pay_number">Número de Mobile Money</string>
+    <string name="cloud_pay_button">Pagar</string>
+    <string name="cloud_pay_waiting">Verifique o seu telemóvel e introduza o PIN do Mobile Money</string>
+    <string name="cloud_pay_paid">Pago. Obrigado! O seu plano foi atualizado.</string>
+    <string name="cloud_pay_failed">O pagamento não foi concluído. Tente novamente.</string>
+    <string name="cloud_pay_still_waiting">Ainda à espera. O seu plano atualiza quando o pagamento chegar.</string>
+    <string name="cloud_pay_done">Concluído</string>
+    <string name="cloud_price_month">%1$s por mês</string>
+    <string name="cloud_price_week">%1$s por semana</string>
 </resources>

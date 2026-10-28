@@ -614,4 +614,16 @@
     <string name="cloud_notice_ends_soon">Your Cloud plan ends soon. Tap to pay.</string>
     <string name="cloud_notice_grace">Your payment is late. Tap to pay and keep your cloud.</string>
     <string name="cloud_notice_paused">Cloud is paused. Tap to pay and resume.</string>
+    <string name="cloud_pay_title">Pay for Cloud</string>
+    <string name="cloud_pay_load_failed">Loading plans did not work. Check your internet and try again.</string>
+    <string name="cloud_pay_retry">Try again</string>
+    <string name="cloud_pay_number">Mobile Money number</string>
+    <string name="cloud_pay_button">Pay</string>
+    <string name="cloud_pay_waiting">Check your phone and enter your Mobile Money PIN</string>
+    <string name="cloud_pay_paid">Paid. Thank you! Your plan is updated.</string>
+    <string name="cloud_pay_failed">The payment did not go through. Try again.</string>
+    <string name="cloud_pay_still_waiting">Still waiting. Your plan updates when the payment arrives.</string>
+    <string name="cloud_pay_done">Done</string>
+    <string name="cloud_price_month">%1$s a month</string>
+    <string name="cloud_price_week">%1$s a week</string>
 </resources>
