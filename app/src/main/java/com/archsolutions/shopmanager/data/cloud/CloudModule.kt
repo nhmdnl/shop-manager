@@ -2,6 +2,7 @@ package com.archsolutions.shopmanager.data.cloud
 
 import android.content.Context
 import com.archsolutions.shopmanager.BuildConfig
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -30,4 +31,11 @@ object CloudModule {
         val base = BuildConfig.CLOUD_BASE_URL.takeIf { it.isNotBlank() }?.toHttpUrlOrNull() ?: return null
         return CloudApi(base, client, BuildConfig.VERSION_NAME) { store.token() }
     }
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class CloudAccountModule {
+    @Binds
+    abstract fun bindCloudAccount(repo: CloudRepo): CloudAccount
 }

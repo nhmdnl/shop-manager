@@ -90,6 +90,7 @@ import com.archsolutions.shopmanager.feature.sell.CheckoutScreen
 import com.archsolutions.shopmanager.feature.sell.SellViewModel
 import com.archsolutions.shopmanager.feature.reports.ReportsScreen
 import com.archsolutions.shopmanager.feature.sell.SellScreen
+import com.archsolutions.shopmanager.feature.cloud.CloudSignInScreen
 import com.archsolutions.shopmanager.feature.settings.SettingsScreen
 import com.archsolutions.shopmanager.feature.settings.SettingsViewModel
 import com.archsolutions.shopmanager.feature.stock.AddPurchaseScreen
@@ -132,6 +133,7 @@ import com.archsolutions.shopmanager.feature.day.PastDayScreen
 @Serializable data class DaySummaryRoute(val dayId: Long) // a closed day's record, read-only (Reports > Days)
 @Serializable data class SupplierDetailRoute(val id: Long)
 @Serializable data class SupplierEditRoute(val id: Long = 0L) // 0 = new supplier
+@Serializable data class CloudSignInRoute(val purpose: String = "LINK") // LINK or RESTORE; both go back for now
 
 enum class NavDestination(
     val route: Any,
@@ -371,7 +373,8 @@ fun AppNavHost(
             destination?.hasRoute(CloseDayRoute::class) == true ||
             destination?.hasRoute(DayClosedRoute::class) == true ||
             destination?.hasRoute(DaySummaryRoute::class) == true ||
-            destination?.hasRoute(SupplierEditRoute::class) == true
+            destination?.hasRoute(SupplierEditRoute::class) == true ||
+            destination?.hasRoute(CloudSignInRoute::class) == true
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
@@ -696,6 +699,9 @@ private fun NavContent(
                 onBack = { navController.popBackStack() },
                 onSales = { navController.navigate(SalesRoute(it)) },
             )
+        }
+        composable<CloudSignInRoute> {
+            CloudSignInScreen(onDone = { navController.popBackStack() })
         }
         composable<SettingsRoute> {
             SettingsScreen(
