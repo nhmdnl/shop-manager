@@ -38,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.archsolutions.cloud.contract.BackupDto
 import com.archsolutions.shopmanager.R
+import com.archsolutions.shopmanager.core.designsystem.CappedFontScale
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
@@ -76,13 +77,15 @@ fun CloudRestoreScreen(
                     }
                 },
                 title = {
-                    Text(
-                        text = stringResource(R.string.cloud_restore_title),
-                        fontFamily = DisplayFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 26.sp,
-                        color = colors.ink,
-                    )
+                    CappedFontScale {
+                        Text(
+                            text = stringResource(R.string.cloud_restore_title),
+                            fontFamily = DisplayFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 26.sp,
+                            color = colors.ink,
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.paper),
             )

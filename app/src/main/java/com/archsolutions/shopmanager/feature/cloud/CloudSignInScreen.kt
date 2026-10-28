@@ -2,6 +2,8 @@ package com.archsolutions.shopmanager.feature.cloud
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +40,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.archsolutions.shopmanager.BuildConfig
 import com.archsolutions.shopmanager.R
+import com.archsolutions.shopmanager.core.designsystem.CappedFontScale
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
@@ -45,7 +48,6 @@ import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButto
 import com.archsolutions.shopmanager.core.designsystem.components.ShopTextField
 
 /** Sign in with an SMS code and link this tablet. [onDone] goes back; [onLinked] runs once the tablet is linked (default: go back). */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CloudSignInScreen(
     onDone: () -> Unit,
@@ -54,11 +56,52 @@ fun CloudSignInScreen(
     viewModel: CloudSignInViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val colors = LocalShopColors.current
 
     LaunchedEffect(state.step, state.left) {
         if (state.step == SignInStep.DONE) onLinked() else if (state.left) onDone()
     }
+
+    CloudSignInContent(
+        state = state,
+        actions = SignInActions(
+            setPhone = viewModel::setPhone,
+            sendCode = viewModel::sendCode,
+            setCode = viewModel::setCode,
+            verify = viewModel::verify,
+            setName = viewModel::setName,
+            setConsent = viewModel::setConsent,
+            submitProfile = viewModel::submitProfile,
+            replaceOldTablet = viewModel::replaceOldTablet,
+            keepOldTablet = viewModel::keepOldTablet,
+        ),
+        onDone = onDone,
+        modifier = modifier,
+    )
+}
+
+/** What the sign-in steps can do; the ViewModel's functions in the app, no-ops in the layout tests. */
+class SignInActions(
+    val setPhone: (String) -> Unit = {},
+    val sendCode: () -> Unit = {},
+    val setCode: (String) -> Unit = {},
+    val verify: () -> Unit = {},
+    val setName: (String) -> Unit = {},
+    val setConsent: (Boolean) -> Unit = {},
+    val submitProfile: () -> Unit = {},
+    val replaceOldTablet: () -> Unit = {},
+    val keepOldTablet: () -> Unit = {},
+)
+
+/** The sign-in screen from plain state. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CloudSignInContent(
+    state: SignInUiState,
+    actions: SignInActions,
+    onDone: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalShopColors.current
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -71,13 +114,15 @@ fun CloudSignInScreen(
                     }
                 },
                 title = {
-                    Text(
-                        text = stringResource(R.string.cloud_signin_title),
-                        fontFamily = DisplayFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 26.sp,
-                        color = colors.ink,
-                    )
+                    CappedFontScale {
+                        Text(
+                            text = stringResource(R.string.cloud_signin_title),
+                            fontFamily = DisplayFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 26.sp,
+                            color = colors.ink,
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.paper),
             )
@@ -92,10 +137,10 @@ fun CloudSignInScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             when (state.step) {
-                SignInStep.PHONE -> PhoneStep(state, viewModel)
-                SignInStep.CODE -> CodeStep(state, viewModel)
-                SignInStep.PROFILE -> ProfileStep(state, viewModel)
-                SignInStep.REPLACE -> ReplaceStep(state, viewModel)
+                SignInStep.PHONE -> PhoneStep(state, actions)
+                SignInStep.CODE -> CodeStep(state, actions)
+                SignInStep.PROFILE -> ProfileStep(state, actions)
+                SignInStep.REPLACE -> ReplaceStep(state, actions)
                 SignInStep.DONE -> Unit
             }
             state.error?.let { ErrorText(it, state.retryMinutes) }
@@ -132,60 +177,61 @@ private fun ErrorText(error: SignInError, minutes: Int) {
 }
 
 @Composable
-private fun PhoneStep(state: SignInUiState, vm: CloudSignInViewModel) {
+private fun PhoneStep(state: SignInUiState, vm: SignInActions) {
     Title(stringResource(R.string.cloud_phone_title))
     Hint(stringResource(R.string.cloud_phone_hint))
     ShopTextField(
         value = state.phone,
-        onValueChange = vm::setPhone,
+        onValueChange = vm.setPhone,
         placeholder = stringResource(R.string.cloud_phone_placeholder),
         keyboardType = KeyboardType.Phone,
     )
     PrimaryButton(
         text = stringResource(R.string.cloud_send_code),
-        onClick = vm::sendCode,
+        onClick = vm.sendCode,
         enabled = state.phone.isNotEmpty() && !state.busy,
     )
 }
 
 @Composable
-private fun CodeStep(state: SignInUiState, vm: CloudSignInViewModel) {
+private fun CodeStep(state: SignInUiState, vm: SignInActions) {
     Title(stringResource(R.string.cloud_code_title))
     Hint(stringResource(R.string.cloud_code_hint, state.phone))
     ShopTextField(
         value = state.code,
-        onValueChange = vm::setCode,
+        onValueChange = vm.setCode,
         placeholder = stringResource(R.string.cloud_code_placeholder),
         keyboardType = KeyboardType.Number,
     )
     PrimaryButton(
         text = stringResource(R.string.cloud_confirm_code),
-        onClick = vm::verify,
+        onClick = vm.verify,
         enabled = state.code.isNotEmpty() && !state.busy,
     )
     SecondaryButton(
         text = stringResource(R.string.cloud_resend),
-        onClick = vm::sendCode,
+        onClick = vm.sendCode,
         enabled = state.canResend && !state.busy,
         modifier = Modifier.fillMaxWidth(),
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ProfileStep(state: SignInUiState, vm: CloudSignInViewModel) {
+private fun ProfileStep(state: SignInUiState, vm: SignInActions) {
     val colors = LocalShopColors.current
     val uriHandler = LocalUriHandler.current
     Title(stringResource(R.string.cloud_profile_title))
     ShopTextField(
         value = state.name,
-        onValueChange = vm::setName,
+        onValueChange = vm.setName,
         placeholder = stringResource(R.string.cloud_name_placeholder),
         capitalization = KeyboardCapitalization.Words,
     )
     Row(verticalAlignment = Alignment.CenterVertically) {
         Checkbox(
             checked = state.consent,
-            onCheckedChange = vm::setConsent,
+            onCheckedChange = vm.setConsent,
             colors = CheckboxDefaults.colors(checkedColor = colors.green),
         )
         Text(
@@ -195,7 +241,8 @@ private fun ProfileStep(state: SignInUiState, vm: CloudSignInViewModel) {
             modifier = Modifier.weight(1f),
         )
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    // Wraps to a second line when the links do not fit side by side (large fonts).
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         TextButton(
             onClick = { uriHandler.openUri("${BuildConfig.CLOUD_BASE_URL}/privacy") },
             modifier = Modifier.heightIn(min = 48.dp),
@@ -207,23 +254,23 @@ private fun ProfileStep(state: SignInUiState, vm: CloudSignInViewModel) {
     }
     PrimaryButton(
         text = stringResource(R.string.cloud_link_tablet),
-        onClick = vm::submitProfile,
+        onClick = vm.submitProfile,
         enabled = state.consent && !state.busy,
     )
 }
 
 @Composable
-private fun ReplaceStep(state: SignInUiState, vm: CloudSignInViewModel) {
+private fun ReplaceStep(state: SignInUiState, vm: SignInActions) {
     Title(stringResource(R.string.cloud_replace_title))
     Hint(stringResource(R.string.cloud_replace_body))
     PrimaryButton(
         text = stringResource(R.string.cloud_replace_yes),
-        onClick = vm::replaceOldTablet,
+        onClick = vm.replaceOldTablet,
         enabled = !state.busy,
     )
     SecondaryButton(
         text = stringResource(R.string.cloud_replace_no),
-        onClick = vm::keepOldTablet,
+        onClick = vm.keepOldTablet,
         enabled = !state.busy,
         modifier = Modifier.fillMaxWidth(),
     )

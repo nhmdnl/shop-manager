@@ -4,6 +4,18 @@ All notable changes to Arch-SME. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Added
+- **Arch-SME Cloud (optional, paid):**
+  - Sign in with an SMS code and link the tablet.
+  - A cloud backup after each closed day, with a Settings card showing the plan and the last backup, and a banner on Home when the plan is ending or paused.
+  - Restore from the cloud, from Settings or from onboarding, onto a new tablet.
+  - Plans, paid by Mobile Money.
+  - Builds without a cloud address show none of this and make no network calls.
+- The app now asks for internet access, used only by the cloud features.
+
+### Fixed
+- Cloud screen titles no longer get cut off at 200% fonts, and the privacy and terms links wrap to a second line when they do not fit.
+
 ## [1.0.0] - 2026-10-23
 
 The first release, for one shop on an Android tablet or phone, fully offline.

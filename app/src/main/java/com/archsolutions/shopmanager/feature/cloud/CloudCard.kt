@@ -37,55 +37,21 @@ fun CloudSettingsCard(
 ) {
     val card by viewModel.card.collectAsStateWithLifecycle()
     if (!card.visible) return
-    val colors = LocalShopColors.current
     val pinGate = rememberPinGate()
     var confirmingUnlink by remember { mutableStateOf(false) }
     // The lines are written in the app language; write them again when it changes.
     val locale = LocalConfiguration.current.locales[0]
     LaunchedEffect(locale) { viewModel.refreshTexts() }
 
-    ShopCard(modifier = modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            SectionLabel(text = stringResource(R.string.cloud_card_title))
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                card.planLine?.let {
-                    Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.ink)
-                }
-                Text(card.backupLine, style = MaterialTheme.typography.bodyMedium, color = colors.muted)
-            }
-            if (!card.signedIn) {
-                SecondaryButton(
-                    text = stringResource(R.string.cloud_sign_in),
-                    onClick = { pinGate.run(R.string.pin_for_cloud, onSignIn) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SecondaryButton(
-                        text = stringResource(R.string.cloud_back_up_now),
-                        onClick = viewModel::backUpNow,
-                        enabled = card.canBackUpNow,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    SecondaryButton(
-                        text = stringResource(R.string.cloud_pay),
-                        onClick = { pinGate.run(R.string.pin_for_cloud, onPay) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    SecondaryButton(
-                        text = stringResource(R.string.cloud_restore),
-                        onClick = { pinGate.run(R.string.pin_for_restore, onRestore) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    SecondaryButton(
-                        text = stringResource(R.string.cloud_unlink),
-                        onClick = { pinGate.run(R.string.pin_for_cloud) { confirmingUnlink = true } },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-        }
-    }
+    CloudSettingsCardContent(
+        card = card,
+        onSignIn = { pinGate.run(R.string.pin_for_cloud, onSignIn) },
+        onPay = { pinGate.run(R.string.pin_for_cloud, onPay) },
+        onRestore = { pinGate.run(R.string.pin_for_restore, onRestore) },
+        onBackUpNow = viewModel::backUpNow,
+        onUnlink = { pinGate.run(R.string.pin_for_cloud) { confirmingUnlink = true } },
+        modifier = modifier,
+    )
 
     if (confirmingUnlink) {
         AlertDialog(
@@ -105,4 +71,61 @@ fun CloudSettingsCard(
             },
         )
     }
+}
+
+/** The card itself, from plain state: the buttons' actions arrive already behind the PIN gate. */
+@Composable
+fun CloudSettingsCardContent(
+    card: CloudCardState,
+    onSignIn: () -> Unit,
+    onPay: () -> Unit,
+    onRestore: () -> Unit,
+    onBackUpNow: () -> Unit,
+    onUnlink: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalShopColors.current
+    ShopCard(modifier = modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            SectionLabel(text = stringResource(R.string.cloud_card_title))
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                card.planLine?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.ink)
+                }
+                Text(card.backupLine, style = MaterialTheme.typography.bodyMedium, color = colors.muted)
+            }
+            if (!card.signedIn) {
+                SecondaryButton(
+                    text = stringResource(R.string.cloud_sign_in),
+                    onClick = onSignIn,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SecondaryButton(
+                        text = stringResource(R.string.cloud_back_up_now),
+                        onClick = onBackUpNow,
+                        enabled = card.canBackUpNow,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    SecondaryButton(
+                        text = stringResource(R.string.cloud_pay),
+                        onClick = onPay,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    SecondaryButton(
+                        text = stringResource(R.string.cloud_restore),
+                        onClick = onRestore,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    SecondaryButton(
+                        text = stringResource(R.string.cloud_unlink),
+                        onClick = onUnlink,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+        }
+    }
+
 }

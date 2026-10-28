@@ -41,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.archsolutions.cloud.contract.Period
 import com.archsolutions.cloud.contract.PlanDto
 import com.archsolutions.shopmanager.R
+import com.archsolutions.shopmanager.core.designsystem.CappedFontScale
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
@@ -49,7 +50,6 @@ import com.archsolutions.shopmanager.core.designsystem.components.ShopTextField
 import com.archsolutions.shopmanager.core.money.Money
 
 /** Pay for a cloud plan by Mobile Money. [onDone] goes back. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CloudPayScreen(
     onDone: () -> Unit,
@@ -57,6 +57,38 @@ fun CloudPayScreen(
     viewModel: CloudPayViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    CloudPayContent(
+        state = state,
+        actions = PayActions(
+            retryLoad = viewModel::retryLoad,
+            tryAgain = viewModel::tryAgain,
+            select = viewModel::select,
+            setMsisdn = viewModel::setMsisdn,
+            pay = viewModel::pay,
+        ),
+        onDone = onDone,
+        modifier = modifier,
+    )
+}
+
+/** What the pay screen can do; the ViewModel's functions in the app, no-ops in the layout tests. */
+class PayActions(
+    val retryLoad: () -> Unit = {},
+    val tryAgain: () -> Unit = {},
+    val select: (String) -> Unit = {},
+    val setMsisdn: (String) -> Unit = {},
+    val pay: () -> Unit = {},
+)
+
+/** The pay screen from plain state. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CloudPayContent(
+    state: PayUiState,
+    actions: PayActions,
+    onDone: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = LocalShopColors.current
 
     Scaffold(
@@ -70,13 +102,15 @@ fun CloudPayScreen(
                     }
                 },
                 title = {
-                    Text(
-                        text = stringResource(R.string.cloud_pay_title),
-                        fontFamily = DisplayFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 26.sp,
-                        color = colors.ink,
-                    )
+                    CappedFontScale {
+                        Text(
+                            text = stringResource(R.string.cloud_pay_title),
+                            fontFamily = DisplayFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 26.sp,
+                            color = colors.ink,
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.paper),
             )
@@ -94,10 +128,10 @@ fun CloudPayScreen(
                 state.loading -> CircularProgressIndicator(color = colors.green)
                 state.loadFailed -> {
                     Message(stringResource(R.string.cloud_pay_load_failed))
-                    PrimaryButton(text = stringResource(R.string.cloud_pay_retry), onClick = viewModel::retryLoad)
+                    PrimaryButton(text = stringResource(R.string.cloud_pay_retry), onClick = actions.retryLoad)
                 }
                 else -> when (state.phase) {
-                    PayPhase.CHOOSE -> Choose(state, viewModel)
+                    PayPhase.CHOOSE -> Choose(state, actions)
                     PayPhase.WAITING -> {
                         CircularProgressIndicator(color = colors.green)
                         Message(stringResource(R.string.cloud_pay_waiting))
@@ -108,7 +142,7 @@ fun CloudPayScreen(
                     }
                     PayPhase.FAILED -> {
                         Message(stringResource(R.string.cloud_pay_failed), error = true)
-                        PrimaryButton(text = stringResource(R.string.cloud_pay_retry), onClick = viewModel::tryAgain)
+                        PrimaryButton(text = stringResource(R.string.cloud_pay_retry), onClick = actions.tryAgain)
                     }
                     PayPhase.STILL_WAITING -> {
                         Message(stringResource(R.string.cloud_pay_still_waiting))
@@ -130,7 +164,7 @@ private fun Message(text: String, error: Boolean = false) {
 }
 
 @Composable
-private fun Choose(state: PayUiState, vm: CloudPayViewModel) {
+private fun Choose(state: PayUiState, vm: PayActions) {
     val colors = LocalShopColors.current
     state.plans.forEach { plan ->
         PlanRow(plan, selected = plan.code == state.selected, onClick = { vm.select(plan.code) })
@@ -143,11 +177,11 @@ private fun Choose(state: PayUiState, vm: CloudPayViewModel) {
         )
         ShopTextField(
             value = state.msisdn,
-            onValueChange = vm::setMsisdn,
+            onValueChange = vm.setMsisdn,
             placeholder = stringResource(R.string.cloud_phone_placeholder),
             keyboardType = KeyboardType.Phone,
         )
-        PrimaryButton(text = stringResource(R.string.cloud_pay_button), onClick = vm::pay, enabled = state.canPay)
+        PrimaryButton(text = stringResource(R.string.cloud_pay_button), onClick = vm.pay, enabled = state.canPay)
     } else {
         state.instructions?.let { Message(it) }
     }
@@ -177,7 +211,7 @@ private fun PlanRow(plan: PlanDto, selected: Boolean, onClick: () -> Unit) {
                 onClick = null,
                 colors = RadioButtonDefaults.colors(selectedColor = colors.green),
             )
-            Column(modifier = Modifier.padding(start = 12.dp)) {
+            Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
                 Text(plan.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = colors.ink)
                 Text(price, style = MaterialTheme.typography.bodyMedium, color = colors.muted)
             }
