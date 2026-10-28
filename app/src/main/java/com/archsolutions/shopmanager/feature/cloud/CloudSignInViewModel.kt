@@ -61,6 +61,7 @@ class CloudSignInViewModel @Inject constructor(
         if (s.busy || s.phone.isEmpty()) return
         run(forRequest = true) {
             account.requestCode(s.phone) // as typed; the server normalizes
+            ticket = null // a new code means a new verification
             startResendTimer()
             _state.update { it.copy(step = SignInStep.CODE, code = "") }
         }
@@ -70,6 +71,11 @@ class CloudSignInViewModel @Inject constructor(
         val s = _state.value
         if (s.busy || s.code.isEmpty()) return
         run {
+            if (ticket != null) {
+                // The code was accepted already and only the link failed: retry the link, the code is used up.
+                finishLink(replace = false, name = null, consent = false)
+                return@run
+            }
             val response = account.verify(s.phone, s.code)
             ticket = response.ownerTicket
             if (response.newOwner) {
@@ -82,8 +88,8 @@ class CloudSignInViewModel @Inject constructor(
 
     fun submitProfile() {
         val s = _state.value
-        if (s.busy || !s.consent) return
-        run { finishLink(replace = false, name = s.name.takeIf { it.isNotBlank() }, consent = true) }
+        if (s.busy || !s.consent || s.name.isBlank()) return
+        run { finishLink(replace = false, name = s.name.trim(), consent = true) }
     }
 
     fun replaceOldTablet() {

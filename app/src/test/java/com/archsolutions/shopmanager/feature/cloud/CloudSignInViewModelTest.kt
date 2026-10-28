@@ -28,6 +28,7 @@ private class LinkCall(val ticket: String, val phone: String, val replace: Boole
 private class FakeAccount : CloudAccount {
     val sentPhones = mutableListOf<String>()
     val links = mutableListOf<LinkCall>()
+    var verifies = 0
     var newOwner = false
     var requestFailure: Throwable? = null
     var verifyFailure: Throwable? = null
@@ -40,6 +41,7 @@ private class FakeAccount : CloudAccount {
     }
 
     override suspend fun verify(phone: String, code: String): VerifyResponse {
+        verifies++
         verifyFailure?.let { throw it }
         return VerifyResponse(ownerTicket = "ticket-1", newOwner = newOwner)
     }
@@ -180,6 +182,35 @@ class CloudSignInViewModelTest {
         assertEquals(SignInError.OTHER, vm.state.value.error)
         assertEquals(SignInStep.CODE, vm.state.value.step)
         assertFalse(vm.state.value.busy)
+    }
+
+    @Test fun `a failed link keeps the ticket, and a retry links without re-verifying`() = runTest(dispatcher) {
+        account.linkFailure = IOException("drop")
+        val vm = vm()
+        toCode(vm)
+        verify(vm)
+        assertEquals(SignInStep.CODE, vm.state.value.step)
+        assertEquals(SignInError.OFFLINE, vm.state.value.error)
+        account.linkFailure = null
+        vm.verify(); runCurrent()
+        assertEquals(1, account.verifies)
+        assertEquals(listOf("ticket-1", "ticket-1"), account.links.map { it.ticket })
+        assertEquals(SignInStep.DONE, vm.state.value.step)
+    }
+
+    @Test fun `a new owner cannot submit a blank name`() = runTest(dispatcher) {
+        account.newOwner = true
+        val vm = vm()
+        toCode(vm)
+        verify(vm)
+        vm.setConsent(true)
+        vm.setName("   ")
+        vm.submitProfile(); runCurrent()
+        assertTrue(account.links.isEmpty())
+        assertEquals(SignInStep.PROFILE, vm.state.value.step)
+        vm.setName(" Amina ")
+        vm.submitProfile(); runCurrent()
+        assertEquals("Amina", account.links.single().name)
     }
 
     @Test fun `phone sent as typed`() = runTest(dispatcher) {

@@ -196,7 +196,13 @@ fun AppNavHost(
 
     // 7.8: a fresh install starts with onboarding, whose last step opens the first day.
     LaunchedEffect(needsOnboarding, currentDestination != null) {
-        if (needsOnboarding == true && currentDestination != null && !currentDestination.hasRoute(OnboardingRoute::class)) {
+        // Sign-in and restore are reached from onboarding: after a rotation or process restore the stack is
+        // [Onboarding, CloudSignIn], so a second Onboarding must not be pushed over them.
+        if (needsOnboarding == true && currentDestination != null &&
+            !currentDestination.hasRoute(OnboardingRoute::class) &&
+            !currentDestination.hasRoute(CloudSignInRoute::class) &&
+            !currentDestination.hasRoute(CloudRestoreRoute::class)
+        ) {
             navController.navigate(OnboardingRoute) { popUpTo<HomeRoute> { inclusive = true } }
         }
     }
@@ -535,7 +541,7 @@ private fun NavContent(
                 backupReminder = backupReminder,
                 onBackUp = backup.backUp,
                 cloudNotice = cloudNotice,
-                onCloudNotice = { navController.navigate(CloudPayRoute) },
+                onCloudNotice = { pinGate.run(R.string.pin_for_cloud) { navController.navigate(CloudPayRoute) } },
                 snackbarHostState = homeSnackbar,
             )
         }

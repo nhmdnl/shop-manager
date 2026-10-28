@@ -12,10 +12,12 @@ import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.util.AppClock
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -103,14 +105,18 @@ class CloudRepo @Inject constructor(
 
     /** Tells the server (best effort: offline is fine), then forgets the link on this tablet. */
     override suspend fun unlink() {
-        if (api != null) {
-            try {
-                call { it.unlink() }
-            } catch (_: IOException) {
-            } catch (_: CloudException) {
+        try {
+            if (api != null) {
+                try {
+                    call { it.unlink() }
+                } catch (_: IOException) {
+                } catch (_: CloudException) {
+                }
             }
+        } finally {
+            // Even when the caller is cancelled mid-call (the owner left Settings): the link must go.
+            withContext(NonCancellable) { store.clearLink() }
         }
-        store.clearLink()
     }
 
     /** Fetches the plan status and caches it for the card; null when offline, refused or Off. */

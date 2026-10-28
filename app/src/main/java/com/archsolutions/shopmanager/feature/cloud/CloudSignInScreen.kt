@@ -255,7 +255,7 @@ private fun ProfileStep(state: SignInUiState, vm: SignInActions) {
     PrimaryButton(
         text = stringResource(R.string.cloud_link_tablet),
         onClick = vm.submitProfile,
-        enabled = state.consent && !state.busy,
+        enabled = state.consent && state.name.isNotBlank() && !state.busy,
     )
 }
 

@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -119,6 +120,16 @@ class CloudRepoTest {
         store.saveLink("t", "s", "0700")
         server.shutdown()
         repo().unlink()
+        assertFalse(store.snapshot.first().linked)
+    }
+
+    @Test fun `unlink still clears the link when the caller is cancelled during the server call`() = runBlocking {
+        store.saveLink("t", "s", "0700")
+        server.enqueue(MockResponse().setResponseCode(204).setHeadersDelay(400, java.util.concurrent.TimeUnit.MILLISECONDS))
+        val repo = repo()
+        val caller = launch(Dispatchers.Default) { repo.unlink() }
+        server.takeRequest()
+        caller.cancelAndJoin()
         assertFalse(store.snapshot.first().linked)
     }
 }

@@ -10,10 +10,12 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.archsolutions.cloud.contract.ArchJson
 import com.archsolutions.cloud.contract.ShopStatus
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import android.util.Base64
+import kotlinx.coroutines.withContext
 
 /**
  * The cloud DataStore: its own file (`files/datastore/cloud.preferences_pb`), apart from the shop settings,
@@ -48,7 +50,10 @@ class CloudStore(
     }
 
     suspend fun saveLink(token: String, shopId: String, phone: String) {
-        val sealed = Base64.encodeToString(cipher.encrypt(token.toByteArray(Charsets.UTF_8)), Base64.NO_WRAP)
+        // Keystore calls are binder round trips: never on the caller's (often Main) thread.
+        val sealed = withContext(Dispatchers.IO) {
+            Base64.encodeToString(cipher.encrypt(token.toByteArray(Charsets.UTF_8)), Base64.NO_WRAP)
+        }
         dataStore.edit {
             it[TOKEN] = sealed
             it[SHOP_ID] = shopId
@@ -60,7 +65,9 @@ class CloudStore(
     /** The device token, or null when none is stored or it can't be decrypted (lost key): that signs out. */
     suspend fun token(): String? {
         val sealed = dataStore.data.first()[TOKEN] ?: return null
-        val plain = runCatching { Base64.decode(sealed, Base64.NO_WRAP) }.getOrNull()?.let(cipher::decrypt)
+        val plain = withContext(Dispatchers.IO) {
+            runCatching { Base64.decode(sealed, Base64.NO_WRAP) }.getOrNull()?.let(cipher::decrypt)
+        }
         if (plain == null) {
             clearLink()
             return null
