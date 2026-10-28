@@ -44,19 +44,20 @@ import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.ShopTextField
 
-/** Sign in with an SMS code and link this tablet. Both purposes (link, restore) call [onDone] for now. */
+/** Sign in with an SMS code and link this tablet. [onDone] goes back; [onLinked] runs once the tablet is linked (default: go back). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CloudSignInScreen(
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    onLinked: () -> Unit = onDone,
     viewModel: CloudSignInViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val colors = LocalShopColors.current
 
     LaunchedEffect(state.step, state.left) {
-        if (state.step == SignInStep.DONE || state.left) onDone()
+        if (state.step == SignInStep.DONE) onLinked() else if (state.left) onDone()
     }
 
     Scaffold(

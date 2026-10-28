@@ -44,4 +44,7 @@ abstract class CloudAccountModule {
 
     @Binds
     abstract fun bindCloudPayments(repo: CloudRepo): CloudPayments
+
+    @Binds
+    abstract fun bindCloudBackups(impl: CloudBackupsImpl): CloudBackups
 }

@@ -613,4 +613,10 @@
     <string name="cloud_pay_done">Imekamilika</string>
     <string name="cloud_price_month">%1$s kwa mwezi</string>
     <string name="cloud_price_week">%1$s kwa wiki</string>
+    <string name="cloud_restore_title">Rejesha kutoka wingu</string>
+    <string name="cloud_restore_empty">Bado hakuna nakala za wingu za akaunti hii</string>
+    <string name="cloud_restore_failed">Haikufanya kazi. Data yako kwenye tablet hii haijabadilika. Angalia intaneti na ujaribu tena.</string>
+    <string name="cloud_restore_confirm">Badilisha kila kitu kwenye tablet hii na nakala ya %1$s?</string>
+    <string name="cloud_restore_replace">Badilisha</string>
+    <string name="onboarding_restore_cloud">Rejesha kutoka Arch-SME Cloud</string>
 </resources>

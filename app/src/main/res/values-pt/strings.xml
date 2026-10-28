@@ -613,4 +613,10 @@
     <string name="cloud_pay_done">Concluído</string>
     <string name="cloud_price_month">%1$s por mês</string>
     <string name="cloud_price_week">%1$s por semana</string>
+    <string name="cloud_restore_title">Restaurar da nuvem</string>
+    <string name="cloud_restore_empty">Ainda não há cópias na nuvem para esta conta</string>
+    <string name="cloud_restore_failed">Não funcionou. Os dados deste tablet não foram alterados. Verifique a internet e tente de novo.</string>
+    <string name="cloud_restore_confirm">Substituir tudo neste tablet pela cópia de %1$s?</string>
+    <string name="cloud_restore_replace">Substituir</string>
+    <string name="onboarding_restore_cloud">Restaurar do Arch-SME Cloud</string>
 </resources>

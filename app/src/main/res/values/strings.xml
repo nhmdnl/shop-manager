@@ -626,4 +626,10 @@
     <string name="cloud_pay_done">Done</string>
     <string name="cloud_price_month">%1$s a month</string>
     <string name="cloud_price_week">%1$s a week</string>
+    <string name="cloud_restore_title">Restore from cloud</string>
+    <string name="cloud_restore_empty">No cloud backups for this account yet</string>
+    <string name="cloud_restore_failed">That did not work. Your data on this tablet is unchanged. Check your internet and try again.</string>
+    <string name="cloud_restore_confirm">Replace everything on this tablet with the backup from %1$s?</string>
+    <string name="cloud_restore_replace">Replace</string>
+    <string name="onboarding_restore_cloud">Restore from Arch-SME Cloud</string>
 </resources>

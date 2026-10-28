@@ -91,6 +91,7 @@ import com.archsolutions.shopmanager.feature.sell.SellViewModel
 import com.archsolutions.shopmanager.feature.reports.ReportsScreen
 import com.archsolutions.shopmanager.feature.sell.SellScreen
 import com.archsolutions.shopmanager.feature.cloud.CloudPayScreen
+import com.archsolutions.shopmanager.feature.cloud.CloudRestoreScreen
 import com.archsolutions.shopmanager.feature.cloud.CloudSignInScreen
 import com.archsolutions.shopmanager.feature.cloud.CloudViewModel
 import com.archsolutions.shopmanager.feature.settings.SettingsScreen
@@ -136,7 +137,8 @@ import com.archsolutions.shopmanager.feature.day.PastDayScreen
 @Serializable data class SupplierDetailRoute(val id: Long)
 @Serializable data class SupplierEditRoute(val id: Long = 0L) // 0 = new supplier
 @Serializable object CloudPayRoute
-@Serializable data class CloudSignInRoute(val purpose: String = "LINK") // LINK or RESTORE; both go back for now
+@Serializable object CloudRestoreRoute
+@Serializable data class CloudSignInRoute(val purpose: String = "LINK") // LINK goes back when linked; RESTORE goes on to CloudRestoreRoute
 
 enum class NavDestination(
     val route: Any,
@@ -378,7 +380,8 @@ fun AppNavHost(
             destination?.hasRoute(DaySummaryRoute::class) == true ||
             destination?.hasRoute(SupplierEditRoute::class) == true ||
             destination?.hasRoute(CloudSignInRoute::class) == true ||
-            destination?.hasRoute(CloudPayRoute::class) == true
+            destination?.hasRoute(CloudPayRoute::class) == true ||
+            destination?.hasRoute(CloudRestoreRoute::class) == true
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
@@ -571,7 +574,10 @@ private fun NavContent(
             )
         }
         composable<OnboardingRoute> {
-            OnboardingScreen(onDone = { navController.navigate(HomeRoute) { popUpTo<OnboardingRoute> { inclusive = true } } })
+            OnboardingScreen(
+                onDone = { navController.navigate(HomeRoute) { popUpTo<OnboardingRoute> { inclusive = true } } },
+                onRestoreFromCloud = { navController.navigate(CloudSignInRoute("RESTORE")) },
+            )
         }
         composable<OpenDayRoute> {
             OpenDayScreen(
@@ -711,8 +717,21 @@ private fun NavContent(
         composable<CloudPayRoute> {
             CloudPayScreen(onDone = { navController.popBackStack() })
         }
-        composable<CloudSignInRoute> {
-            CloudSignInScreen(onDone = { navController.popBackStack() })
+        composable<CloudRestoreRoute> {
+            CloudRestoreScreen(onBack = { navController.popBackStack() })
+        }
+        composable<CloudSignInRoute> { entry ->
+            val restoring = entry.toRoute<CloudSignInRoute>().purpose == "RESTORE"
+            CloudSignInScreen(
+                onDone = { navController.popBackStack() },
+                onLinked = {
+                    if (restoring) {
+                        navController.navigate(CloudRestoreRoute) { popUpTo<CloudSignInRoute> { inclusive = true } }
+                    } else {
+                        navController.popBackStack()
+                    }
+                },
+            )
         }
         composable<SettingsRoute> {
             SettingsScreen(
@@ -721,7 +740,7 @@ private fun NavContent(
                 onNavigateBack = if (!isExpanded) { { navController.popBackStack() } } else null,
                 onCloudSignIn = { navController.navigate(CloudSignInRoute()) },
                 onCloudPay = { navController.navigate(CloudPayRoute) },
-                onCloudRestore = { }, // Task 7 opens Restore here
+                onCloudRestore = { navController.navigate(CloudRestoreRoute) },
             )
         }
     }
