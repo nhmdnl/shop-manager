@@ -8,7 +8,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.toSize
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
@@ -34,6 +45,8 @@ import com.archsolutions.shopmanager.feature.cloud.SignInStep
 import com.archsolutions.shopmanager.feature.cloud.SignInUiState
 import org.junit.Rule
 import org.junit.Test
+
+private const val PHONE_TAG = "phone"
 
 class ShopDesignSystemTest {
 
@@ -68,10 +81,34 @@ class ShopDesignSystemTest {
             CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale = 2f)) {
                 ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
                     Box(Modifier.fillMaxSize()) {
-                        Box(Modifier.requiredSize(390.dp, 844.dp).padding(0.dp)) { content() }
+                        Box(Modifier.requiredSize(390.dp, 844.dp).testTag(PHONE_TAG)) { content() }
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * assertIsDisplayed passes for half-visible nodes and cannot see ellipsised or cut text, so every text
+     * node is also checked here: no overflow in its text layout, and its unclipped bounds inside the phone box width.
+     */
+    private fun assertNothingClipped() {
+        val phone = composeTestRule.onNodeWithTag(PHONE_TAG).fetchSemanticsNode().boundsInRoot
+        val nodes = composeTestRule
+            .onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
+            .fetchSemanticsNodes()
+        assertTrue("no text nodes found", nodes.isNotEmpty())
+        nodes.forEach { node ->
+            val label = node.config.getOrNull(SemanticsProperties.Text)?.joinToString { it.text } ?: "node ${node.id}"
+            val results = mutableListOf<TextLayoutResult>()
+            node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(results)
+            results.forEach {
+                assertFalse("'$label' has visual overflow", it.hasVisualOverflow)
+                assertFalse("'$label' overflows its height", it.didOverflowHeight)
+                assertFalse("'$label' overflows its width", it.didOverflowWidth)
+            }
+            val b = Rect(node.positionInRoot, node.size.toSize())
+            assertTrue("'$label' sticks out of the phone width: $b vs $phone", b.left >= phone.left - 0.5f && b.right <= phone.right + 0.5f)
         }
     }
 
@@ -79,11 +116,13 @@ class ShopDesignSystemTest {
 
     private fun shown(resId: Int) {
         composeTestRule.onNodeWithText(text(resId)).assertIsDisplayed()
+        assertNothingClipped()
     }
 
     /** The screens scroll, so a node below the fold is scrolled to first; it must then fit the phone box. */
     private fun shownScrolled(resId: Int) {
         composeTestRule.onNodeWithText(text(resId)).performScrollTo().assertIsDisplayed()
+        assertNothingClipped()
     }
 
     @Test
