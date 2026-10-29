@@ -159,8 +159,11 @@ class CloudViewModel @Inject constructor(
         .combine(textsVersion) { state, _ -> noticeFor(state) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    init {
-        // One refresh per screen; offline or refused leaves the cached status in place.
+    /**
+     * Fetches the plan status; screens call it each time they come back, so a payment made meanwhile shows.
+     * Offline or refused leaves the cached status in place.
+     */
+    fun refresh() {
         viewModelScope.launch {
             try {
                 if (link.state.first() is CloudState.Linked) link.refreshStatus()

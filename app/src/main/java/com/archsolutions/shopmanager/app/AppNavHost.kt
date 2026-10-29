@@ -235,8 +235,9 @@ fun AppNavHost(
     if (useRail) {
         // Expanded layout (Tablet): Navigation Rail (104 dp wide) + content
         Row(modifier = modifier.fillMaxSize().background(colors.paper)) {
-            // Open the day is a full-screen task on tablet too (no rail on the design board)
-            if (!isOpenDay) {
+            // Open the day is a full-screen task on tablet too (no rail on the design board), and so is
+            // onboarding, including the cloud sign-in and restore it leads to.
+            if (!isOpenDay && needsOnboarding != true) {
                 // NavigationRail
                 NavigationRail(
                     modifier = Modifier
@@ -515,6 +516,7 @@ private fun NavContent(
             val homeSnackbar = remember { SnackbarHostState() }
             val cloudViewModel: CloudViewModel = hiltViewModel()
             val cloudNotice by cloudViewModel.notice.collectAsStateWithLifecycle()
+            LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { cloudViewModel.refresh() }
             val backup = rememberBackupActions(homeSnackbar)
             HomeScreen(
                 isExpanded = isExpanded,

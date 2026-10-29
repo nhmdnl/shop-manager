@@ -18,6 +18,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
@@ -36,6 +38,7 @@ fun CloudSettingsCard(
     viewModel: CloudViewModel = hiltViewModel(),
 ) {
     val card by viewModel.card.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     if (!card.visible) return
     val pinGate = rememberPinGate()
     var confirmingUnlink by remember { mutableStateOf(false) }

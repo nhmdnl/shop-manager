@@ -190,9 +190,21 @@ class CloudViewModelTest {
         val link = FakeLink(linked(status(PlanState.ACTIVE, periodEnd = at(11, 23))))
         link.refreshResult = null // offline: refreshStatus returns null and the cache stays
         val vm = viewModel(link)
+        vm.refresh()
         val card = vm.cardNow()
         assertEquals(1, link.refreshes)
         assertEquals("active 23 Nov", card.planLine)
+    }
+
+    @Test fun `every refresh asks again, so a payment made meanwhile shows`() = runTest(dispatcher) {
+        val link = FakeLink(linked(status(PlanState.ACTIVE, periodEnd = at(11, 23))))
+        val vm = viewModel(link)
+        assertEquals(0, link.refreshes)
+        vm.refresh()
+        vm.cardNow()
+        vm.refresh()
+        vm.cardNow()
+        assertEquals(2, link.refreshes)
     }
 
     @Test fun `a refresh that throws is ignored`() = runTest(dispatcher) {
@@ -200,6 +212,7 @@ class CloudViewModelTest {
             override suspend fun refreshStatus(): ShopStatus? = throw java.io.IOException("offline")
         }
         val vm = CloudViewModel(link, work, FakeTexts(), clock)
+        vm.refresh()
         assertTrue(vm.cardNow().visible)
     }
 
