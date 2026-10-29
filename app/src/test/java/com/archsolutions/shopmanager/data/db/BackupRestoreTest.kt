@@ -129,4 +129,32 @@ class BackupRestoreTest {
         db = openDb()
         assertEquals(listOf("Sugar 1kg"), db.productDao().getAllActive().first().map { it.name })
     }
+
+    @Test
+    fun `automatic copies go to app storage when the shared folder can't be written`() {
+        val shared = tmpFolder.newFolder("shared")
+        val local = File(tmpFolder.root, "local")
+        assertEquals(shared, BackupManager.autoBackupDir(shared, local))
+        assertEquals(local, BackupManager.autoBackupDir(null, local))
+
+        shared.setWritable(false)
+        try {
+            assertEquals(local, BackupManager.autoBackupDir(shared, local))
+            assertTrue(local.isDirectory)
+        } finally {
+            shared.setWritable(true)
+        }
+    }
+
+    @Test
+    fun `newestAutoBackup finds the newest copy in either folder`() = runTest {
+        val store = SettingsStore(PreferenceDataStoreFactory.create(scope = backgroundScope, produceFile = { tmpFolder.newFile("f.preferences_pb") }))
+        val shared = File(context.getExternalFilesDir("backups"), "${BackupManager.PREFIX}20261028_2000.zip").apply { parentFile?.mkdirs(); writeText("x") }
+        val local = File(context.filesDir, "backups/${BackupManager.PREFIX}20261029_2000.zip").apply { parentFile?.mkdirs(); writeText("x") }
+
+        assertEquals(local, manager(store).newestAutoBackup())
+        local.delete()
+        assertEquals(shared, manager(store).newestAutoBackup())
+        shared.delete()
+    }
 }
