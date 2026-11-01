@@ -74,6 +74,7 @@ import com.archsolutions.shopmanager.feature.stock.FieldLabel
 @Composable
 fun OnboardingScreen(
     onDone: () -> Unit,
+    onRestoreFromCloud: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
@@ -124,7 +125,7 @@ fun OnboardingScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 when (state.step) {
-                    1 -> ShopAndLanguageStep(state, viewModel)
+                    1 -> ShopAndLanguageStep(state, viewModel, onRestoreFromCloud)
                     2 -> ThemeStep(state, viewModel)
                     else -> OpeningMoneyStep(state, viewModel)
                 }
@@ -173,8 +174,9 @@ private fun StepTitle(title: String, subtitle: String) {
 }
 
 @Composable
-private fun ShopAndLanguageStep(state: OnboardingUiState, viewModel: OnboardingViewModel) {
+private fun ShopAndLanguageStep(state: OnboardingUiState, viewModel: OnboardingViewModel, onRestoreFromCloud: () -> Unit) {
     val colors = LocalShopColors.current
+    val cloudAvailable by viewModel.cloudAvailable.collectAsStateWithLifecycle()
     StepTitle(stringResource(R.string.onboarding_welcome_title), stringResource(R.string.onboarding_welcome_sub))
     Spacer(modifier = Modifier.height(4.dp))
     FieldLabel(stringResource(R.string.settings_shop_name))
@@ -213,6 +215,14 @@ private fun ShopAndLanguageStep(state: OnboardingUiState, viewModel: OnboardingV
                 }
             }
         }
+    }
+    if (cloudAvailable) {
+        Spacer(modifier = Modifier.height(4.dp))
+        SecondaryButton(
+            text = stringResource(R.string.onboarding_restore_cloud),
+            onClick = onRestoreFromCloud,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

@@ -90,6 +90,10 @@ import com.archsolutions.shopmanager.feature.sell.CheckoutScreen
 import com.archsolutions.shopmanager.feature.sell.SellViewModel
 import com.archsolutions.shopmanager.feature.reports.ReportsScreen
 import com.archsolutions.shopmanager.feature.sell.SellScreen
+import com.archsolutions.shopmanager.feature.cloud.CloudPayScreen
+import com.archsolutions.shopmanager.feature.cloud.CloudRestoreScreen
+import com.archsolutions.shopmanager.feature.cloud.CloudSignInScreen
+import com.archsolutions.shopmanager.feature.cloud.CloudViewModel
 import com.archsolutions.shopmanager.feature.settings.SettingsScreen
 import com.archsolutions.shopmanager.feature.settings.SettingsViewModel
 import com.archsolutions.shopmanager.feature.stock.AddPurchaseScreen
@@ -132,6 +136,9 @@ import com.archsolutions.shopmanager.feature.day.PastDayScreen
 @Serializable data class DaySummaryRoute(val dayId: Long) // a closed day's record, read-only (Reports > Days)
 @Serializable data class SupplierDetailRoute(val id: Long)
 @Serializable data class SupplierEditRoute(val id: Long = 0L) // 0 = new supplier
+@Serializable object CloudPayRoute
+@Serializable object CloudRestoreRoute
+@Serializable data class CloudSignInRoute(val purpose: String = "LINK") // LINK goes back when linked; RESTORE goes on to CloudRestoreRoute
 
 enum class NavDestination(
     val route: Any,
@@ -189,7 +196,13 @@ fun AppNavHost(
 
     // 7.8: a fresh install starts with onboarding, whose last step opens the first day.
     LaunchedEffect(needsOnboarding, currentDestination != null) {
-        if (needsOnboarding == true && currentDestination != null && !currentDestination.hasRoute(OnboardingRoute::class)) {
+        // Sign-in and restore are reached from onboarding: after a rotation or process restore the stack is
+        // [Onboarding, CloudSignIn], so a second Onboarding must not be pushed over them.
+        if (needsOnboarding == true && currentDestination != null &&
+            !currentDestination.hasRoute(OnboardingRoute::class) &&
+            !currentDestination.hasRoute(CloudSignInRoute::class) &&
+            !currentDestination.hasRoute(CloudRestoreRoute::class)
+        ) {
             navController.navigate(OnboardingRoute) { popUpTo<HomeRoute> { inclusive = true } }
         }
     }
@@ -222,8 +235,9 @@ fun AppNavHost(
     if (useRail) {
         // Expanded layout (Tablet): Navigation Rail (104 dp wide) + content
         Row(modifier = modifier.fillMaxSize().background(colors.paper)) {
-            // Open the day is a full-screen task on tablet too (no rail on the design board)
-            if (!isOpenDay) {
+            // Open the day is a full-screen task on tablet too (no rail on the design board), and so is
+            // onboarding, including the cloud sign-in and restore it leads to.
+            if (!isOpenDay && needsOnboarding != true) {
                 // NavigationRail
                 NavigationRail(
                     modifier = Modifier
@@ -371,7 +385,10 @@ fun AppNavHost(
             destination?.hasRoute(CloseDayRoute::class) == true ||
             destination?.hasRoute(DayClosedRoute::class) == true ||
             destination?.hasRoute(DaySummaryRoute::class) == true ||
-            destination?.hasRoute(SupplierEditRoute::class) == true
+            destination?.hasRoute(SupplierEditRoute::class) == true ||
+            destination?.hasRoute(CloudSignInRoute::class) == true ||
+            destination?.hasRoute(CloudPayRoute::class) == true ||
+            destination?.hasRoute(CloudRestoreRoute::class) == true
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
@@ -497,6 +514,9 @@ private fun NavContent(
             val backupReminderViewModel: BackupReminderViewModel = hiltViewModel()
             val backupReminder by backupReminderViewModel.reminder.collectAsStateWithLifecycle()
             val homeSnackbar = remember { SnackbarHostState() }
+            val cloudViewModel: CloudViewModel = hiltViewModel()
+            val cloudNotice by cloudViewModel.notice.collectAsStateWithLifecycle()
+            LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { cloudViewModel.refresh() }
             val backup = rememberBackupActions(homeSnackbar)
             HomeScreen(
                 isExpanded = isExpanded,
@@ -522,6 +542,8 @@ private fun NavContent(
                 onReopenDay = { dayId -> pinGate.run(R.string.pin_for_reopen) { homeViewModel.reopenDay(dayId) } },
                 backupReminder = backupReminder,
                 onBackUp = backup.backUp,
+                cloudNotice = cloudNotice,
+                onCloudNotice = { pinGate.run(R.string.pin_for_cloud) { navController.navigate(CloudPayRoute) } },
                 snackbarHostState = homeSnackbar,
             )
         }
@@ -560,7 +582,10 @@ private fun NavContent(
             )
         }
         composable<OnboardingRoute> {
-            OnboardingScreen(onDone = { navController.navigate(HomeRoute) { popUpTo<OnboardingRoute> { inclusive = true } } })
+            OnboardingScreen(
+                onDone = { navController.navigate(HomeRoute) { popUpTo<OnboardingRoute> { inclusive = true } } },
+                onRestoreFromCloud = { navController.navigate(CloudSignInRoute("RESTORE")) },
+            )
         }
         composable<OpenDayRoute> {
             OpenDayScreen(
@@ -697,11 +722,33 @@ private fun NavContent(
                 onSales = { navController.navigate(SalesRoute(it)) },
             )
         }
+        composable<CloudPayRoute> {
+            CloudPayScreen(onDone = { navController.popBackStack() })
+        }
+        composable<CloudRestoreRoute> {
+            CloudRestoreScreen(onBack = { navController.popBackStack() })
+        }
+        composable<CloudSignInRoute> { entry ->
+            val restoring = entry.toRoute<CloudSignInRoute>().purpose == "RESTORE"
+            CloudSignInScreen(
+                onDone = { navController.popBackStack() },
+                onLinked = {
+                    if (restoring) {
+                        navController.navigate(CloudRestoreRoute) { popUpTo<CloudSignInRoute> { inclusive = true } }
+                    } else {
+                        navController.popBackStack()
+                    }
+                },
+            )
+        }
         composable<SettingsRoute> {
             SettingsScreen(
                 viewModel = settingsViewModel,
                 isExpanded = isExpanded,
                 onNavigateBack = if (!isExpanded) { { navController.popBackStack() } } else null,
+                onCloudSignIn = { navController.navigate(CloudSignInRoute()) },
+                onCloudPay = { navController.navigate(CloudPayRoute) },
+                onCloudRestore = { navController.navigate(CloudRestoreRoute) },
             )
         }
     }

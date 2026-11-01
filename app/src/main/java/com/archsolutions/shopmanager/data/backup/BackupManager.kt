@@ -61,7 +61,7 @@ class BackupManager @Inject constructor(
      * this device, so it doesn't count as "last backup" (the Home reminder is about a lost phone).
      */
     suspend fun autoBackup(): File = withContext(Dispatchers.IO) {
-        val dir = (context.getExternalFilesDir(BACKUP_DIR) ?: File(context.filesDir, BACKUP_DIR)).apply { mkdirs() }
+        val dir = autoBackupDir(context.getExternalFilesDir(BACKUP_DIR), File(context.filesDir, BACKUP_DIR))
         val file = File(dir, fileName())
         file.outputStream().use(::writeZip)
         dir.listFiles { f -> f.name.startsWith(PREFIX) && f.name.endsWith(".zip") }
@@ -74,6 +74,21 @@ class BackupManager @Inject constructor(
     suspend fun restoreFrom(uri: Uri): RestoreResult = withContext(Dispatchers.IO) {
         val input = context.contentResolver.openInputStream(uri) ?: return@withContext RestoreResult.NOT_A_BACKUP
         input.use { stageRestore(it) }
+    }
+
+    /** The newest automatic copy kept on this device (in either folder [autoBackupDir] picks), or null when there is none. */
+    fun newestAutoBackup(): File? =
+        listOfNotNull(context.getExternalFilesDir(BACKUP_DIR), File(context.filesDir, BACKUP_DIR))
+            .flatMap { dir -> dir.listFiles { f -> f.name.startsWith(PREFIX) && f.name.endsWith(".zip") }.orEmpty().asList() }
+            .maxByOrNull { it.name }
+
+    /** Stages a restore from a backup file already on this device (the cloud download, an automatic copy). */
+    suspend fun restoreFromFile(file: File): RestoreResult = withContext(Dispatchers.IO) {
+        try {
+            file.inputStream().use { stageRestore(it) }
+        } catch (e: IOException) {
+            RestoreResult.NOT_A_BACKUP
+        }
     }
 
     internal fun writeZip(out: OutputStream) {
@@ -132,6 +147,13 @@ class BackupManager @Inject constructor(
         const val PREFIX = "arch-sme_backup_"
         const val KEEP = 7
         private const val BACKUP_DIR = "backups"
+
+        /**
+         * Where an automatic copy goes: app-specific shared storage, else app storage when that is missing
+         * or can't be written (some Android builds hand the app a shared folder it may not write to).
+         */
+        internal fun autoBackupDir(shared: File?, local: File): File =
+            shared?.takeIf { (it.isDirectory || it.mkdirs()) && it.canWrite() } ?: local.apply { mkdirs() }
         internal const val MANIFEST = "manifest.properties"
         internal const val DATABASE = "shop_manager.db"
         internal const val SETTINGS = "shop_settings.preferences_pb"

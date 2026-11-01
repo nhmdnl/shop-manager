@@ -39,7 +39,16 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "CLOUD_BASE_URL", "\"http://127.0.0.1:8080\"")
+        }
         release {
+            // Set `arch.cloud.url` in ~/.gradle/gradle.properties; blank hides every cloud screen and makes no network call.
+            val cloudUrl = providers.gradleProperty("arch.cloud.url").getOrElse("")
+            require(cloudUrl.isBlank() || cloudUrl.startsWith("https://")) {
+                "arch.cloud.url must start with https:// in a release build (got \"$cloudUrl\"); leave it blank to ship without cloud."
+            }
+            buildConfigField("String", "CLOUD_BASE_URL", "\"$cloudUrl\"")
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -52,7 +61,7 @@ android {
     buildFeatures {
       compose = true
       aidl = false
-      buildConfig = false
+      buildConfig = true
       shaders = false
     }
 
@@ -108,6 +117,11 @@ dependencies {
   // WorkManager (close-day reminder)
   implementation(libs.androidx.work.runtime.ktx)
 
+  // Arch-SME Cloud
+  implementation(project(":cloud-contract"))
+  implementation(libs.okhttp)
+  implementation(libs.kotlinx.serialization.json)
+
   // Tooling
   debugImplementation(libs.androidx.compose.ui.tooling)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
@@ -118,6 +132,8 @@ dependencies {
   testImplementation(libs.turbine)
   testImplementation(libs.androidx.room.testing)
   testImplementation(libs.robolectric)
+  testImplementation(libs.okhttp.mockwebserver)
+  testImplementation(libs.androidx.work.testing)
   testImplementation(libs.androidx.test.core)
   testImplementation(libs.androidx.test.ext.junit)
 

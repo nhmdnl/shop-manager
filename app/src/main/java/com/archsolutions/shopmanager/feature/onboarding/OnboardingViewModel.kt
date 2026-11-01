@@ -11,10 +11,15 @@ import com.archsolutions.shopmanager.data.repo.ImportResult
 import com.archsolutions.shopmanager.data.repo.ProductImporter
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import com.archsolutions.shopmanager.data.settings.ShopSettings
+import com.archsolutions.shopmanager.data.cloud.CloudLink
+import com.archsolutions.shopmanager.data.cloud.CloudState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -43,9 +48,15 @@ class OnboardingViewModel @Inject constructor(
     private val dayRepo: DayRepo,
     private val importer: ProductImporter,
     private val clock: AppClock,
+    cloud: CloudLink,
 ) : ViewModel() {
     private val _state = MutableStateFlow(OnboardingUiState())
     val state: StateFlow<OnboardingUiState> = _state.asStateFlow()
+
+    /** "Restore from Arch-SME Cloud" shows unless this build has no cloud. */
+    val cloudAvailable: StateFlow<Boolean> = cloud.state
+        .map { it != CloudState.Off }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     init {
         viewModelScope.launch {
