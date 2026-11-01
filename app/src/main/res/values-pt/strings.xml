@@ -488,6 +488,7 @@
     <string name="action_change">Mudar</string>
     <string name="settings_last_backup">Última cópia %1$s</string>
     <string name="settings_no_backup">Ainda sem cópia</string>
+    <string name="settings_auto_backup_failed">A cópia automática ao fechar o dia falhou. Toque em Fazer cópia agora.</string>
     <string name="backup_today">hoje %1$s</string>
     <string name="settings_fixed_v1">Fixo na v1</string>
     <string name="settings_restore">Restaurar uma cópia</string>

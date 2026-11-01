@@ -118,6 +118,19 @@ class CloudStoreTest {
         assertTrue(snap.linked)
     }
 
+    @Test
+    fun `a backup seen in the cloud list only moves the last cloud backup forward`() = runBlocking {
+        val store = newStore()
+        store.noteCloudBackup(1_700_000_000_000L)
+        assertEquals(1_700_000_000_000L, store.snapshot.first().lastCloudBackupAt)
+
+        store.noteCloudBackup(1_600_000_000_000L)
+        assertEquals(1_700_000_000_000L, store.snapshot.first().lastCloudBackupAt)
+
+        store.noteCloudBackup(1_800_000_000_000L)
+        assertEquals(1_800_000_000_000L, store.snapshot.first().lastCloudBackupAt)
+    }
+
     private fun status() = ShopStatus(plan = "basic", state = PlanState.TRIAL, trialEnd = 99L, features = listOf("backup"))
 }
 

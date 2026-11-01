@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -32,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -229,10 +231,18 @@ private fun ProfileStep(state: SignInUiState, vm: SignInActions) {
         placeholder = stringResource(R.string.cloud_name_placeholder),
         capitalization = KeyboardCapitalization.Words,
     )
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    // The whole row toggles, so the label is a tap target too.
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .toggleable(value = state.consent, onValueChange = vm.setConsent, role = Role.Checkbox),
+    ) {
         Checkbox(
             checked = state.consent,
-            onCheckedChange = vm.setConsent,
+            onCheckedChange = null,
             colors = CheckboxDefaults.colors(checkedColor = colors.green),
         )
         Text(

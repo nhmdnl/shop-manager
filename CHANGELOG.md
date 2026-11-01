@@ -13,6 +13,9 @@ All notable changes to Arch-SME. The format follows [Keep a Changelog](https://k
   - Builds without a cloud address show none of this and make no network calls.
 - The app now asks for internet access, used only by the cloud features.
 
+### Fixed
+- Settings now warns when the automatic backup after closing the day could not be saved (it used to fail silently). The next good backup clears the warning.
+
 ## [1.0.0] - 2026-10-23
 
 The first release, for one shop on an Android tablet or phone, fully offline.

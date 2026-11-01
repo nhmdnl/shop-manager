@@ -101,6 +101,11 @@ class CloudStore(
         dataStore.edit { it[LAST_BACKUP] = at }
     }
 
+    /** A backup this tablet saw in the cloud list (one sent before a reinstall, say): never moves the time back. */
+    suspend fun noteCloudBackup(at: Long) {
+        dataStore.edit { p -> if (at > (p[LAST_BACKUP] ?: Long.MIN_VALUE)) p[LAST_BACKUP] = at }
+    }
+
     private companion object {
         val TOKEN = stringPreferencesKey("token")
         val SHOP_ID = stringPreferencesKey("shop_id")

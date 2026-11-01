@@ -488,6 +488,7 @@
     <string name="action_change">Badilisha</string>
     <string name="settings_last_backup">Nakala ya mwisho %1$s</string>
     <string name="settings_no_backup">Bado hakuna nakala</string>
+    <string name="settings_auto_backup_failed">Nakala ya kiotomatiki baada ya kufunga siku imeshindwa. Gusa Hifadhi nakala sasa.</string>
     <string name="backup_today">leo %1$s</string>
     <string name="settings_fixed_v1">Haibadiliki v1</string>
     <string name="settings_restore">Rejesha kutoka kwa nakala</string>

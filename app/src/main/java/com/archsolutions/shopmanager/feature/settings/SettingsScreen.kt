@@ -479,6 +479,13 @@ private fun ShopDataSettingsCard(
             SettingRow(title = stringResource(R.string.settings_backup), subtitle = lastBackup) {
                 RowChip(text = stringResource(R.string.settings_backup_now), onClick = backup.backUp)
             }
+            if (settings.autoBackupFailedAt != null) {
+                Text(
+                    text = stringResource(R.string.settings_auto_backup_failed),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LocalShopColors.current.rust,
+                )
+            }
             SettingRow(title = stringResource(R.string.settings_import), subtitle = stringResource(R.string.import_sub)) {
                 RowChip(text = stringResource(R.string.settings_import_choose), onClick = importProducts)
             }

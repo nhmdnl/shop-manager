@@ -19,11 +19,16 @@ interface CloudBackups {
 
 class CloudBackupsImpl @Inject constructor(
     private val repo: CloudRepo,
+    private val store: CloudStore,
     private val backupManager: BackupManager,
     @param:ApplicationContext private val context: Context,
 ) : CloudBackups {
     override fun tempFile() = File(context.cacheDir, "cloud-restore.zip")
-    override suspend fun list() = repo.call { it.listBackups() }
+
+    // The cloud datastore is not in a backup zip, so a fresh or restored install learns its last cloud backup here.
+    override suspend fun list() = repo.call { it.listBackups() }.also { list ->
+        list.maxOfOrNull { it.uploadedAt }?.let { store.noteCloudBackup(it) }
+    }
     override suspend fun download(id: String, dest: File) = repo.call { it.downloadBackup(id, dest) }
     override suspend fun restore(file: File) = backupManager.restoreFromFile(file)
 }

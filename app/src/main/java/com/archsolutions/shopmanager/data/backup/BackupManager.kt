@@ -6,6 +6,7 @@ import com.archsolutions.shopmanager.core.util.AppClock
 import com.archsolutions.shopmanager.data.db.AppDatabase
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -44,14 +45,16 @@ class BackupManager @Inject constructor(
     /** "Back up now": to wherever the user picked (Storage Access Framework, so Google Drive works too). */
     suspend fun backUpTo(uri: Uri) = withContext(Dispatchers.IO) {
         // Recorded before the copy, so a restore of this backup knows it was backed up (no reminder
-        // straight after restoring); put back if the copy fails.
-        val previous = settingsStore.settings.first().lastBackupAt
+        // straight after restoring); put back if the copy fails. A good copy also answers a failed automatic one.
+        val previous = settingsStore.settings.first()
         settingsStore.setLastBackupAt(clock.nowMillis())
+        settingsStore.setAutoBackupFailedAt(null)
         try {
             val out = context.contentResolver.openOutputStream(uri) ?: error("Can't write $uri")
             out.use(::writeZip)
         } catch (e: Exception) {
-            settingsStore.setLastBackupAt(previous)
+            settingsStore.setLastBackupAt(previous.lastBackupAt)
+            settingsStore.setAutoBackupFailedAt(previous.autoBackupFailedAt)
             throw e
         }
     }
@@ -69,6 +72,21 @@ class BackupManager @Inject constructor(
             ?.drop(KEEP)
             ?.forEach { it.delete() }
         file
+    }
+
+    /** [autoBackup] for the worker. A failure is kept for Settings to show, and the next good copy clears it. */
+    suspend fun runAutoBackup(): Boolean {
+        // Cleared before the copy, so the zip doesn't carry an old failure into a later restore.
+        settingsStore.setAutoBackupFailedAt(null)
+        return try {
+            autoBackup()
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            settingsStore.setAutoBackupFailedAt(clock.nowMillis())
+            false
+        }
     }
 
     suspend fun restoreFrom(uri: Uri): RestoreResult = withContext(Dispatchers.IO) {

@@ -501,6 +501,7 @@
     <string name="action_change">Change</string>
     <string name="settings_last_backup">Last backup %1$s</string>
     <string name="settings_no_backup">No backup yet</string>
+    <string name="settings_auto_backup_failed">The automatic copy after closing the day failed. Tap Back up now to keep a copy.</string>
     <string name="backup_today">today %1$s</string>
     <string name="settings_fixed_v1">Fixed in v1</string>
     <string name="settings_restore">Restore from a backup</string>

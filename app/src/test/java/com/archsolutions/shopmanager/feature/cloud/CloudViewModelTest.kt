@@ -151,6 +151,12 @@ class CloudViewModelTest {
         assertEquals("none", viewModel(FakeLink(linked(status(PlanState.ACTIVE, periodEnd = at(12, 20))))).cardNow().backupLine)
     }
 
+    @Test fun `a paused plan disables Back up now, other plan states allow it`() = runTest(dispatcher) {
+        assertFalse(viewModel(FakeLink(linked(status(PlanState.LAPSED)))).cardNow().canBackUpNow)
+        assertTrue(viewModel(FakeLink(linked(status(PlanState.GRACE, graceEnd = at(12, 20))))).cardNow().canBackUpNow)
+        assertTrue(viewModel(FakeLink(linked(null))).cardNow().canBackUpNow)
+    }
+
     @Test fun `last backup reads today yesterday or date in shop zone`() = runTest(dispatcher) {
         fun line(last: Long) = viewModel(FakeLink(linked(null, last)))
         assertEquals("today 19:42", line(at(11, 20, 19, 42)).cardNow().backupLine)

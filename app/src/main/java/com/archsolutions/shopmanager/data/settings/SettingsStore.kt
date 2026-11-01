@@ -33,6 +33,8 @@ data class ShopSettings(
     val pinEnabled: Boolean = false,
     val pinHash: String = "",
     val lastBackupAt: Long? = null,
+    /** When the automatic copy after closing a day last failed; null once one succeeds. */
+    val autoBackupFailedAt: Long? = null,
     val onboardingDone: Boolean = false,
 )
 
@@ -55,6 +57,7 @@ class SettingsStore(
         val KEY_PIN_ENABLED = booleanPreferencesKey("pin_enabled")
         val KEY_PIN_HASH = stringPreferencesKey("pin_hash")
         val KEY_LAST_BACKUP = longPreferencesKey("last_backup")
+        val KEY_AUTO_BACKUP_FAILED = longPreferencesKey("auto_backup_failed")
         val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
     }
 
@@ -71,6 +74,7 @@ class SettingsStore(
             pinEnabled = prefs[KEY_PIN_ENABLED] ?: false,
             pinHash = prefs[KEY_PIN_HASH] ?: "",
             lastBackupAt = prefs[KEY_LAST_BACKUP],
+            autoBackupFailedAt = prefs[KEY_AUTO_BACKUP_FAILED],
             onboardingDone = prefs[KEY_ONBOARDING_DONE] ?: false,
         )
     }
@@ -113,6 +117,10 @@ class SettingsStore(
     /** Null clears it (no backup yet). */
     suspend fun setLastBackupAt(millis: Long?) {
         dataStore.edit { if (millis == null) it.remove(KEY_LAST_BACKUP) else it[KEY_LAST_BACKUP] = millis }
+    }
+
+    suspend fun setAutoBackupFailedAt(millis: Long?) {
+        dataStore.edit { if (millis == null) it.remove(KEY_AUTO_BACKUP_FAILED) else it[KEY_AUTO_BACKUP_FAILED] = millis }
     }
 
     suspend fun setOnboardingDone(done: Boolean) {

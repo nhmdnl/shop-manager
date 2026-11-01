@@ -1,6 +1,7 @@
 package com.archsolutions.shopmanager.data.db
 
 import android.content.Context
+import android.net.Uri
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -17,6 +18,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -144,6 +147,35 @@ class BackupRestoreTest {
         } finally {
             shared.setWritable(true)
         }
+    }
+
+    @Test
+    fun `a failed auto backup is kept for Settings and the next good one clears it`() = runTest {
+        val store = SettingsStore(PreferenceDataStoreFactory.create(scope = backgroundScope, produceFile = { tmpFolder.newFile("g.preferences_pb") }))
+
+        // Neither folder can take the copy: the shared one is read-only and a plain file sits where the local one goes.
+        val shared = context.getExternalFilesDir("backups")!!.apply { setWritable(false) }
+        val local = File(context.filesDir, "backups").apply { deleteRecursively(); writeText("not a folder") }
+        try {
+            assertFalse(manager(store).runAutoBackup())
+            assertEquals(FakeClock().nowMillis(), store.settings.first().autoBackupFailedAt)
+        } finally {
+            shared.setWritable(true)
+            local.delete()
+        }
+
+        assertTrue(manager(store).runAutoBackup())
+        assertNull(store.settings.first().autoBackupFailedAt)
+        manager(store).newestAutoBackup()?.delete()
+    }
+
+    @Test
+    fun `Back up now also clears a failed auto backup`() = runTest {
+        val store = SettingsStore(PreferenceDataStoreFactory.create(scope = backgroundScope, produceFile = { tmpFolder.newFile("h.preferences_pb") }))
+        store.setAutoBackupFailedAt(1L)
+
+        manager(store).backUpTo(Uri.fromFile(tmpFolder.newFile("manual.zip")))
+        assertNull(store.settings.first().autoBackupFailedAt)
     }
 
     @Test

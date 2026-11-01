@@ -202,7 +202,8 @@ class CloudViewModel @Inject constructor(
                     signedIn = true,
                     planLine = status?.let { planLine(it, zone) },
                     backupLine = backupLine,
-                    canBackUpNow = true,
+                    // The server refuses uploads while paused; the line already says to pay, and Pay sits below.
+                    canBackUpNow = status?.state != PlanState.LAPSED,
                 )
             }
         }

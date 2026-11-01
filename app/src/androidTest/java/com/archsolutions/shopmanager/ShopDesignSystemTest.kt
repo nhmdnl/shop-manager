@@ -23,6 +23,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.compose.ui.unit.Density
@@ -192,6 +193,16 @@ class ShopDesignSystemTest {
         shownScrolled(R.string.cloud_privacy_link)
         shownScrolled(R.string.cloud_terms_link)
         shownScrolled(R.string.cloud_link_tablet)
+    }
+
+    @Test
+    fun cloudConsentLabelTicksTheBox() {
+        var consent = false
+        phoneAt200 {
+            CloudSignInContent(SignInUiState(step = SignInStep.PROFILE, name = "Nakato"), SignInActions(setConsent = { consent = it }), onDone = {})
+        }
+        composeTestRule.onNodeWithText(text(R.string.cloud_consent)).performScrollTo().performClick()
+        assertTrue(consent)
     }
 
     @Test
