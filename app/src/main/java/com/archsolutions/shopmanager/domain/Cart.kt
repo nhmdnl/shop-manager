@@ -38,4 +38,4 @@ object CashQuickAmounts {
 }
 
 /** Same rule as ProductDao.getLowStock: low at or below the alert level. */
-val ProductEntity.isLowStock: Boolean get() = stockQty <= lowStockLevel
+val ProductEntity.isLowStock: Boolean get() = com.archsolutions.cloud.contract.shop.LowStock.isLow(stockQty, lowStockLevel)
