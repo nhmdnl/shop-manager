@@ -77,6 +77,77 @@ class BackupRestoreTest {
         assertEquals(listOf("Sugar 1kg"), db.productDao().getAllActive().first().map { it.name })
     }
 
+    private fun dbFrom(zip: ByteArray): ByteArray {
+        ZipInputStream(ByteArrayInputStream(zip)).use { z ->
+            while (true) {
+                val e = z.nextEntry ?: error("no database entry")
+                if (e.name == "shop_manager.db") return z.readBytes()
+            }
+        }
+    }
+
+    private fun integrity(bytes: ByteArray): String {
+        val file = tmpFolder.newFile()
+        file.writeBytes(bytes)
+        val copy = android.database.sqlite.SQLiteDatabase.openDatabase(file.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY)
+        return copy.use { c -> c.rawQuery("PRAGMA integrity_check", null).use { it.moveToFirst(); it.getString(0) } }
+    }
+
+    @Test
+    fun `a backup taken while another thread keeps writing is a whole database`() = runTest {
+        val store = SettingsStore(PreferenceDataStoreFactory.create(scope = backgroundScope, produceFile = { tmpFolder.newFile("w.preferences_pb") }))
+        for (i in 1..300) db.productDao().insert(product("Seed $i"))
+        val running = java.util.concurrent.atomic.AtomicBoolean(true)
+        val failure = java.util.concurrent.atomic.AtomicReference<Throwable?>(null)
+        val writes = java.util.concurrent.atomic.AtomicInteger(0)
+        val writer = Thread {
+            var n = 0
+            try { while (running.get()) {
+                db.runInTransaction {
+                    db.openHelper.writableDatabase.execSQL("INSERT INTO product (name, unit, sellPrice, costPrice, stockQty, lowStockLevel, active, createdAt, updatedAt, uid) VALUES ('W${n++}', 'PCS', 1, 1, 0, 0, 1, 0, 0, hex(randomblob(16)))")
+                    db.openHelper.writableDatabase.execSQL("DELETE FROM product WHERE name LIKE 'W%' AND id % 3 = 0")
+                }
+                writes.incrementAndGet()
+            } } catch (t: Throwable) { failure.set(t) }
+        }
+        writer.start()
+        try {
+            repeat(15) {
+                val zip = ByteArrayOutputStream().also { manager(store).writeZip(it) }.toByteArray()
+                assertEquals("ok", integrity(dbFrom(zip)))
+            }
+        } finally {
+            running.set(false)
+            writer.join()
+        }
+        assertEquals(null, failure.get())
+        assertTrue("the writer must have been writing (${writes.get()})", writes.get() > 50)
+    }
+
+    @Test
+    fun `a staged database with a good header but a garbled body is refused`() = runTest {
+        val store = SettingsStore(PreferenceDataStoreFactory.create(scope = backgroundScope, produceFile = { tmpFolder.newFile("g.preferences_pb") }))
+        for (i in 1..400) db.productDao().insert(product("Product number $i"))
+        val good = ByteArrayOutputStream().also { manager(store).writeZip(it) }.toByteArray()
+        val bytes = dbFrom(good)
+        assertTrue(bytes.size > 3 * 4096)
+        val random = java.util.Random(7)
+        for (i in 4096 until bytes.size) bytes[i] = random.nextInt().toByte() // page 1 (header, schema) stays
+        val garbled = ByteArrayOutputStream().also { out ->
+            ZipOutputStream(out).use { zip ->
+                zip.putNextEntry(ZipEntry("manifest.properties"))
+                zip.write("app=com.archsolutions.shopmanager\nschemaVersion=${AppDatabase.VERSION}\n".toByteArray())
+                zip.closeEntry()
+                zip.putNextEntry(ZipEntry("shop_manager.db"))
+                zip.write(bytes)
+                zip.closeEntry()
+            }
+        }.toByteArray()
+
+        assertEquals(RestoreResult.NOT_A_BACKUP, manager(store).stageRestore(ByteArrayInputStream(garbled)))
+        assertFalse(File(context.filesDir, "pending_restore/ready").exists())
+    }
+
     @Test
     fun `a restore sets the fill marker, and nothing staged leaves it unset`() = runTest {
         val marker = FillMarker(context.filesDir)
