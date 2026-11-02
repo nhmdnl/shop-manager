@@ -53,7 +53,7 @@ import javax.inject.Singleton
         MoneyEntryEntity::class,
     ],
     version = AppDatabase.VERSION,
-    exportSchema = false,
+    exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {

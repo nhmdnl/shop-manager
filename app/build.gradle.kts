@@ -6,6 +6,11 @@ plugins {
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.ksp)
   alias(libs.plugins.hilt)
+  alias(libs.plugins.androidx.room)
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 android {
@@ -64,6 +69,11 @@ android {
       buildConfig = true
       shaders = false
     }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+    sourceSets["test"].assets.srcDir("$projectDir/schemas")
 
     packaging {
       resources {
