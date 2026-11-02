@@ -69,8 +69,11 @@ class UidStabilityTest {
     private fun uidOf(table: String, id: Long): String =
         db.openHelper.writableDatabase.query("SELECT uid FROM $table WHERE id = $id").use { it.moveToFirst(); it.getString(0) }
 
-    private fun assertOnlyUpserts() {
-        assertTrue("outbox: ${outbox()}", outbox().none { it.op != "UPSERT" })
+    /** Only UPSERTs, and at least one of them for [table]/[uid] (an empty outbox must not pass). */
+    private fun assertOnlyUpserts(table: String, uid: String) {
+        val out = outbox()
+        assertTrue("outbox: $out", out.none { it.op != "UPSERT" })
+        assertTrue("no UPSERT for $table/$uid in $out", Out(table, uid, "UPSERT") in out)
     }
 
     @Test
@@ -99,7 +102,7 @@ class UidStabilityTest {
         val before = uidOf("product", p)
         products.adjustStock(p, 3.0, "Recount")
         assertEquals(before, uidOf("product", p))
-        assertOnlyUpserts()
+        assertOnlyUpserts("product", before)
     }
 
     @Test
@@ -113,7 +116,7 @@ class UidStabilityTest {
         sales.voidSale(sale, "mistake")
         assertEquals(saleUid, uidOf("sale", sale))
         assertEquals(productUid, uidOf("product", p))
-        assertOnlyUpserts()
+        assertOnlyUpserts("sale", saleUid)
     }
 
     @Test
@@ -124,7 +127,7 @@ class UidStabilityTest {
         days.closeDay(day, 0, 0, 0, 0, 0, 0)
         days.reopenDay(day)
         assertEquals(before, uidOf("business_day", day))
-        assertOnlyUpserts()
+        assertOnlyUpserts("business_day", before)
     }
 
     @Test
@@ -135,7 +138,7 @@ class UidStabilityTest {
         val before = uidOf("product", p)
         purchases.savePurchase(day, null, PurchasePaid.CASH, listOf(PurchaseLineItem(p, 2.0, 6_500)))
         assertEquals(before, uidOf("product", p))
-        assertOnlyUpserts()
+        assertOnlyUpserts("product", before)
     }
 
     @Test
@@ -148,7 +151,8 @@ class UidStabilityTest {
         money.addCreditRepayment(day, c, 1_000, MoneyMethod.CASH)
         assertEquals(customerUid, uidOf("customer", c))
         assertEquals(dayUid, uidOf("business_day", day))
-        assertOnlyUpserts()
+        val entryUid = db.openHelper.writableDatabase.query("SELECT uid FROM money_entry ORDER BY id DESC LIMIT 1").use { it.moveToFirst(); it.getString(0) }
+        assertOnlyUpserts("money_entry", entryUid)
     }
 
     @Test
