@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.archsolutions.cloud.contract.Features
 import com.archsolutions.cloud.contract.PlanState
 import com.archsolutions.cloud.contract.ShopStatus
 import com.archsolutions.shopmanager.R
@@ -16,6 +17,8 @@ import com.archsolutions.shopmanager.data.backup.AutoBackupWorker
 import com.archsolutions.shopmanager.data.cloud.CloudBackupWorker
 import com.archsolutions.shopmanager.data.cloud.CloudLink
 import com.archsolutions.shopmanager.data.cloud.CloudState
+import com.archsolutions.shopmanager.data.cloud.sync.CloudSync
+import com.archsolutions.shopmanager.data.cloud.sync.SyncStatus
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -45,6 +48,7 @@ data class CloudCardState(
     val planLine: String? = null,
     val backupLine: String = "",
     val canBackUpNow: Boolean = false,
+    val ownerViewLine: String? = null,
 )
 
 enum class CloudNotice { ENDS_SOON, GRACE, PAUSED }
@@ -61,6 +65,10 @@ interface CloudTexts {
     fun trialUntil(at: Long, zone: ZoneId): String
     fun activeUntil(at: Long, zone: ZoneId): String
     fun payBy(at: Long, zone: ZoneId): String
+    fun ownerViewOn(day: BackupDay, at: Long, zone: ZoneId): String
+    fun ownerViewOnNever(): String
+    fun ownerViewFilling(): String
+    fun ownerViewWaiting(): String
 }
 
 /** WorkManager as the card sees it, so tests need no real WorkManager. */
@@ -111,6 +119,21 @@ class AndroidCloudTexts @Inject constructor(
         return ctx.getString(R.string.cloud_line_last, whenText)
     }
 
+    override fun ownerViewOn(day: BackupDay, at: Long, zone: ZoneId): String {
+        val (ctx, locale) = localized()
+        val time = DayFormat.time(at, zone)
+        val whenText = when (day) {
+            BackupDay.TODAY -> ctx.getString(R.string.backup_today, time)
+            BackupDay.YESTERDAY -> ctx.getString(R.string.cloud_yesterday, time)
+            BackupDay.EARLIER -> "${date(at, zone, locale)} $time"
+        }
+        return ctx.getString(R.string.cloud_owner_view_on, whenText)
+    }
+
+    override fun ownerViewOnNever() = localized().first.getString(R.string.cloud_owner_view_on_never)
+    override fun ownerViewFilling() = localized().first.getString(R.string.cloud_owner_view_filling)
+    override fun ownerViewWaiting() = localized().first.getString(R.string.cloud_owner_view_waiting)
+
     override fun trialUntil(at: Long, zone: ZoneId): String {
         val (ctx, locale) = localized()
         return ctx.getString(R.string.cloud_plan_trial, date(at, zone, locale))
@@ -134,12 +157,15 @@ abstract class CloudUiModule {
     @Binds abstract fun bindCloudTexts(texts: AndroidCloudTexts): CloudTexts
 }
 
+/** A run ends with an empty outbox at least every 15 minutes online, so entries still waiting after 30 mean no connection. */
+private const val WAITING_MILLIS = 30 * 60 * 1000L
 private const val ENDS_SOON_MILLIS = 3 * 24 * 60 * 60 * 1000L
 
 @HiltViewModel
 class CloudViewModel @Inject constructor(
     private val link: CloudLink,
     private val work: CloudWork,
+    private val sync: CloudSync,
     private val texts: CloudTexts,
     private val clock: AppClock,
 ) : ViewModel() {
@@ -151,8 +177,11 @@ class CloudViewModel @Inject constructor(
         .combine(textsVersion) { infos, _ -> infos.any { it.state == WorkInfo.State.ENQUEUED } }
         .catch { emit(false) }
 
-    val card: StateFlow<CloudCardState> = combine(link.state, waiting, textsVersion) { state, isWaiting, _ ->
-        cardFor(state, isWaiting)
+    val card: StateFlow<CloudCardState> = combine(
+        combine(link.state, waiting, textsVersion) { state, isWaiting, _ -> state to isWaiting },
+        sync.status,
+    ) { (state, isWaiting), syncStatus ->
+        cardFor(state, isWaiting, syncStatus)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CloudCardState())
 
     val notice: StateFlow<CloudNotice?> = link.state
@@ -182,7 +211,7 @@ class CloudViewModel @Inject constructor(
 
     fun refreshTexts() = textsVersion.update { it + 1 }
 
-    private fun cardFor(state: CloudState, isWaiting: Boolean): CloudCardState {
+    private fun cardFor(state: CloudState, isWaiting: Boolean, syncStatus: SyncStatus): CloudCardState {
         val zone = clock.zoneId
         return when (state) {
             CloudState.Off -> CloudCardState()
@@ -204,8 +233,19 @@ class CloudViewModel @Inject constructor(
                     backupLine = backupLine,
                     // The server refuses uploads while paused; the line already says to pay, and Pay sits below.
                     canBackUpNow = status?.state != PlanState.LAPSED,
+                    ownerViewLine = if (status != null && Features.LIVE in status.features) ownerViewLine(syncStatus, zone) else null,
                 )
             }
+        }
+    }
+
+    private fun ownerViewLine(sync: SyncStatus, zone: ZoneId): String {
+        val last = sync.lastSyncAt
+        return when {
+            sync.fillPending -> texts.ownerViewFilling()
+            sync.hasOutbox && (last == null || clock.nowMillis() - last > WAITING_MILLIS) -> texts.ownerViewWaiting()
+            last != null -> texts.ownerViewOn(backupDay(last), last, zone)
+            else -> texts.ownerViewOnNever()
         }
     }
 

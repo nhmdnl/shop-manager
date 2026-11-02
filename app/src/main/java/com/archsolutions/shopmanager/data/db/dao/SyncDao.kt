@@ -25,6 +25,9 @@ interface SyncDao {
     @Query("SELECT EXISTS(SELECT 1 FROM sync_outbox)")
     fun hasOutbox(): Flow<Boolean>
 
+    @Query("SELECT EXISTS(SELECT 1 FROM sync_outbox WHERE op = 'FILL_END')")
+    fun fillPending(): Flow<Boolean>
+
     @Query("SELECT EXISTS(SELECT 1 FROM sync_outbox)")
     suspend fun outboxNotEmpty(): Boolean
 
