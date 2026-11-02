@@ -168,7 +168,7 @@ class CloudRestoreViewModelTest {
 
     @Test fun `tablet stays linked after a restore`() = runTest {
         val context: Context = ApplicationProvider.getApplicationContext()
-        val db = Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.DATABASE_NAME).allowMainThreadQueries().build()
+        val db = AppDatabase.configure(Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.DATABASE_NAME)).allowMainThreadQueries().build()
         val settings = SettingsStore(PreferenceDataStoreFactory.create(scope = backgroundScope, produceFile = { tmp.newFile("s.preferences_pb") }))
         val manager = BackupManager(context, db, settings, FakeClock())
         val cloud = CloudStore(

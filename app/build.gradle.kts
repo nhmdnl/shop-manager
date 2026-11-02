@@ -73,7 +73,8 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }
-    sourceSets["test"].assets.srcDir("$projectDir/schemas")
+    // Robolectric unit tests read the merged assets of the debug variant, not the test source set.
+    sourceSets["debug"].assets.srcDir("$projectDir/schemas")
 
     packaging {
       resources {

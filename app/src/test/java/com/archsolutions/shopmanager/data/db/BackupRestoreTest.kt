@@ -43,7 +43,7 @@ class BackupRestoreTest {
     private var db: AppDatabase = openDb()
 
     private fun openDb(): AppDatabase =
-        Room.databaseBuilder(ApplicationProvider.getApplicationContext(), AppDatabase::class.java, AppDatabase.DATABASE_NAME)
+        AppDatabase.configure(Room.databaseBuilder(ApplicationProvider.getApplicationContext(), AppDatabase::class.java, AppDatabase.DATABASE_NAME))
             .allowMainThreadQueries()
             .build()
 
