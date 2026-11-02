@@ -15,6 +15,9 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** [waitSeconds] is the delay behind a [SyncOutcome.WAIT]; 0 otherwise. Returned with the outcome so another run can't overwrite it. */
+data class SyncResult(val outcome: SyncOutcome, val waitSeconds: Int = 0)
+
 enum class SyncOutcome { SENT, NOTHING_TO_SEND, OFF, NOT_LINKED, PAUSED, REPLACED, REJECTED, WAIT, RETRY }
 
 /** One sync run: status, then a fill if needed, then batches until the outbox is empty. */
@@ -26,12 +29,20 @@ class SyncRunner @Inject internal constructor(
     private val marker: FillMarker,
     private val clock: AppClock,
 ) {
-    /** The delay behind the last [SyncOutcome.WAIT], in seconds. */
-    @Volatile var lastWaitSeconds: Int = 60
-        private set
-
     /** Waits its turn (not tryLock): the periodic, soon, now and later works never interleave, so one sender at a time. */
-    suspend fun run(): SyncOutcome = mutex.withLock { runLocked() }
+    suspend fun run(): SyncResult = mutex.withLock {
+        waitSeconds = 0
+        val outcome = runLocked()
+        SyncResult(outcome, if (outcome == SyncOutcome.WAIT) waitSeconds else 0)
+    }
+
+    /** Turns sync off if the tablet has no token, under the run's Mutex so it can't land between a run's token check and its fill. */
+    suspend fun disableIfUnlinked() = mutex.withLock {
+        if (store.token() == null && repo.isEnabled()) repo.disable()
+    }
+
+    /** Only read and written inside the Mutex. */
+    private var waitSeconds = 0
 
     private suspend fun runLocked(): SyncOutcome {
         if (cloud.state.first() is CloudState.Off) return SyncOutcome.OFF
@@ -106,7 +117,7 @@ class SyncRunner @Inject internal constructor(
         }
         batch && (e.code == ErrorCode.PLAN_LAPSED || e.http == 402) -> SyncOutcome.PAUSED
         e.http == 429 -> {
-            lastWaitSeconds = e.retryAfterSeconds ?: 60
+            waitSeconds = e.retryAfterSeconds ?: 60
             SyncOutcome.WAIT
         }
         // 5xx, and a 2xx whose body did not decode (a captive portal): try again later.

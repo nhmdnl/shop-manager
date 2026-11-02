@@ -20,11 +20,11 @@ import java.util.concurrent.TimeUnit
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result = try {
         val deps = EntryPointAccessors.fromApplication(applicationContext, SyncEntryPoint::class.java)
-        val runner = deps.syncRunner()
-        when (runner.run()) {
+        val result = deps.syncRunner().run()
+        when (result.outcome) {
             SyncOutcome.RETRY -> Result.retry()
             SyncOutcome.WAIT -> {
-                deps.syncScheduler().runAfter(runner.lastWaitSeconds)
+                deps.syncScheduler().runAfter(result.waitSeconds)
                 Result.success()
             }
             else -> Result.success()

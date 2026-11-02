@@ -114,7 +114,8 @@ class SyncRunnerTest {
     }
 
     private fun link() = runBlocking { store.saveLink("tok-1", "shop-1", "0700111222") }
-    private fun run() = runBlocking { runner.run() }
+    private var lastWait = -1
+    private fun run(): SyncOutcome = runBlocking { runner.run() }.also { lastWait = it.waitSeconds }.outcome
     private fun err(http: Int, code: String, retryAfter: Int? = null) =
         MockResponse().setResponseCode(http).setBody("""{"code":"$code","message":"m"}""").also {
             if (retryAfter != null) it.setHeader("Retry-After", retryAfter.toString())
@@ -223,7 +224,7 @@ class SyncRunnerTest {
         link(); rows(2)
         batchOverrides += err(429, "RATE_LIMITED", retryAfter = 3600)
         assertEquals(SyncOutcome.WAIT, run())
-        assertEquals(3600, runner.lastWaitSeconds)
+        assertEquals(3600, lastWait)
         assertEquals(4L, outboxCount())
         val fillId = state().fillId
         assertEquals(SyncOutcome.SENT, run())
@@ -238,7 +239,7 @@ class SyncRunnerTest {
         link(); rows(1)
         batchOverrides += err(429, "RATE_LIMITED")
         assertEquals(SyncOutcome.WAIT, run())
-        assertEquals(60, runner.lastWaitSeconds)
+        assertEquals(60, lastWait)
     }
 
     @Test fun `a fill spread over two runs keeps its place`() {
@@ -277,8 +278,8 @@ class SyncRunnerTest {
         link(); rows(29) // 30 entries with the day... plus FILL_END
         val outcomes = runBlocking {
             listOf(
-                async(Dispatchers.Default) { runner.run() },
-                async(Dispatchers.Default) { runner.run() },
+                async(Dispatchers.Default) { runner.run().outcome },
+                async(Dispatchers.Default) { runner.run().outcome },
             ).awaitAll()
         }
         assertEquals(setOf(SyncOutcome.SENT, SyncOutcome.NOTHING_TO_SEND), outcomes.toSet())
@@ -389,7 +390,7 @@ class SyncRunnerTest {
         assertEquals(SyncOutcome.RETRY, run())
         statusOverrides += err(429, "RATE_LIMITED", 120)
         assertEquals(SyncOutcome.WAIT, run())
-        assertEquals(120, runner.lastWaitSeconds)
+        assertEquals(120, lastWait)
     }
 
     @Test fun `no token clears an enabled outbox`() {
@@ -401,12 +402,39 @@ class SyncRunnerTest {
         assertEquals(0L, outboxCount())
     }
 
+    @Test fun `an unlink during a run ends with sync off and an empty outbox`() {
+        link(); rows(2)
+        val entered = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        val inner = server.dispatcher
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                if (request.path == "/v1/shop/status") {
+                    entered.countDown()
+                    release.await(10, java.util.concurrent.TimeUnit.SECONDS)
+                }
+                return inner.dispatch(request)
+            }
+        }
+        runBlocking {
+            val running = async(Dispatchers.Default) { runner.run() }
+            assertTrue(entered.await(10, java.util.concurrent.TimeUnit.SECONDS)) // the run holds the Mutex, inside its status call
+            store.clearLink()
+            val watcher = async(Dispatchers.Default) { runner.disableIfUnlinked() } // waits for the run
+            release.countDown()
+            running.await()
+            watcher.await()
+        }
+        assertFalse(runBlocking { repo.isEnabled() })
+        assertEquals(0L, outboxCount())
+    }
+
     @Test fun `no CloudApi is off`() {
         val settings = SettingsStore(
             PreferenceDataStoreFactory.create(scope = CoroutineScope(Dispatchers.IO + job), produceFile = { File(context.filesDir, "datastore/s2.preferences_pb") }),
         )
         val offRunner = SyncRunner(CloudRepo(store, null, settings, clock, context), store, repo, marker, clock)
-        assertEquals(SyncOutcome.OFF, runBlocking { offRunner.run() })
+        assertEquals(SyncOutcome.OFF, runBlocking { offRunner.run().outcome })
         assertEquals(0, statusCalls)
     }
 }

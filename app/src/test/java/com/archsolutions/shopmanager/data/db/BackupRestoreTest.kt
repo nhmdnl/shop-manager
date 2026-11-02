@@ -95,6 +95,32 @@ class BackupRestoreTest {
     }
 
     @Test
+    fun `the marker is written before the copy, so a failed copy still leaves it and the restore`() = runTest {
+        val marker = FillMarker(context.filesDir)
+        marker.clear()
+        val store = SettingsStore(PreferenceDataStoreFactory.create(scope = backgroundScope, produceFile = { tmpFolder.newFile("o.preferences_pb") }))
+        val zip = ByteArrayOutputStream().also { manager(store).writeZip(it) }.toByteArray()
+        assertEquals(RestoreResult.OK, manager(store).stageRestore(ByteArrayInputStream(zip)))
+        val staged = File(context.filesDir, "pending_restore")
+        assertTrue(File(staged, "ready").exists())
+        assertTrue(File(staged, BackupManager.DATABASE).delete()) // the copy will fail
+        db.close()
+
+        var thrown = false
+        try {
+            PendingRestore.applyIfPending(context)
+        } catch (e: java.io.IOException) {
+            thrown = true
+        }
+        db = openDb()
+        assertTrue(thrown)
+        assertTrue(marker.isSet())
+        assertTrue(File(staged, "ready").exists())
+        marker.clear()
+        staged.deleteRecursively()
+    }
+
+    @Test
     fun `a v1 backup stages, applies and opens at v2 with uids set`() = runTest {
         val store = SettingsStore(PreferenceDataStoreFactory.create(scope = backgroundScope, produceFile = { tmpFolder.newFile("v1.preferences_pb") }))
         val helper = MigrationTestHelper(InstrumentationRegistry.getInstrumentation(), AppDatabase::class.java)
