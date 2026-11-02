@@ -335,6 +335,26 @@ class SyncRunnerTest {
         assertFalse(marker.isSet())
     }
 
+    @Test fun `a fill started for one shop is not carried to another shop`() {
+        link(); rows(2)
+        assertEquals(SyncOutcome.SENT, run())
+        val first = state().fillId
+        posted.clear()
+        // Unlink and link another shop while a run was in flight: the watcher never got to clear the fill.
+        runBlocking { store.saveLink("tok-2", "shop-2", "0700333444") }
+        assertEquals(SyncOutcome.SENT, run())
+        val second = state().fillId
+        assertNotEquals(first, second)
+        assertTrue(posted.first().fillStart)
+        assertTrue(posted.all { it.fillId == second })
+        assertTrue(posted.last().fillEnd)
+        // The same shop on the next run keeps its fill.
+        posted.clear()
+        assertEquals(SyncOutcome.NOTHING_TO_SEND, run())
+        assertEquals(second, state().fillId)
+        assertTrue(posted.isEmpty())
+    }
+
     @Test fun `413 drops to 100-row batches`() {
         link(); rows(250)
         batchOverrides += err(413, "TOO_LARGE")

@@ -120,14 +120,37 @@ class SyncSchedulerTest {
         assertEquals(first.id, second.id)
     }
 
-    @Test fun `start twice launches the watchers once and enqueues the periodic work`() {
+    private val allWorks = listOf(SyncScheduler.PERIODIC, SyncScheduler.SOON, SyncScheduler.NOW, SyncScheduler.LATER)
+
+    private fun live(name: String) = infos(name).filter { !it.state.isFinished }
+
+    @Test fun `start twice launches the watchers once and enqueues the periodic work while linked`() {
+        link()
         val scope = scope
         scheduler.start(scope)
         scheduler.start(scope)
         assertEquals(3, scheduler.collectorsLaunched.get())
+        await("cloud-sync") { infos(SyncScheduler.PERIODIC).isNotEmpty() }
         val periodic = infos(SyncScheduler.PERIODIC)
         assertEquals(1, periodic.size)
         assertEquals(15 * 60_000L, periodic.single().periodicityInfo!!.repeatIntervalMillis)
+    }
+
+    @Test fun `an unlinked tablet gets no periodic work`() {
+        startAndSettle()
+        assertTrue(infos(SyncScheduler.PERIODIC).isEmpty())
+    }
+
+    @Test fun `linking later enqueues the periodic work, and unlinking cancels all four works`() {
+        startAndSettle()
+        assertTrue(infos(SyncScheduler.PERIODIC).isEmpty())
+        link()
+        await("cloud-sync") { live(SyncScheduler.PERIODIC).size == 1 }
+        scheduler.runSoon(); scheduler.runNow(); scheduler.runAfter(60)
+        for (name in allWorks) assertEquals(name, 1, live(name).size)
+
+        runBlocking { store.clearLink() }
+        await("all four cancelled") { allWorks.all { live(it).isEmpty() } }
     }
 
     @Test fun `outbox going from empty to waiting enqueues soon`() {
@@ -139,6 +162,7 @@ class SyncSchedulerTest {
     }
 
     @Test fun `a start with entries already waiting enqueues soon from the first value`() {
+        link()
         waitingEntry()
         scheduler.start(scope)
         await("cloud-sync-soon") { infos(SyncScheduler.SOON).size == 1 }
@@ -240,5 +264,17 @@ class SyncSchedulerTest {
         await("sync off") { !runBlocking { repo.isEnabled() } }
         assertEquals(0, off.collectorsLaunched.get())
         assertTrue(infos(SyncScheduler.PERIODIC).isEmpty())
+    }
+
+    @Test fun `with no CloudApi the works an earlier build left are cancelled`() {
+        scheduler.runSoon(); scheduler.runNow(); scheduler.runAfter(60)
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            SyncScheduler.PERIODIC, androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            androidx.work.PeriodicWorkRequestBuilder<SyncWorker>(15, java.util.concurrent.TimeUnit.MINUTES).build(),
+        ).result.get()
+        for (name in allWorks) assertEquals(name, 1, live(name).size)
+
+        scheduler(null).start(scope)
+        await("all four cancelled") { allWorks.all { live(it).isEmpty() } }
     }
 }

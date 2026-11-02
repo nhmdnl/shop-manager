@@ -65,8 +65,12 @@ class SyncRunner @Inject internal constructor(
             return SyncOutcome.OFF
         }
 
-        if (!repo.isEnabled() || !repo.hasFill() || marker.isSet() || (status.resync && !repo.fillInFlight())) {
+        val shopId = store.snapshot.first().shopId
+        if (!repo.isEnabled() || !repo.hasFill() || marker.isSet() || shopId != store.syncShopId() ||
+            (status.resync && !repo.fillInFlight())
+        ) {
             repo.startFill()
+            store.setSyncShopId(shopId)
             marker.clear()
         }
 

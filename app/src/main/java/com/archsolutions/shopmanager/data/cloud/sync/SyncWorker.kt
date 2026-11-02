@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.ListenableWorker
 import androidx.work.NetworkType
 import androidx.work.WorkerParameters
 import dagger.hilt.EntryPoint
@@ -18,22 +19,10 @@ import java.util.concurrent.TimeUnit
  * acknowledged batch, and the fill goes on next run.
  */
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
-    override suspend fun doWork(): Result = try {
-        val deps = EntryPointAccessors.fromApplication(applicationContext, SyncEntryPoint::class.java)
-        val result = deps.syncRunner().run()
-        when (result.outcome) {
-            SyncOutcome.RETRY -> Result.retry()
-            SyncOutcome.WAIT -> {
-                deps.syncScheduler().runAfter(result.waitSeconds)
-                Result.success()
-            }
-            else -> Result.success()
-        }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        Result.failure()
-    }
+    override suspend fun doWork(): Result = syncWorkResult(
+        run = { EntryPointAccessors.fromApplication(applicationContext, SyncEntryPoint::class.java).syncRunner().run() },
+        runAfter = { EntryPointAccessors.fromApplication(applicationContext, SyncEntryPoint::class.java).syncScheduler().runAfter(it) },
+    )
 
     companion object {
         const val TAG = "cloud-sync"
@@ -43,6 +32,26 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         const val BACKOFF_SECONDS = 30L
         val BACKOFF_UNIT = TimeUnit.SECONDS
     }
+}
+
+/**
+ * The mapping from a run to the worker's [Result], without WorkManager or Hilt so the JVM can test it. A retry retries,
+ * a wait plans a later run and succeeds, anything thrown fails the work, and only cancellation is rethrown.
+ */
+internal suspend fun syncWorkResult(run: suspend () -> SyncResult, runAfter: (Int) -> Unit): ListenableWorker.Result = try {
+    val result = run()
+    when (result.outcome) {
+        SyncOutcome.RETRY -> ListenableWorker.Result.retry()
+        SyncOutcome.WAIT -> {
+            runAfter(result.waitSeconds)
+            ListenableWorker.Result.success()
+        }
+        else -> ListenableWorker.Result.success()
+    }
+} catch (e: CancellationException) {
+    throw e
+} catch (e: Exception) {
+    ListenableWorker.Result.failure()
 }
 
 @EntryPoint

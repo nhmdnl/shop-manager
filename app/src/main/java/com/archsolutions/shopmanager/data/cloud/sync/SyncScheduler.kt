@@ -49,6 +49,8 @@ class SyncScheduler @Inject constructor(
         if (!started.compareAndSet(false, true)) return
         if (api == null) {
             // A restore from a synced tablet on a build without a cloud URL: nothing else would ever turn sync off.
+            // Works an earlier cloud build left behind would only wake the phone to do nothing.
+            guard { cancelAll() }
             scope.launch {
                 try {
                     if (repo.isEnabled()) repo.disable()
@@ -60,8 +62,6 @@ class SyncScheduler @Inject constructor(
             }
             return
         }
-        guard { enqueuePeriodic() }
-
         collectorsLaunched.incrementAndGet()
         scope.launch {
             var previous = false
@@ -77,7 +77,13 @@ class SyncScheduler @Inject constructor(
         collectorsLaunched.incrementAndGet()
         scope.launch {
             guardCollect(store.snapshot.map { it.linked }.distinctUntilChanged()) { linked ->
-                if (!linked) runner.disableIfUnlinked()
+                // The periodic run only exists while linked: a shop that never links is never woken.
+                if (linked) {
+                    guard { enqueuePeriodic() }
+                } else {
+                    guard { cancelAll() }
+                    runner.disableIfUnlinked()
+                }
             }
         }
         collectorsLaunched.incrementAndGet()
@@ -112,6 +118,11 @@ class SyncScheduler @Inject constructor(
                 .build()
             WorkManager.getInstance(context).enqueueUniqueWork(name, policy, request)
         }
+    }
+
+    private fun cancelAll() {
+        val work = WorkManager.getInstance(context)
+        listOf(PERIODIC, SOON, NOW, LATER).forEach { work.cancelUniqueWork(it) }
     }
 
     private fun enqueuePeriodic() {

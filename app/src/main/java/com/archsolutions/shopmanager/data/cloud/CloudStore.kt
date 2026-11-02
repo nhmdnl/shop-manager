@@ -56,6 +56,13 @@ class CloudStore(
         dataStore.edit { it[LAST_SYNC] = at }
     }
 
+    /** The shop the current sync fill was started for; a different linked shop needs a new fill. Not in the Room schema (frozen). */
+    suspend fun syncShopId(): String? = dataStore.data.first()[SYNC_SHOP_ID]
+
+    suspend fun setSyncShopId(shopId: String?) {
+        dataStore.edit { if (shopId == null) it.remove(SYNC_SHOP_ID) else it[SYNC_SHOP_ID] = shopId }
+    }
+
     suspend fun saveLink(token: String, shopId: String, phone: String) {
         // Keystore calls are binder round trips: never on the caller's (often Main) thread.
         val sealed = withContext(Dispatchers.IO) {
@@ -121,5 +128,6 @@ class CloudStore(
         val REPLACED = booleanPreferencesKey("replaced")
         val LAST_BACKUP = longPreferencesKey("last_cloud_backup")
         val LAST_SYNC = longPreferencesKey("last_sync_at")
+        val SYNC_SHOP_ID = stringPreferencesKey("sync_shop_id")
     }
 }
