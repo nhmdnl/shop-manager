@@ -13,7 +13,14 @@ import com.archsolutions.cloud.contract.shop.ProductRow
 import com.archsolutions.cloud.contract.shop.PurchaseRow
 import com.archsolutions.cloud.contract.shop.SaleItemRow
 import com.archsolutions.cloud.contract.shop.SaleRow
+import com.archsolutions.cloud.contract.shop.SYNC_SCHEMA_VERSION
 import com.archsolutions.cloud.contract.shop.SaleStatus
+import com.archsolutions.cloud.contract.shop.StockUnit
+import com.archsolutions.cloud.contract.shop.DayStatus as WireDayStatus
+import com.archsolutions.cloud.contract.shop.MoneyEntryType as WireMoneyEntryType
+import com.archsolutions.cloud.contract.shop.MoneyMethod as WireMoneyMethod
+import com.archsolutions.cloud.contract.shop.PayMethod as WirePayMethod
+import com.archsolutions.cloud.contract.shop.PurchasePaid as WirePurchasePaid
 import com.archsolutions.cloud.contract.shop.SyncBatch
 import com.archsolutions.cloud.contract.shop.SyncReply
 import com.archsolutions.cloud.contract.shop.SyncRow
@@ -168,22 +175,30 @@ class SyncRepoTest {
         val batch = repo.nextBatch()!!
 
         assertEquals(syncedRows, batch.rows.size)
-        for (r in batch.rows) {
-            val d = r.data!!
-            when (r.table) {
-                "category" -> assertEquals("Food", ArchJson.decodeFromJsonElement(CategoryRow.serializer(), d).name)
-                "product" -> ArchJson.decodeFromJsonElement(ProductRow.serializer(), d)
-                "customer" -> assertEquals("Mary", ArchJson.decodeFromJsonElement(CustomerRow.serializer(), d).name)
-                "business_day" -> assertEquals("2026-09-01", ArchJson.decodeFromJsonElement(BusinessDayRow.serializer(), d).date)
-                "sale" -> r.data!!.jsonObject.sale()
-                "sale_item" -> assertEquals(1.5, ArchJson.decodeFromJsonElement(SaleItemRow.serializer(), d).qty, 0.0)
-                "money_entry" -> ArchJson.decodeFromJsonElement(MoneyEntryRow.serializer(), d)
-                "purchase" -> assertEquals(9000L, ArchJson.decodeFromJsonElement(PurchaseRow.serializer(), d).total)
-                else -> error("unexpected table ${r.table}")
-            }
-            assertEquals("UPSERT", r.op)
-        }
-        assertEquals(2, batch.schemaVersion - 0)
+        for (r in batch.rows) assertEquals("UPSERT", r.op)
+        fun <T> dec(ser: kotlinx.serialization.KSerializer<T>, table: String, uid: String): T =
+            ArchJson.decodeFromJsonElement(ser, batch.row(table, uid).data!!)
+        assertEquals(CategoryRow("Food", 1), dec(CategoryRow.serializer(), "category", "cat-1"))
+        assertEquals(
+            ProductRow("Rice", "cat-1", StockUnit.KG, 5000, 4000, 12.5, 2.0, null, true, 1, 1),
+            dec(ProductRow.serializer(), "product", "prod-1"),
+        )
+        assertEquals(CustomerRow("Mary", "0700", null), dec(CustomerRow.serializer(), "customer", "cust-1"))
+        assertEquals(
+            BusinessDayRow("2026-09-01", WireDayStatus.OPEN, 0, 10000, 0, null, null, null, null, null, null, null, null, null, 0),
+            dec(BusinessDayRow.serializer(), "business_day", "day-1"),
+        )
+        assertEquals(
+            SaleRow("day-1", 4, 4000, 3200, WirePayMethod.CREDIT, "cust-1", null, SaleStatus.DONE, null, null),
+            dec(SaleRow.serializer(), "sale", "sale-4"),
+        )
+        assertEquals(SaleItemRow("sale-3", "prod-1", "Rice", 1.5, 1000, 800), dec(SaleItemRow.serializer(), "sale_item", "item-3"))
+        assertEquals(
+            MoneyEntryRow("day-1", 2, WireMoneyEntryType.CREDIT_REPAYMENT, WireMoneyMethod.MOBILE_MONEY, 700, null, "cust-1", null),
+            dec(MoneyEntryRow.serializer(), "money_entry", "money-2"),
+        )
+        assertEquals(PurchaseRow("day-1", 1, 9000, WirePurchasePaid.CASH, null), dec(PurchaseRow.serializer(), "purchase", "purch-1"))
+        assertEquals(SYNC_SCHEMA_VERSION, batch.schemaVersion)
         assertEquals(500L, batch.shopSettings.allowedDifference)
     }
 
@@ -209,13 +224,19 @@ class SyncRepoTest {
         repo.ack(SyncReply(Long.MAX_VALUE, emptyList()))
         sql.execSQL("INSERT INTO money_entry (dayId, createdAt, type, method, amount, uid) VALUES (1, 9, 'EXPENSE', 'CASH', 5, 'money-gone')")
         sql.execSQL("DELETE FROM money_entry WHERE uid = 'money-gone'")
+        val upsertSeq = outbox().first().first
 
-        val batch = repo.nextBatch()!!
-        assertEquals(listOf("DELETE"), batch.rows.map { it.op })
-        assertEquals("money-gone", batch.rows.single().uid)
-        assertNull(batch.rows.single().data)
-        assertEquals(outbox().last().first, batch.toSeq)
-        assertEquals(outbox().first().first, batch.fromSeq)
+        // The slice holds only the UPSERT, so its row is read while gone.
+        val batch = repo.nextBatch(maxRows = 1)!!
+        assertTrue(batch.rows.isEmpty())
+        assertEquals(upsertSeq, batch.fromSeq)
+        assertEquals(upsertSeq, batch.toSeq)
+        repo.ack(SyncReply(batch.toSeq, emptyList()))
+
+        val next = repo.nextBatch()!!
+        assertEquals(listOf("DELETE"), next.rows.map { it.op })
+        assertEquals("money-gone", next.rows.single().uid)
+        assertNull(next.rows.single().data)
     }
 
     @Test
@@ -250,6 +271,7 @@ class SyncRepoTest {
         assertEquals(listOf(500, 500, 200), batches.map { it.rows.size })
         for (i in 1 until batches.size) assertTrue(batches[i].fromSeq > batches[i - 1].toSeq)
         assertEquals(1_200, batches.flatMap { it.rows }.map { it.uid }.toSet().size)
+        assertTrue(batches.none { it.fillEnd })
     }
 
     @Test
@@ -291,7 +313,9 @@ class SyncRepoTest {
         repo.ack(SyncReply(third.toSeq, emptyList()))
 
         sql.execSQL("UPDATE sale SET total = 1 WHERE uid = 'sale-1'")
-        assertFalse(repo.nextBatch()!!.fillStart)
+        val after = repo.nextBatch()!!
+        assertFalse(after.fillStart)
+        assertFalse(after.fillEnd)
     }
 
     @Test
@@ -311,6 +335,8 @@ class SyncRepoTest {
         repo.startFill()
         assertEquals(repo.nextBatch()!!.batchId, repo.nextBatch()!!.batchId)
         val before = repo.nextBatch()!!.batchId
+        sql.execSQL("UPDATE sync_state SET fillId = 'other' WHERE id = 1")
+        assertNotEquals(before, repo.nextBatch()!!.batchId)
         repo.startFill()
         assertNotEquals(before, repo.nextBatch()!!.batchId)
     }
@@ -356,5 +382,43 @@ class SyncRepoTest {
         sql.execSQL("UPDATE sale SET total = 7 WHERE uid = 'sale-1'")
         assertEquals(0L, count("SELECT COUNT(*) FROM sync_outbox"))
         assertNull(repo.nextBatch())
+    }
+
+    @Test
+    fun `a FILL_END of another fill is skipped and acknowledged`() = runTest {
+        fixture()
+        val repo = repo()
+        repo.startFill()
+        repo.ack(SyncReply(Long.MAX_VALUE, emptyList()))
+        sql.execSQL("INSERT INTO sync_outbox (tbl, uid, op) VALUES ('', 'older-fill', 'FILL_END')")
+
+        val batch = repo.nextBatch()!!
+        assertFalse(batch.fillEnd)
+        assertTrue(batch.rows.isEmpty())
+        repo.ack(SyncReply(batch.toSeq, emptyList()))
+        assertNull(repo.nextBatch())
+    }
+
+    @Test
+    fun `no batch without a fillId`() = runTest {
+        fixture()
+        val repo = repo()
+        sql.execSQL("UPDATE sync_state SET enabled = 1 WHERE id = 1")
+        sql.execSQL("UPDATE sale SET total = 2 WHERE uid = 'sale-1'")
+        assertTrue(outbox().isNotEmpty())
+
+        assertNull(repo.nextBatch())
+    }
+
+    @Test
+    fun `app enums have the same names as the contract's`() {
+        fun <A : Enum<A>, B : Enum<B>> same(a: Array<A>, b: Array<B>) = assertEquals(b.map { it.name }, a.map { it.name })
+        same(com.archsolutions.shopmanager.data.db.entities.Unit.values(), StockUnit.values())
+        same(com.archsolutions.shopmanager.data.db.entities.DayStatus.values(), WireDayStatus.values())
+        same(com.archsolutions.shopmanager.data.db.entities.PayMethod.values(), WirePayMethod.values())
+        same(com.archsolutions.shopmanager.data.db.entities.SaleStatus.values(), SaleStatus.values())
+        same(com.archsolutions.shopmanager.data.db.entities.MoneyEntryType.values(), WireMoneyEntryType.values())
+        same(com.archsolutions.shopmanager.data.db.entities.MoneyMethod.values(), WireMoneyMethod.values())
+        same(com.archsolutions.shopmanager.data.db.entities.PurchasePaid.values(), WirePurchasePaid.values())
     }
 }

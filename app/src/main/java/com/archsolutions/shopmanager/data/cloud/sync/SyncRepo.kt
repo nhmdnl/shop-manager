@@ -88,15 +88,26 @@ class SyncRepo @Inject constructor(
             val slice = dao.peek(maxRows)
             if (slice.isEmpty()) return@withTransaction null
             val state = dao.state()
+            val fillId = state.fillId
+            if (fillId == null) {
+                Log.w(TAG, "Outbox has entries but no fill is active; no batch built")
+                return@withTransaction null
+            }
             val fromSeq = slice.first().seq
             val toSeq = slice.last().seq
 
             // Only the last entry per (table, uid) matters; the rest are acknowledged without a row.
             val last = LinkedHashMap<Pair<String, String>, SyncOutboxEntity>()
             var fillEnd = false
+            var staleFillEnds = 0
             for (e in slice) {
-                if (e.op == SyncOutboxEntity.OP_FILL_END) fillEnd = true else last[e.tbl to e.uid] = e
+                if (e.op == SyncOutboxEntity.OP_FILL_END) {
+                    if (e.uid == fillId) fillEnd = true else staleFillEnds++
+                } else {
+                    last[e.tbl to e.uid] = e
+                }
             }
+            if (staleFillEnds > 0) Log.i(TAG, "Skipped $staleFillEnds FILL_END markers of an earlier fill")
             val upserts = last.values.filter { it.op == SyncOutboxEntity.OP_UPSERT }.groupBy({ it.tbl }, { it.uid })
             val data = HashMap<Pair<String, String>, JsonElement>()
             for ((table, uids) in upserts) for (chunk in uids.chunked(READ_CHUNK)) readRows(table, chunk, data)
@@ -113,7 +124,6 @@ class SyncRepo @Inject constructor(
             }
             if (skipped > 0) Log.i(TAG, "Skipped $skipped outbox entries whose row is gone or has no parent")
 
-            val fillId = state.fillId ?: ""
             SyncBatch(
                 batchId = UUID.nameUUIDFromBytes("$fillId:$fromSeq:$toSeq".toByteArray()).toString(),
                 schemaVersion = SYNC_SCHEMA_VERSION,
