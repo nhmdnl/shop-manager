@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
+import androidx.room.testing.MigrationTestHelper
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.core.app.ApplicationProvider
 import com.archsolutions.shopmanager.data.backup.BackupManager
 import com.archsolutions.shopmanager.data.cloud.CloudStore
@@ -72,6 +74,36 @@ class BackupRestoreTest {
         PendingRestore.applyIfPending(context)
         db = openDb()
         assertEquals(listOf("Sugar 1kg"), db.productDao().getAllActive().first().map { it.name })
+    }
+
+    @Test
+    fun `a v1 backup stages, applies and opens at v2 with uids set`() = runTest {
+        val store = SettingsStore(PreferenceDataStoreFactory.create(scope = backgroundScope, produceFile = { tmpFolder.newFile("v1.preferences_pb") }))
+        val helper = MigrationTestHelper(InstrumentationRegistry.getInstrumentation(), AppDatabase::class.java)
+        helper.createDatabase("v1-source", 1).use { insertV1Rows(it) }
+        val v1File = context.getDatabasePath("v1-source")
+        val bytes = ByteArrayOutputStream()
+        ZipOutputStream(bytes).use { zip ->
+            zip.putNextEntry(ZipEntry("manifest.properties"))
+            zip.write("app=com.archsolutions.shopmanager\nschemaVersion=1\n".toByteArray())
+            zip.closeEntry()
+            zip.putNextEntry(ZipEntry("shop_manager.db"))
+            zip.write(v1File.readBytes())
+            zip.closeEntry()
+        }
+
+        assertEquals(RestoreResult.OK, manager(store).stageRestore(ByteArrayInputStream(bytes.toByteArray())))
+
+        db.close()
+        PendingRestore.applyIfPending(context)
+        db = openDb()
+        val uids = SyncTriggers.TABLES.flatMap { t ->
+            db.openHelper.writableDatabase.query("SELECT uid FROM $t").use { c -> buildList { while (c.moveToNext()) add(c.getString(0)) } }
+        }
+        assertEquals(16, uids.size)
+        assertEquals(16, uids.toSet().size)
+        assertTrue(uids.all { it.length == 36 })
+        context.deleteDatabase("v1-source")
     }
 
     @Test

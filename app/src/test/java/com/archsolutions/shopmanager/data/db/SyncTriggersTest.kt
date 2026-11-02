@@ -63,8 +63,8 @@ class SyncTriggersTest {
     )
 
     @Test
-    fun `triggers cover exactly the contract tables`() {
-        assertEquals(SyncTables.ALL, SyncTriggers.TABLES)
+    fun `the frozen v2 table list still equals the contract's`() {
+        assertEquals(SyncTables.ALL, v2TablesForTest())
     }
 
     @Test
@@ -135,7 +135,6 @@ class SyncTriggersTest {
     fun `a REPLACE over an existing row writes DELETE then UPSERT for the same uid`() {
         val appDb = AppDatabase.createInMemory(context).also { open += it }
         // A Room query first: its invalidation tracker is what turns recursive_triggers on.
-        appDb.categoryDao()
         appDb.query("SELECT 1", null).use { it.moveToFirst() }
         val db = appDb.openHelper.writableDatabase
         db.enable()
