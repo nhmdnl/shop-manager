@@ -77,6 +77,10 @@ class SyncRepo @Inject constructor(
         dao.clearOutbox()
     }
 
+    suspend fun hasFill(): Boolean = dao.state().fillId != null
+
+    suspend fun hasOutbox(): Boolean = dao.outboxNotEmpty()
+
     suspend fun fillInFlight(): Boolean = dao.fillEndPending()
 
     suspend fun ack(reply: SyncReply) = dao.deleteUpTo(reply.ackSeq)

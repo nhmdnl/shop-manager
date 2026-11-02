@@ -11,6 +11,7 @@ import com.archsolutions.shopmanager.data.backup.BackupManager
 import com.archsolutions.shopmanager.data.cloud.CloudStore
 import com.archsolutions.shopmanager.data.cloud.FakeTokenCipher
 import com.archsolutions.shopmanager.data.cloud.cloudDataStoreFile
+import com.archsolutions.shopmanager.data.cloud.sync.FillMarker
 import com.archsolutions.shopmanager.data.backup.PendingRestore
 import com.archsolutions.shopmanager.data.backup.RestoreResult
 import com.archsolutions.shopmanager.data.db.entities.ProductEntity
@@ -74,6 +75,23 @@ class BackupRestoreTest {
         PendingRestore.applyIfPending(context)
         db = openDb()
         assertEquals(listOf("Sugar 1kg"), db.productDao().getAllActive().first().map { it.name })
+    }
+
+    @Test
+    fun `a restore sets the fill marker, and nothing staged leaves it unset`() = runTest {
+        val marker = FillMarker(context.filesDir)
+        marker.clear()
+        PendingRestore.applyIfPending(context)
+        assertFalse(marker.isSet())
+
+        val store = SettingsStore(PreferenceDataStoreFactory.create(scope = backgroundScope, produceFile = { tmpFolder.newFile("m.preferences_pb") }))
+        val zip = ByteArrayOutputStream().also { manager(store).writeZip(it) }.toByteArray()
+        assertEquals(RestoreResult.OK, manager(store).stageRestore(ByteArrayInputStream(zip)))
+        db.close()
+        PendingRestore.applyIfPending(context)
+        db = openDb()
+        assertTrue(marker.isSet())
+        marker.clear()
     }
 
     @Test

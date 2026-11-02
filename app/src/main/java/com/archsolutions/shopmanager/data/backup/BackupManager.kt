@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.archsolutions.shopmanager.core.util.AppClock
 import com.archsolutions.shopmanager.data.db.AppDatabase
+import com.archsolutions.shopmanager.data.cloud.sync.FillMarker
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -204,6 +205,8 @@ object PendingRestore {
             dir.deleteRecursively()
             return
         }
+        // Before the copy: a crash in between leaves `ready`, so the next start applies it again with the marker set.
+        FillMarker(context.filesDir).set()
         val target = context.getDatabasePath(AppDatabase.DATABASE_NAME)
         target.parentFile?.mkdirs()
         listOf("-wal", "-shm", "-journal").forEach { File(target.path + it).delete() }

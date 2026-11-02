@@ -128,4 +128,7 @@ object DatabaseModule {
 
     @Provides
     fun provideMoneyEntryDao(db: AppDatabase): MoneyEntryDao = db.moneyEntryDao()
+
+    @Provides
+    fun provideSyncDao(db: AppDatabase): SyncDao = db.syncDao()
 }

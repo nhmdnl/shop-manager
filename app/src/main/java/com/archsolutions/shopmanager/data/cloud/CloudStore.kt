@@ -49,6 +49,13 @@ class CloudStore(
         )
     }
 
+    /** A run ended with the outbox empty at this time (A2-E11). Outside backups with the rest of this file. */
+    val lastSyncAt: Flow<Long?> = dataStore.data.map { it[LAST_SYNC] }
+
+    suspend fun setLastSyncAt(at: Long) {
+        dataStore.edit { it[LAST_SYNC] = at }
+    }
+
     suspend fun saveLink(token: String, shopId: String, phone: String) {
         // Keystore calls are binder round trips: never on the caller's (often Main) thread.
         val sealed = withContext(Dispatchers.IO) {
@@ -113,5 +120,6 @@ class CloudStore(
         val STATUS = stringPreferencesKey("status")
         val REPLACED = booleanPreferencesKey("replaced")
         val LAST_BACKUP = longPreferencesKey("last_cloud_backup")
+        val LAST_SYNC = longPreferencesKey("last_sync_at")
     }
 }
