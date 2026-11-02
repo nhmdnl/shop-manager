@@ -10,6 +10,7 @@ import com.archsolutions.shopmanager.data.db.entities.ProductEntity
 import com.archsolutions.shopmanager.data.db.entities.ProductSupplierEntity
 import com.archsolutions.shopmanager.data.db.entities.StockMovementEntity
 import kotlinx.coroutines.flow.Flow
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -46,32 +47,6 @@ class ProductRepo @Inject constructor(
         return existing?.id ?: categoryDao.insert(CategoryEntity(name = name, sortOrder = sortOrder))
     }
 
-    suspend fun saveProduct(
-        product: ProductEntity,
-        supplierId: Long? = null,
-        supplierCost: Long? = null,
-    ): Long = db.withTransaction {
-        val now = clock.nowMillis()
-        val toSave = if (product.id == 0L) {
-            product.copy(createdAt = now, updatedAt = now)
-        } else {
-            product.copy(updatedAt = now)
-        }
-        val productId = productDao.insert(toSave)
-
-        if (supplierId != null) {
-            supplierDao.upsertProductSupplier(
-                ProductSupplierEntity(
-                    productId = productId,
-                    supplierId = supplierId,
-                    supplierCost = supplierCost ?: product.costPrice,
-                    isPreferred = true,
-                )
-            )
-        }
-        productId
-    }
-
     /** A new product; its starting stock is one ADJUSTMENT "Opening stock" movement (addendum C1). */
     suspend fun createProduct(
         product: ProductEntity,
@@ -80,7 +55,7 @@ class ProductRepo @Inject constructor(
     ): Long = db.withTransaction {
         val now = clock.nowMillis()
         val productId = productDao.insert(
-            product.copy(id = 0, stockQty = startingStock, createdAt = now, updatedAt = now)
+            product.copy(id = 0, uid = UUID.randomUUID().toString(), stockQty = startingStock, createdAt = now, updatedAt = now)
         )
         if (startingStock != 0.0) {
             stockMovementDao.insertMovement(
@@ -105,7 +80,7 @@ class ProductRepo @Inject constructor(
     ) = db.withTransaction {
         val current = productDao.getByIdDirect(product.id) ?: return@withTransaction
         productDao.update(
-            product.copy(stockQty = current.stockQty, createdAt = current.createdAt, updatedAt = clock.nowMillis())
+            product.copy(uid = current.uid, stockQty = current.stockQty, createdAt = current.createdAt, updatedAt = clock.nowMillis())
         )
         suppliers.forEach { supplierDao.upsertProductSupplier(it.copy(productId = product.id)) }
     }
