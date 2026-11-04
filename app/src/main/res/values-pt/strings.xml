@@ -591,6 +591,10 @@
     <string name="cloud_line_waiting">A aguardar internet</string>
     <string name="cloud_line_last">Última cópia na nuvem: %1$s</string>
     <string name="cloud_yesterday">ontem %1$s</string>
+    <string name="cloud_owner_view_on">Vista do dono: ligada · último envio %1$s</string>
+    <string name="cloud_owner_view_on_never">Vista do dono: ligada</string>
+    <string name="cloud_owner_view_filling">Vista do dono: a enviar o histórico da loja</string>
+    <string name="cloud_owner_view_waiting">Vista do dono: à espera de internet</string>
     <string name="cloud_line_none">Ainda sem cópia na nuvem</string>
     <string name="cloud_plan_trial">Teste grátis até %1$s</string>
     <string name="cloud_plan_active">Cloud Backup até %1$s</string>

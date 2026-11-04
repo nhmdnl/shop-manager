@@ -17,6 +17,8 @@ import com.archsolutions.cloud.contract.Purpose
 import com.archsolutions.cloud.contract.ShopStatus
 import com.archsolutions.cloud.contract.VerifyRequest
 import com.archsolutions.cloud.contract.VerifyResponse
+import com.archsolutions.cloud.contract.shop.SyncBatch
+import com.archsolutions.cloud.contract.shop.SyncReply
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
@@ -88,6 +90,9 @@ class CloudApi(
             Request.Builder().url(url("v1/backups")).post(body).header(ArchHeaders.CONTENT_SHA256, sha256),
         ).decode()
     }
+
+    suspend fun sendBatch(batch: SyncBatch): SyncReply =
+        post("v1/sync/batch", ArchJson.encodeToString(SyncBatch.serializer(), batch)).decode()
 
     suspend fun listBackups(): List<BackupDto> = get("v1/backups").decode(ListSerializer(BackupDto.serializer()))
 

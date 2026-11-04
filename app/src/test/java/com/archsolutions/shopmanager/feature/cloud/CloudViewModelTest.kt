@@ -7,6 +7,8 @@ import com.archsolutions.shopmanager.core.util.DayFormat
 import com.archsolutions.shopmanager.data.cloud.CloudLink
 import com.archsolutions.shopmanager.data.cloud.CloudState
 import com.archsolutions.shopmanager.data.cloud.FixedClock
+import com.archsolutions.shopmanager.data.cloud.sync.CloudSync
+import com.archsolutions.shopmanager.data.cloud.sync.SyncStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
@@ -39,7 +41,8 @@ private fun status(
     trialEnd: Long? = null,
     periodEnd: Long? = null,
     graceEnd: Long? = null,
-) = ShopStatus(plan = "basic", state = state, trialEnd = trialEnd, periodEnd = periodEnd, graceEnd = graceEnd, features = listOf("backup"))
+    features: List<String> = listOf("backup"),
+) = ShopStatus(plan = "basic", state = state, trialEnd = trialEnd, periodEnd = periodEnd, graceEnd = graceEnd, features = features)
 
 private class FakeLink(initial: CloudState) : CloudLink {
     val flow = MutableStateFlow(initial)
@@ -68,6 +71,11 @@ private class FakeWork : CloudWork {
     }
 }
 
+private class FakeCloudSync(initial: SyncStatus = SyncStatus(hasOutbox = false, fillPending = false, lastSyncAt = null)) : CloudSync {
+    val flow = MutableStateFlow(initial)
+    override val status: Flow<SyncStatus> = flow
+}
+
 /** Plain English texts shaped like the plan's examples; the Android one reads strings.xml. */
 private class FakeTexts : CloudTexts {
     override fun replaced() = "replaced"
@@ -82,6 +90,10 @@ private class FakeTexts : CloudTexts {
             BackupDay.EARLIER -> "${DayFormat.dateOf(at, zone, "d MMM", Locale.ENGLISH)} $time"
         }
     }
+    override fun ownerViewOn(day: BackupDay, at: Long, zone: ZoneId) = "owner on $day ${DayFormat.time(at, zone)}"
+    override fun ownerViewOnNever() = "owner on"
+    override fun ownerViewFilling() = "owner filling"
+    override fun ownerViewWaiting() = "owner waiting"
     override fun trialUntil(at: Long, zone: ZoneId) = "trial ${DayFormat.dateOf(at, zone, "d MMM", Locale.ENGLISH)}"
     override fun activeUntil(at: Long, zone: ZoneId) = "active ${DayFormat.dateOf(at, zone, "d MMM", Locale.ENGLISH)}"
     override fun payBy(at: Long, zone: ZoneId) = "pay ${DayFormat.dateOf(at, zone, "d MMM", Locale.ENGLISH)}"
@@ -94,11 +106,12 @@ class CloudViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val clock = FixedClock(at(11, 20, 12, 0))
     private val work = FakeWork()
+    private val sync = FakeCloudSync()
 
     @Before fun setUp() = Dispatchers.setMain(dispatcher)
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel(link: FakeLink) = CloudViewModel(link, work, FakeTexts(), clock)
+    private fun viewModel(link: FakeLink) = CloudViewModel(link, work, sync, FakeTexts(), clock)
 
     private fun linked(status: ShopStatus? = null, lastBackup: Long? = null) = CloudState.Linked(status, lastBackup)
 
@@ -217,7 +230,7 @@ class CloudViewModelTest {
         val link = object : CloudLink by FakeLink(linked(null)) {
             override suspend fun refreshStatus(): ShopStatus? = throw java.io.IOException("offline")
         }
-        val vm = CloudViewModel(link, work, FakeTexts(), clock)
+        val vm = CloudViewModel(link, work, sync, FakeTexts(), clock)
         vm.refresh()
         assertTrue(vm.cardNow().visible)
     }
@@ -231,5 +244,37 @@ class CloudViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
         assertEquals(1, link.unlinks)
         assertFalse(vm.cardNow().signedIn)
+    }
+
+    private val live = listOf("backup", "live")
+
+    @Test fun `owner view line is absent without live`() = runTest(dispatcher) {
+        val withoutLive = viewModel(FakeLink(linked(status(PlanState.ACTIVE, periodEnd = at(12, 20))))).cardNow()
+        assertNull(withoutLive.ownerViewLine)
+        assertNull(viewModel(FakeLink(CloudState.SignedOut)).cardNow().ownerViewLine)
+    }
+
+    private suspend fun liveLine(s: SyncStatus): String? {
+        sync.flow.value = s
+        return viewModel(FakeLink(linked(status(PlanState.ACTIVE, periodEnd = at(12, 20), features = live)))).cardNow().ownerViewLine
+    }
+
+    @Test fun `filling wins over waiting`() = runTest(dispatcher) {
+        assertEquals("owner filling", liveLine(SyncStatus(hasOutbox = true, fillPending = true, lastSyncAt = null)))
+    }
+
+    @Test fun `entries waiting 31 minutes after the last sync read waiting`() = runTest(dispatcher) {
+        val last = clock.nowMillis() - 31 * 60_000L
+        assertEquals("owner waiting", liveLine(SyncStatus(hasOutbox = true, fillPending = false, lastSyncAt = last)))
+        assertEquals("owner waiting", liveLine(SyncStatus(hasOutbox = true, fillPending = false, lastSyncAt = null)))
+    }
+
+    @Test fun `entries waiting 10 minutes after the last sync read on with the time`() = runTest(dispatcher) {
+        val last = clock.nowMillis() - 10 * 60_000L
+        assertEquals("owner on TODAY 11:50", liveLine(SyncStatus(hasOutbox = true, fillPending = false, lastSyncAt = last)))
+    }
+
+    @Test fun `never synced and nothing waiting reads on`() = runTest(dispatcher) {
+        assertEquals("owner on", liveLine(SyncStatus(hasOutbox = false, fillPending = false, lastSyncAt = null)))
     }
 }

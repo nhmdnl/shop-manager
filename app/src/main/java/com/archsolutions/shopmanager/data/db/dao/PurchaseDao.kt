@@ -42,7 +42,7 @@ interface PurchaseDao {
     @Query("SELECT * FROM purchase WHERE id = :id LIMIT 1")
     suspend fun getPurchaseByIdDirect(id: Long): PurchaseEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert
     suspend fun insertPurchase(purchase: PurchaseEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

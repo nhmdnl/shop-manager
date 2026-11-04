@@ -3,7 +3,6 @@ package com.archsolutions.shopmanager.data.db.dao
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.archsolutions.shopmanager.data.db.entities.MoneyEntryEntity
 import kotlinx.coroutines.flow.Flow
@@ -22,7 +21,7 @@ interface MoneyEntryDao {
     @Query("SELECT * FROM money_entry WHERE createdAt >= :startMillis AND createdAt <= :endMillis ORDER BY createdAt DESC")
     fun getEntriesBetween(startMillis: Long, endMillis: Long): Flow<List<MoneyEntryEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert
     suspend fun insertEntry(entry: MoneyEntryEntity): Long
 
     @Delete

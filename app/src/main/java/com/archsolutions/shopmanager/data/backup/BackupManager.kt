@@ -1,9 +1,13 @@
 package com.archsolutions.shopmanager.data.backup
 
 import android.content.Context
+import android.database.DatabaseErrorHandler
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteException
 import android.net.Uri
 import com.archsolutions.shopmanager.core.util.AppClock
 import com.archsolutions.shopmanager.data.db.AppDatabase
+import com.archsolutions.shopmanager.data.cloud.sync.FillMarker
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -112,6 +116,22 @@ class BackupManager @Inject constructor(
     internal fun writeZip(out: OutputStream) {
         // Through Room, so it waits its turn with Room's own connections.
         db.query(SimpleSQLiteQuery("PRAGMA wal_checkpoint(FULL)")).use { it.moveToFirst() }
+        // Sync writes on its own (fill, acks, disable): the file is copied while holding Room's single writer
+        // connection, so no write or auto-checkpoint changes pages under the copy. Only the copy is under the lock.
+        val snapshot = File.createTempFile("backup_db", ".tmp", context.cacheDir)
+        try {
+            db.runInTransaction {
+                context.getDatabasePath(AppDatabase.DATABASE_NAME).inputStream().use { input ->
+                    snapshot.outputStream().use { input.copyTo(it) }
+                }
+            }
+            zipWith(out, snapshot)
+        } finally {
+            snapshot.delete()
+        }
+    }
+
+    private fun zipWith(out: OutputStream, database: File) {
         ZipOutputStream(out).use { zip ->
             zip.putNextEntry(ZipEntry(MANIFEST))
             Properties().apply {
@@ -120,7 +140,7 @@ class BackupManager @Inject constructor(
                 setProperty(KEY_CREATED, clock.nowMillis().toString())
             }.store(zip, null)
             zip.closeEntry()
-            zip.putFile(DATABASE, context.getDatabasePath(AppDatabase.DATABASE_NAME))
+            zip.putFile(DATABASE, database)
             settingsFile(context).takeIf { it.exists() }?.let { zip.putFile(SETTINGS, it) }
         }
     }
@@ -143,6 +163,7 @@ class BackupManager @Inject constructor(
             val database = File(staging, DATABASE)
             if (manifest.getProperty(KEY_APP) != APP_ID || schema == null || !database.isSqlite()) return RestoreResult.NOT_A_BACKUP
             if (schema > AppDatabase.VERSION) return RestoreResult.TOO_NEW
+            if (!database.passesQuickCheck()) return RestoreResult.NOT_A_BACKUP
             PendingRestore.stage(context, database, File(staging, SETTINGS).takeIf { it.exists() })
             return RestoreResult.OK
         } catch (e: IOException) {
@@ -156,6 +177,15 @@ class BackupManager @Inject constructor(
         putNextEntry(ZipEntry(name))
         file.inputStream().use { it.copyTo(this) }
         closeEntry()
+    }
+
+    /** Read-only, with a handler that does nothing, so SQLite never deletes the file it finds damaged; closed before returning. */
+    private fun File.passesQuickCheck(): Boolean = try {
+        SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY, DatabaseErrorHandler { }).use { staged ->
+            staged.rawQuery("PRAGMA quick_check", null).use { it.moveToFirst() && it.getString(0) == "ok" }
+        }
+    } catch (e: SQLiteException) {
+        false
     }
 
     private fun File.isSqlite(): Boolean =
@@ -204,6 +234,8 @@ object PendingRestore {
             dir.deleteRecursively()
             return
         }
+        // Before the copy: a crash in between leaves `ready`, so the next start applies it again with the marker set.
+        FillMarker(context.filesDir).set()
         val target = context.getDatabasePath(AppDatabase.DATABASE_NAME)
         target.parentFile?.mkdirs()
         listOf("-wal", "-shm", "-journal").forEach { File(target.path + it).delete() }

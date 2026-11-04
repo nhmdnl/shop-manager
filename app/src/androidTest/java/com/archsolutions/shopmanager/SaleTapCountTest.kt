@@ -56,7 +56,7 @@ class SaleTapCountTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val queryExecutor = Executors.newFixedThreadPool(4)
-    private val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+    private val db = AppDatabase.configure(Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java))
         .allowMainThreadQueries()
         .setQueryExecutor(queryExecutor)
         .build()

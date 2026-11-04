@@ -96,6 +96,9 @@ fun CloudSettingsCardContent(
                     Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.ink)
                 }
                 Text(card.backupLine, style = MaterialTheme.typography.bodyMedium, color = colors.muted)
+                card.ownerViewLine?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.muted)
+                }
             }
             if (!card.signedIn) {
                 SecondaryButton(

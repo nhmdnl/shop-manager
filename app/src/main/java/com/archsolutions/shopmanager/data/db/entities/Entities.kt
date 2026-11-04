@@ -3,17 +3,22 @@ package com.archsolutions.shopmanager.data.db.entities
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
-@Entity(tableName = "category")
+@Entity(
+    tableName = "category",
+    indices = [Index(value = ["uid"], unique = true)],
+)
 data class CategoryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val sortOrder: Int = 0,
+    val uid: String = UUID.randomUUID().toString(),
 )
 
 @Entity(
     tableName = "product",
-    indices = [Index("categoryId"), Index("barcode"), Index("name")],
+    indices = [Index("categoryId"), Index("barcode"), Index("name"), Index(value = ["uid"], unique = true)],
 )
 data class ProductEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -28,6 +33,7 @@ data class ProductEntity(
     val active: Boolean = true,
     val createdAt: Long,
     val updatedAt: Long,
+    val uid: String = UUID.randomUUID().toString(),
 )
 
 @Entity(tableName = "supplier")
@@ -54,17 +60,21 @@ data class ProductSupplierEntity(
     val isPreferred: Boolean = false,
 )
 
-@Entity(tableName = "customer")
+@Entity(
+    tableName = "customer",
+    indices = [Index(value = ["uid"], unique = true)],
+)
 data class CustomerEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val phone: String?,
     val note: String?,
+    val uid: String = UUID.randomUUID().toString(),
 )
 
 @Entity(
     tableName = "business_day",
-    indices = [Index(value = ["date"], unique = true)],
+    indices = [Index(value = ["date"], unique = true), Index(value = ["uid"], unique = true)],
 )
 data class BusinessDayEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -83,6 +93,7 @@ data class BusinessDayEntity(
     val diffReason: String? = null,
     val closeNote: String? = null,
     val reopenedCount: Int = 0,
+    val uid: String = UUID.randomUUID().toString(),
 )
 
 @Entity(
@@ -98,7 +109,7 @@ data class CashCountEntity(
 
 @Entity(
     tableName = "sale",
-    indices = [Index("dayId"), Index("createdAt"), Index("customerId")],
+    indices = [Index("dayId"), Index("createdAt"), Index("customerId"), Index(value = ["uid"], unique = true)],
 )
 data class SaleEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -112,11 +123,12 @@ data class SaleEntity(
     val status: SaleStatus = SaleStatus.DONE,
     val voidReason: String? = null,
     val voidedAt: Long? = null,
+    val uid: String = UUID.randomUUID().toString(),
 )
 
 @Entity(
     tableName = "sale_item",
-    indices = [Index("saleId"), Index("productId")],
+    indices = [Index("saleId"), Index("productId"), Index(value = ["uid"], unique = true)],
 )
 data class SaleItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -126,11 +138,12 @@ data class SaleItemEntity(
     val qty: Double,
     val unitPrice: Long,
     val unitCost: Long,
+    val uid: String = UUID.randomUUID().toString(),
 )
 
 @Entity(
     tableName = "purchase",
-    indices = [Index("dayId"), Index("supplierId")],
+    indices = [Index("dayId"), Index("supplierId"), Index(value = ["uid"], unique = true)],
 )
 data class PurchaseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -140,6 +153,7 @@ data class PurchaseEntity(
     val total: Long,
     val paid: PurchasePaid,
     val note: String? = null,
+    val uid: String = UUID.randomUUID().toString(),
 )
 
 @Entity(
@@ -170,7 +184,7 @@ data class StockMovementEntity(
 
 @Entity(
     tableName = "money_entry",
-    indices = [Index("dayId"), Index("customerId")],
+    indices = [Index("dayId"), Index("customerId"), Index(value = ["uid"], unique = true)],
 )
 data class MoneyEntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -182,4 +196,5 @@ data class MoneyEntryEntity(
     val category: String? = null, // EXPENSE: Transport, Rent, Power, Water, Lunch, Cleaning, Airtime, Other
     val customerId: Long? = null, // CREDIT_REPAYMENT
     val note: String? = null,
+    val uid: String = UUID.randomUUID().toString(),
 )

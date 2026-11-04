@@ -2,7 +2,6 @@ package com.archsolutions.shopmanager.data.db.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.archsolutions.shopmanager.data.db.entities.ProductEntity
@@ -50,11 +49,8 @@ interface ProductDao {
     @Query("SELECT CAST(COALESCE(SUM(stockQty * costPrice), 0) AS INTEGER) FROM product WHERE active = 1")
     fun getTotalStockValue(): Flow<Long>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert
     suspend fun insert(product: ProductEntity): Long
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(products: List<ProductEntity>)
 
     @Update
     suspend fun update(product: ProductEntity)

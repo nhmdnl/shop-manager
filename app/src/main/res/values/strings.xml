@@ -604,6 +604,10 @@
     <string name="cloud_line_waiting">Waiting for internet</string>
     <string name="cloud_line_last">Last cloud backup: %1$s</string>
     <string name="cloud_yesterday">yesterday %1$s</string>
+    <string name="cloud_owner_view_on">Owner view: on · last sent %1$s</string>
+    <string name="cloud_owner_view_on_never">Owner view: on</string>
+    <string name="cloud_owner_view_filling">Owner view: sending the shop\'s history</string>
+    <string name="cloud_owner_view_waiting">Owner view: waiting for internet</string>
     <string name="cloud_line_none">No cloud backup yet</string>
     <string name="cloud_plan_trial">Free trial until %1$s</string>
     <string name="cloud_plan_active">Cloud Backup until %1$s</string>
