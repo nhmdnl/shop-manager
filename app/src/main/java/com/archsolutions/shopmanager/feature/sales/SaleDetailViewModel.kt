@@ -15,6 +15,7 @@ import com.archsolutions.shopmanager.data.repo.CustomerRepo
 import com.archsolutions.shopmanager.data.repo.DayRepo
 import com.archsolutions.shopmanager.data.repo.SaleRepo
 import com.archsolutions.shopmanager.data.settings.SettingsStore
+import com.archsolutions.shopmanager.data.staff.StaffSession
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -46,6 +47,8 @@ data class SaleDetailUiState(
     val canVoid: Boolean = false,
     val pinEnabled: Boolean = false,
     val voiding: Boolean = false,
+    val soldBy: String? = null,
+    val voidedBy: String? = null,
 )
 
 @HiltViewModel
@@ -56,6 +59,7 @@ class SaleDetailViewModel @Inject constructor(
     customerRepo: CustomerRepo,
     settingsStore: SettingsStore,
     clock: AppClock,
+    private val staffSession: StaffSession,
 ) : ViewModel() {
     private val saleId = savedStateHandle.toRoute<SaleDetailRoute>().id
     private val voiding = MutableStateFlow(false)
@@ -71,6 +75,8 @@ class SaleDetailViewModel @Inject constructor(
             } else {
                 val sale = saleWithItems.sale
                 val customer = sale.customerId?.let { customerRepo.getById(it) } ?: flowOf(null)
+                val soldBy = saleRepo.staffName(sale.staffId)
+                val voidedBy = saleRepo.staffName(sale.voidedByStaffId)
                 combine(dayRepo.getDayById(sale.dayId), customer, settingsStore.settings, voiding) { day, buyer, settings, isVoiding ->
                     SaleDetailUiState(
                         loaded = true,
@@ -87,6 +93,8 @@ class SaleDetailViewModel @Inject constructor(
                         canVoid = sale.status == SaleStatus.DONE && day?.status == DayStatus.OPEN,
                         pinEnabled = settings.pinEnabled,
                         voiding = isVoiding,
+                        soldBy = soldBy,
+                        voidedBy = voidedBy,
                     )
                 }
             }
@@ -95,10 +103,12 @@ class SaleDetailViewModel @Inject constructor(
 
     fun void(reason: String, note: String) {
         if (voiding.value) return
+        // R1: read the actor now, before any coroutine; the PIN gate clears the approver right after this returns.
+        val staffId = staffSession.actingId
         voiding.value = true
         viewModelScope.launch {
             try {
-                saleRepo.voidSale(saleId, if (note.isBlank()) reason else "$reason — ${note.trim()}")
+                saleRepo.voidSale(saleId, if (note.isBlank()) reason else "$reason — ${note.trim()}", staffId)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

@@ -16,6 +16,7 @@ import com.archsolutions.shopmanager.data.repo.SaleRepo
 import com.archsolutions.shopmanager.domain.CartLine
 import com.archsolutions.shopmanager.domain.CartMath
 import com.archsolutions.shopmanager.domain.CashQuickAmounts
+import com.archsolutions.shopmanager.data.staff.StaffSession
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -84,6 +85,7 @@ class SellViewModel @Inject constructor(
     private val saleRepo: SaleRepo,
     dayGate: DayGate,
     private val savedStateHandle: SavedStateHandle,
+    private val staffSession: StaffSession,
 ) : ViewModel() {
     private val inputs = MutableStateFlow(restoreInputs())
     private val gateState = dayGate.state.stateIn(viewModelScope, SharingStarted.Eagerly, DayGateState.Loading)
@@ -162,6 +164,7 @@ class SellViewModel @Inject constructor(
         val current = state.value
         if (!current.canComplete) return
         edit { it.copy(saving = true) }
+        val staffId = staffSession.currentId
         viewModelScope.launch {
             try {
                 // Wait for the gate's first answer rather than dropping a tap made while it loads.
@@ -181,6 +184,7 @@ class SellViewModel @Inject constructor(
                     },
                     customerId = if (current.method == PayMethod.CREDIT) current.selectedCustomer?.customer?.id else null,
                     cashReceived = if (current.method == PayMethod.CASH) current.cashReceived else null,
+                    staffId = staffId,
                 )
                 _savedSale.value = SavedSale(saleId, current.method, current.total, current.change)
                 clear()
@@ -196,9 +200,10 @@ class SellViewModel @Inject constructor(
 
     /** Addendum C2: Undo inside the snackbar voids without a PIN. */
     fun undoSale(saleId: Long) {
+        val staffId = staffSession.currentId
         viewModelScope.launch {
             try {
-                saleRepo.voidSale(saleId, UNDO_REASON)
+                saleRepo.voidSale(saleId, UNDO_REASON, staffId)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

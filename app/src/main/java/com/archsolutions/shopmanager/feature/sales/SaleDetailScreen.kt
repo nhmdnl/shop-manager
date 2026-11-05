@@ -180,7 +180,13 @@ fun SaleDetailScreen(
                     }
                 }
             }
+            state.soldBy?.let {
+                Text(stringResource(R.string.sale_sold_by, it), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
+            }
             if (state.voided) {
+                state.voidedBy?.let {
+                    Text(stringResource(R.string.sale_voided_by, it), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
+                }
                 Badge(
                     text = stringResource(R.string.voided_reason, state.voidReason.orEmpty()),
                     kind = BadgeKind.Muted,

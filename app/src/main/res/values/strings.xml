@@ -170,6 +170,8 @@
     <string name="todays_sales">Today\'s sales</string>
     <string name="sales_summary">%1$s · %2$s · %3$s</string>
     <string name="voided_reason">Voided · %1$s</string>
+    <string name="sale_sold_by">Sold by %1$s</string>
+    <string name="sale_voided_by">Voided by %1$s</string>
     <string name="credit_customer">Credit · %1$s</string>
     <string name="voided_note">Voided sales stay in the list but don\'t count in any total.</string>
     <string name="filter_all">All</string>

@@ -22,6 +22,7 @@ import com.archsolutions.shopmanager.app.DayGateState
 import com.archsolutions.shopmanager.core.designsystem.ShopManagerTheme
 import com.archsolutions.shopmanager.core.designsystem.ThemeMode
 import com.archsolutions.shopmanager.core.util.AppClock
+import com.archsolutions.shopmanager.data.staff.StaffSession
 import com.archsolutions.shopmanager.data.db.AppDatabase
 import com.archsolutions.shopmanager.data.db.entities.BusinessDayEntity
 import com.archsolutions.shopmanager.data.db.entities.ProductEntity
@@ -87,7 +88,7 @@ class SaleTapCountTest {
         )
         val settings = SettingsStore(PreferenceDataStoreFactory.create(scope = scope, produceFile = { File(context.cacheDir, "taps_${System.nanoTime()}.preferences_pb") }))
         val factory = viewModelFactory {
-            initializer { SellViewModel(ProductRepo(db, clock), CustomerRepo(db), SaleRepo(db, clock), DayGate(dayRepo, settings, clock), SavedStateHandle()) }
+            initializer { SellViewModel(ProductRepo(db, clock), CustomerRepo(db), SaleRepo(db, clock), DayGate(dayRepo, settings, clock), SavedStateHandle(), StaffSession(clock)) }
         }
         val viewModel = ViewModelProvider(viewModelStore, factory)[SellViewModel::class.java]
         viewModel to dayRepo.getDayByIdDirect(dayId)!!

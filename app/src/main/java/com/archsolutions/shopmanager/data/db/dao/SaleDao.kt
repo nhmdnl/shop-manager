@@ -64,6 +64,6 @@ interface SaleDao {
     @Update
     suspend fun updateSale(sale: SaleEntity)
 
-    @Query("UPDATE sale SET status = 'VOIDED', voidReason = :reason, voidedAt = :voidedAt WHERE id = :saleId")
-    suspend fun voidSale(saleId: Long, reason: String, voidedAt: Long)
+    @Query("UPDATE sale SET status = 'VOIDED', voidReason = :reason, voidedAt = :voidedAt, voidedByStaffId = :staffId WHERE id = :saleId")
+    suspend fun voidSale(saleId: Long, reason: String, voidedAt: Long, staffId: Long?)
 }
