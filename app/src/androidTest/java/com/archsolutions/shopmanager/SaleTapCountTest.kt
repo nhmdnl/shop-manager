@@ -26,6 +26,7 @@ import com.archsolutions.shopmanager.data.staff.StaffSession
 import com.archsolutions.shopmanager.data.db.AppDatabase
 import com.archsolutions.shopmanager.data.db.entities.BusinessDayEntity
 import com.archsolutions.shopmanager.data.db.entities.ProductEntity
+import com.archsolutions.shopmanager.data.db.entities.StaffEntity
 import com.archsolutions.shopmanager.data.repo.CustomerRepo
 import com.archsolutions.shopmanager.data.repo.DayRepo
 import com.archsolutions.shopmanager.data.repo.ProductRepo
@@ -40,6 +41,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -80,7 +82,7 @@ class SaleTapCountTest {
         db.close()
     }
 
-    private fun openShop(): Pair<SellViewModel, BusinessDayEntity> = runBlocking {
+    private fun openShop(signedIn: StaffEntity? = null): Pair<SellViewModel, BusinessDayEntity> = runBlocking {
         val dayRepo = DayRepo(db, clock)
         val dayId = dayRepo.openDay("2026-09-30", openingCash = 150_000L, openingMobile = 40_000L)
         db.productDao().insert(
@@ -88,7 +90,7 @@ class SaleTapCountTest {
         )
         val settings = SettingsStore(PreferenceDataStoreFactory.create(scope = scope, produceFile = { File(context.cacheDir, "taps_${System.nanoTime()}.preferences_pb") }))
         val factory = viewModelFactory {
-            initializer { SellViewModel(ProductRepo(db, clock), CustomerRepo(db), SaleRepo(db, clock), DayGate(dayRepo, settings, clock), SavedStateHandle(), StaffSession(clock)) }
+            initializer { SellViewModel(ProductRepo(db, clock), CustomerRepo(db), SaleRepo(db, clock), DayGate(dayRepo, settings, clock), SavedStateHandle(), StaffSession(clock).also { session -> signedIn?.let(session::signIn) }) }
         }
         val viewModel = ViewModelProvider(viewModelStore, factory)[SellViewModel::class.java]
         viewModel to dayRepo.getDayByIdDirect(dayId)!!
@@ -147,5 +149,45 @@ class SaleTapCountTest {
         composeRule.onNodeWithText(context.getString(R.string.action_complete_sale)).performClick() // 3: cash, complete
 
         waitForOneSale(day.id)
+    }
+
+    private val cashier = StaffEntity(id = 7, name = "Amina", role = "CASHIER", pinHash = "x", createdAt = 0L)
+
+    @Test
+    fun signedInCashierStillSellsInTwoTapsOnTablet() {
+        val (viewModel, day) = openShop(signedIn = cashier)
+        composeRule.setContent {
+            ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
+                SellScreen(isExpanded = true, gateState = DayGateState.Ready(day), zoneId = clock.zoneId, viewModel = viewModel, onOpenDay = {}, onCloseDay = {}, onCheckout = {})
+            }
+        }
+
+        composeRule.onNodeWithText("Sugar 1kg").performClick() // 1
+        composeRule.onNodeWithText(context.getString(R.string.action_complete_sale)).performClick() // 2
+
+        waitForOneSale(day.id)
+        assertEquals(cashier.id, runBlocking { db.saleDao().getSalesForDayDirect(day.id).single().staffId })
+    }
+
+    @Test
+    fun signedInCashierStillSellsInThreeTapsOnPhone() {
+        val (viewModel, day) = openShop(signedIn = cashier)
+        composeRule.setContent {
+            var checkout by remember { mutableStateOf(false) }
+            ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
+                if (!checkout) {
+                    SellScreen(isExpanded = false, gateState = DayGateState.Ready(day), zoneId = clock.zoneId, viewModel = viewModel, onOpenDay = {}, onCloseDay = {}, onCheckout = { checkout = true })
+                } else {
+                    CheckoutScreen(viewModel = viewModel, onBack = { checkout = false }, onDone = { checkout = false })
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Sugar 1kg").performClick() // 1
+        composeRule.onNodeWithText(context.getString(R.string.action_charge)).performClick() // 2
+        composeRule.onNodeWithText(context.getString(R.string.action_complete_sale)).performClick() // 3
+
+        waitForOneSale(day.id)
+        assertEquals(cashier.id, runBlocking { db.saleDao().getSalesForDayDirect(day.id).single().staffId })
     }
 }

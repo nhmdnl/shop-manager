@@ -115,6 +115,8 @@ fun HomeScreen(
     cloudNotice: CloudNotice? = null,
     onCloudNotice: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    signedInName: String? = null,
+    onSwitchUser: () -> Unit = {},
 ) {
     val colors = LocalShopColors.current
     val locale = LocalConfiguration.current.locales[0]
@@ -168,6 +170,14 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            signedInName?.let {
+                SecondaryButton(
+                    text = stringResource(R.string.staff_signed_in_switch, it),
+                    onClick = onSwitchUser,
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 48.dp,
+                )
+            }
             cloudNotice?.let { CloudPlanBanner(notice = it, onClick = onCloudNotice) }
 
             if (gateState is DayGateState.Ready) {

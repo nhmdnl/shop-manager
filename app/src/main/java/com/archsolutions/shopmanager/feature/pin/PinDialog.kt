@@ -47,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.core.designsystem.fontScaled
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
 import com.archsolutions.shopmanager.core.security.Pin
 import com.archsolutions.shopmanager.data.settings.PinGuard
@@ -152,17 +153,12 @@ private fun PinCheckDialog(title: String, purpose: String, check: suspend (Strin
             if (digits.length == Pin.LENGTH) {
                 val entered = digits
                 scope.launch {
-                    when (val result = check(entered)) {
-                        PinResult.Ok -> onSuccess()
-                        is PinResult.Wrong -> {
-                            message = resources.getQuantityString(R.plurals.plurals_pin_tries_left, result.triesLeft, result.triesLeft)
-                            digits = ""
-                        }
-                        is PinResult.Locked -> {
-                            val seconds = ceil(result.waitMillis / 1000.0).toInt()
-                            message = resources.getQuantityString(R.plurals.plurals_pin_wait, seconds, seconds)
-                            digits = ""
-                        }
+                    val result = check(entered)
+                    if (result == PinResult.Ok) {
+                        onSuccess()
+                    } else {
+                        message = pinFailureMessage(resources, result)
+                        digits = ""
                     }
                 }
             }
@@ -225,49 +221,74 @@ private fun PinKeypadDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
+                PinPad(title, subtitle, digits, message, onDigit, onBackspace)
+                SecondaryButton(text = stringResource(R.string.action_cancel), onClick = onDismiss, modifier = Modifier.fillMaxWidth())
+            }
+        }
+    }
+}
+
+/** The PIN wording for a failed try: tries left, or how long to wait. */
+internal fun pinFailureMessage(resources: android.content.res.Resources, result: PinResult): String? = when (result) {
+    PinResult.Ok -> null
+    is PinResult.Wrong -> resources.getQuantityString(R.plurals.plurals_pin_tries_left, result.triesLeft, result.triesLeft)
+    is PinResult.Locked -> {
+        val seconds = ceil(result.waitMillis / 1000.0).toInt()
+        resources.getQuantityString(R.plurals.plurals_pin_wait, seconds, seconds)
+    }
+}
+
+@Composable
+internal fun PinPad(
+    title: String,
+    subtitle: String,
+    digits: String,
+    message: String?,
+    onDigit: (String) -> Unit,
+    onBackspace: () -> Unit,
+) {
+    val colors = LocalShopColors.current
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Box(
+            modifier = Modifier.size(52.dp).clip(CircleShape).background(colors.greenTint),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.green)
+        }
+        Text(title, fontFamily = DisplayFontFamily, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = colors.ink, textAlign = TextAlign.Center)
+        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = colors.muted, textAlign = TextAlign.Center)
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            repeat(Pin.LENGTH) { index ->
+                val filled = index < digits.length
                 Box(
-                    modifier = Modifier.size(52.dp).clip(CircleShape).background(colors.greenTint),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.green)
-                }
-                Text(title, fontFamily = DisplayFontFamily, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = colors.ink, textAlign = TextAlign.Center)
-                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = colors.muted, textAlign = TextAlign.Center)
-                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    repeat(Pin.LENGTH) { index ->
-                        val filled = index < digits.length
-                        Box(
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(if (filled) colors.ink else colors.surface)
-                                .border(BorderStroke(1.5.dp, if (filled) colors.ink else colors.muted), CircleShape),
-                        )
-                    }
-                }
-                Text(
-                    text = message.orEmpty(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.rust,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.height(20.dp),
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(if (filled) colors.ink else colors.surface)
+                        .border(BorderStroke(1.5.dp, if (filled) colors.ink else colors.muted), CircleShape),
                 )
-                listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf("", "0", BACKSPACE)).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        row.forEach { key ->
-                            when (key) {
-                                "" -> Spacer(modifier = Modifier.weight(1f))
-                                BACKSPACE -> KeypadKey(onClick = onBackspace, modifier = Modifier.weight(1f)) {
-                                    Icon(Icons.AutoMirrored.Outlined.Backspace, contentDescription = stringResource(R.string.pin_backspace), tint = colors.ink)
-                                }
-                                else -> KeypadKey(onClick = { onDigit(key) }, modifier = Modifier.weight(1f)) {
-                                    Text(key, fontFamily = DisplayFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, color = colors.ink)
-                                }
-                            }
+            }
+        }
+        Text(
+            text = message.orEmpty(),
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.rust,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.height(fontScaled(20.dp)),
+        )
+        listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf("", "0", BACKSPACE)).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { key ->
+                    when (key) {
+                        "" -> Spacer(modifier = Modifier.weight(1f))
+                        BACKSPACE -> KeypadKey(onClick = onBackspace, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.AutoMirrored.Outlined.Backspace, contentDescription = stringResource(R.string.pin_backspace), tint = colors.ink)
+                        }
+                        else -> KeypadKey(onClick = { onDigit(key) }, modifier = Modifier.weight(1f)) {
+                            Text(key, fontFamily = DisplayFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, color = colors.ink)
                         }
                     }
                 }
-                SecondaryButton(text = stringResource(R.string.action_cancel), onClick = onDismiss, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -275,7 +296,7 @@ private fun PinKeypadDialog(
 
 @Composable
 private fun KeypadKey(onClick: () -> Unit, modifier: Modifier, content: @Composable () -> Unit) {
-    Surface(onClick = onClick, shape = RoundedCornerShape(14.dp), color = LocalShopColors.current.segmentTrack, modifier = modifier.height(56.dp)) {
+    Surface(onClick = onClick, shape = RoundedCornerShape(14.dp), color = LocalShopColors.current.segmentTrack, modifier = modifier.height(fontScaled(56.dp))) {
         Box(contentAlignment = Alignment.Center) { content() }
     }
 }

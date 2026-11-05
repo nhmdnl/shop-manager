@@ -104,6 +104,8 @@ import com.archsolutions.shopmanager.feature.suppliers.SupplierEditScreen
 import com.archsolutions.shopmanager.feature.suppliers.SuppliersScreen
 import kotlinx.serialization.Serializable
 import com.archsolutions.shopmanager.feature.pin.rememberPinGate
+import com.archsolutions.shopmanager.feature.staff.StaffGate
+import com.archsolutions.shopmanager.feature.staff.StaffGateViewModel
 import com.archsolutions.shopmanager.feature.backup.BackupReminderViewModel
 import com.archsolutions.shopmanager.feature.backup.rememberBackupActions
 import com.archsolutions.shopmanager.data.backup.AutoBackupWorker
@@ -156,8 +158,29 @@ enum class NavDestination(
     SETTINGS(SettingsRoute, R.string.nav_settings, Icons.Outlined.Settings, showInCompactBottomBar = false),
 }
 
+/** The app shell, with the staff sign-in gate laid over it while staff is on and nobody is signed in. */
 @Composable
 fun AppNavHost(
+    isExpanded: Boolean,
+    // 3.5: medium widths (portrait tablets) keep the rail; screens go two-pane only when expanded.
+    useRail: Boolean = isExpanded,
+    openCloseDay: Boolean = false,
+    onCloseDayOpened: () -> Unit = {},
+    navController: NavHostController = rememberNavController(),
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
+    gateViewModel: DayGateViewModel = hiltViewModel(),
+    modifier: Modifier = Modifier,
+) {
+    val needsOnboarding by gateViewModel.needsOnboarding.collectAsStateWithLifecycle()
+    Box(modifier = modifier.fillMaxSize()) {
+        AppShell(isExpanded, useRail, openCloseDay, onCloseDayOpened, navController, settingsViewModel, gateViewModel)
+        // Unknown (still loading) counts as onboarding: the gate must not flash over the splash.
+        StaffGate(onboarding = needsOnboarding != false)
+    }
+}
+
+@Composable
+private fun AppShell(
     isExpanded: Boolean,
     // 3.5: medium widths (portrait tablets) keep the rail; screens go two-pane only when expanded.
     useRail: Boolean = isExpanded,
@@ -514,6 +537,8 @@ private fun NavContent(
             val backupReminderViewModel: BackupReminderViewModel = hiltViewModel()
             val backupReminder by backupReminderViewModel.reminder.collectAsStateWithLifecycle()
             val homeSnackbar = remember { SnackbarHostState() }
+            val staffGate: StaffGateViewModel = hiltViewModel()
+            val signedIn by staffGate.current.collectAsStateWithLifecycle()
             val cloudViewModel: CloudViewModel = hiltViewModel()
             val cloudNotice by cloudViewModel.notice.collectAsStateWithLifecycle()
             LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { cloudViewModel.refresh() }
@@ -538,6 +563,8 @@ private fun NavContent(
                 onSeeAllSales = { navController.navigate(SalesRoute()) },
                 onOpenSale = { navController.navigate(SaleDetailRoute(it)) },
                 todaySummary = todaySummary,
+                signedInName = signedIn?.name,
+                onSwitchUser = staffGate::switchUser,
                 onDaySummary = { navController.navigate(DayClosedRoute(it)) },
                 onReopenDay = { dayId -> pinGate.run(R.string.pin_for_reopen) { homeViewModel.reopenDay(dayId) } },
                 backupReminder = backupReminder,
