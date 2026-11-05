@@ -19,8 +19,8 @@ Success:
 | D1 | A cashier signs in once per shift with their own PIN. Sales are attributed to them until sign-out. |
 | D2 | Sign-out after an idle timeout (default 10 minutes, a Setting) or when someone taps Switch user. |
 | D3 | First version ships **Owner** and **Cashier**. Manager, then finance and other departments, come later. Roles are rows of a code map, so adding one needs no migration. |
-| D4 | Existing shops are unchanged on update. Staff stays off until the owner taps **Set up staff** in Settings. The current shared PIN then becomes the first Owner PIN. |
-| D5 | App only. Staff records and who-did-what are not synced in this version. No PIN hash ever leaves the tablet. Cloud sync of staff (contract v1.2, server mirror, owner "staff activity" page WEB-16) is a follow-up. |
+| D4 | Existing shops are unchanged on update. Staff stays off until the owner taps **Set up staff** in Settings. When a shared PIN is set, setup verifies it and then asks the owner to choose a NEW 4-digit Owner PIN (staff may know the old shared one), and uses that. Turning staff off and on again keeps the existing Owner and needs that Owner's current PIN. |
+| D5 | App only. Staff data is not synced to the cloud's sync stream; PIN hashes are carried inside backup zips (local and Cloud Backup), so a backup file must be treated as sensitive. Cloud sync of staff (contract v1.2, server mirror, owner "staff activity" page WEB-16) is a follow-up. |
 | D6 | A forgotten Owner PIN is recovered with a one-time 8-character recovery code, shown once at setup. If both are lost, the only way back is wiping the app data and restoring a backup. |
 
 ## Data (database v3)
@@ -84,3 +84,4 @@ Cloud sync of staff; a Manager role; attribution for stock corrections, money en
 1. The tap count: sign-in must happen before the Sell screen, never inside the sale flow.
 2. The sync triggers: the migration must not make `staff` or the new `sale` columns break `SyncRepo`'s wire reads (covered by the sync test above).
 3. Lock-out of an owner who lost both PIN and code: documented, not solved.
+4. Backup files hold every PIN hash (`staff.pinHash`, `recovery_hash`, the old shared `pin_hash`). A 4-digit PIN hash can be cracked offline, so a backup zip is as sensitive as the PINs. With staff on, only a signed-in Owner (or an Owner-approved action) can create or export one.
