@@ -124,6 +124,8 @@ data class SaleEntity(
     val voidReason: String? = null,
     val voidedAt: Long? = null,
     val uid: String = UUID.randomUUID().toString(),
+    val staffId: Long? = null, // who rang it up; null for sales from before staff existed
+    val voidedByStaffId: Long? = null,
 )
 
 @Entity(

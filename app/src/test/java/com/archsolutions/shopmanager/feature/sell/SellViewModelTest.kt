@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import com.archsolutions.shopmanager.app.DayGate
+import com.archsolutions.shopmanager.data.staff.StaffSession
 import com.archsolutions.shopmanager.data.db.AppDatabase
 import com.archsolutions.shopmanager.data.db.entities.MoneyEntryEntity
 import com.archsolutions.shopmanager.data.db.entities.MoneyEntryType
@@ -99,7 +100,7 @@ class SellViewModelTest {
         dayGate: DayGate = newDayGate(),
         savedStateHandle: SavedStateHandle = SavedStateHandle(),
     ): SellViewModel {
-        val viewModel = SellViewModel(ProductRepo(db, clock), customerRepo, saleRepo, dayGate, savedStateHandle)
+        val viewModel = SellViewModel(ProductRepo(db, clock), customerRepo, saleRepo, dayGate, savedStateHandle, StaffSession(clock))
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.state.collect {} }
         return viewModel
     }

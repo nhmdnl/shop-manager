@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.stock
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -250,7 +251,7 @@ fun EditProductScreen(
             productName = form.name,
             stockQty = state.stockQty,
             unitText = unitText,
-            pinEnabled = state.pinEnabled,
+            pinNeeded = state.pinNeeded,
             onDismiss = { showCorrect = false },
             onSave = { counted, reason, note ->
                 pinGate.run(R.string.pin_for_stock) { viewModel.correctStock(counted, reason, note) }
@@ -325,7 +326,7 @@ private fun CorrectStockSheet(
     productName: String,
     stockQty: Double,
     unitText: String,
-    pinEnabled: Boolean,
+    pinNeeded: Boolean,
     onDismiss: () -> Unit,
     onSave: (counted: Double, reason: String, note: String) -> Unit,
 ) {
@@ -344,6 +345,7 @@ private fun CorrectStockSheet(
     val change = counted - stockQty
     val close: () -> Unit = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } }
 
+    OnSignOut(onDismiss)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = colors.surface) {
         Column(
             modifier = Modifier
@@ -398,7 +400,7 @@ private fun CorrectStockSheet(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(16.dp))
                 Text(
-                    text = (if (pinEnabled) stringResource(R.string.pin_needed) + " · " else "") + stringResource(R.string.adjustment_note),
+                    text = (if (pinNeeded) stringResource(R.string.pin_needed) + " · " else "") + stringResource(R.string.adjustment_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.muted,
                 )

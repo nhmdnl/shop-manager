@@ -70,6 +70,7 @@ import com.archsolutions.shopmanager.core.designsystem.components.InkButton
 import com.archsolutions.shopmanager.core.designsystem.components.LockedActionButton
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import com.archsolutions.shopmanager.core.designsystem.components.SectionLabel
 import com.archsolutions.shopmanager.core.designsystem.components.ShopCard
 import com.archsolutions.shopmanager.core.money.Money
@@ -115,12 +116,15 @@ fun HomeScreen(
     cloudNotice: CloudNotice? = null,
     onCloudNotice: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    signedInName: String? = null,
+    onSwitchUser: () -> Unit = {},
 ) {
     val colors = LocalShopColors.current
     val locale = LocalConfiguration.current.locales[0]
     val tradingOpen = gateState is DayGateState.Ready
     val dayClosed = gateState is DayGateState.TodayClosed
     var confirmReopen by remember { mutableStateOf(false) }
+    OnSignOut { confirmReopen = false }
     val newSaleLocked = stringResource(if (dayClosed) R.string.selling_opens_tomorrow else R.string.action_new_sale)
 
     Scaffold(
@@ -168,6 +172,14 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            signedInName?.let {
+                SecondaryButton(
+                    text = stringResource(R.string.staff_signed_in_switch, it),
+                    onClick = onSwitchUser,
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 48.dp,
+                )
+            }
             cloudNotice?.let { CloudPlanBanner(notice = it, onClick = onCloudNotice) }
 
             if (gateState is DayGateState.Ready) {

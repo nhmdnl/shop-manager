@@ -32,6 +32,9 @@ class SaleRepo @Inject constructor(
     private val productDao = db.productDao()
     private val stockMovementDao = db.stockMovementDao()
 
+    /** Display name for a sold-by / voided-by line; a deactivated person still resolves. */
+    suspend fun staffName(id: Long?): String? = id?.let { db.staffDao().getByIdDirect(it)?.name }
+
     fun getSaleWithItems(saleId: Long): Flow<SaleWithItems?> = saleDao.getSaleWithItems(saleId)
 
     fun getSalesForDay(dayId: Long): Flow<List<SaleEntity>> = saleDao.getSalesForDay(dayId)
@@ -51,6 +54,7 @@ class SaleRepo @Inject constructor(
         items: List<SaleCartItem>,
         customerId: Long? = null,
         cashReceived: Long? = null,
+        staffId: Long? = null,
     ): Long = db.withTransaction {
         require(items.isNotEmpty()) { "Sale must contain at least one item" }
         if (method == PayMethod.CREDIT) {
@@ -73,6 +77,7 @@ class SaleRepo @Inject constructor(
                 customerId = customerId,
                 cashReceived = cashReceived,
                 status = SaleStatus.DONE,
+                staffId = staffId,
             )
         )
 
@@ -110,13 +115,13 @@ class SaleRepo @Inject constructor(
         saleId
     }
 
-    suspend fun voidSale(saleId: Long, reason: String) = db.withTransaction {
+    suspend fun voidSale(saleId: Long, reason: String, staffId: Long? = null) = db.withTransaction {
         val sale = saleDao.getSaleByIdDirect(saleId) ?: return@withTransaction
         if (sale.status == SaleStatus.VOIDED) return@withTransaction
         db.requireOpenDay(sale.dayId)
 
         val now = clock.nowMillis()
-        saleDao.voidSale(saleId, reason, now)
+        saleDao.voidSale(saleId, reason, now, staffId)
 
         val items = saleDao.getSaleItems(saleId)
         for (item in items) {

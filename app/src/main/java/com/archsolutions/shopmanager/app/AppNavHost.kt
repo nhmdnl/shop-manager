@@ -104,6 +104,10 @@ import com.archsolutions.shopmanager.feature.suppliers.SupplierEditScreen
 import com.archsolutions.shopmanager.feature.suppliers.SuppliersScreen
 import kotlinx.serialization.Serializable
 import com.archsolutions.shopmanager.feature.pin.rememberPinGate
+import com.archsolutions.shopmanager.feature.staff.LocalSignOutTick
+import com.archsolutions.shopmanager.feature.staff.StaffGate
+import com.archsolutions.shopmanager.feature.staff.StaffGateViewModel
+import com.archsolutions.shopmanager.feature.staff.StaffScreen
 import com.archsolutions.shopmanager.feature.backup.BackupReminderViewModel
 import com.archsolutions.shopmanager.feature.backup.rememberBackupActions
 import com.archsolutions.shopmanager.data.backup.AutoBackupWorker
@@ -138,6 +142,7 @@ import com.archsolutions.shopmanager.feature.day.PastDayScreen
 @Serializable data class SupplierEditRoute(val id: Long = 0L) // 0 = new supplier
 @Serializable object CloudPayRoute
 @Serializable object CloudRestoreRoute
+@Serializable object StaffRoute
 @Serializable data class CloudSignInRoute(val purpose: String = "LINK") // LINK goes back when linked; RESTORE goes on to CloudRestoreRoute
 
 enum class NavDestination(
@@ -156,8 +161,55 @@ enum class NavDestination(
     SETTINGS(SettingsRoute, R.string.nav_settings, Icons.Outlined.Settings, showInCompactBottomBar = false),
 }
 
+/** The app shell, with the staff sign-in gate laid over it while staff is on and nobody is signed in. */
 @Composable
 fun AppNavHost(
+    isExpanded: Boolean,
+    // 3.5: medium widths (portrait tablets) keep the rail; screens go two-pane only when expanded.
+    useRail: Boolean = isExpanded,
+    openCloseDay: Boolean = false,
+    onCloseDayOpened: () -> Unit = {},
+    navController: NavHostController = rememberNavController(),
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
+    gateViewModel: DayGateViewModel = hiltViewModel(),
+    modifier: Modifier = Modifier,
+) {
+    val needsOnboarding by gateViewModel.needsOnboarding.collectAsStateWithLifecycle()
+    Box(modifier = modifier.fillMaxSize()) {
+        // Unknown onboarding stays null: the gate fails closed until it and the staff setting are read.
+        StaffGate(onboarding = needsOnboarding) {
+            AppShell(isExpanded, useRail, openCloseDay, onCloseDayOpened, navController, settingsViewModel, gateViewModel)
+        }
+    }
+}
+
+/** Screens reached only through an Owner-gated tap (restore, cloud sign-in/pay, staff). Nothing else may keep them open. */
+internal val entryGatedRoutes = listOf(CloudRestoreRoute::class, CloudSignInRoute::class, CloudPayRoute::class, StaffRoute::class)
+
+/** True when any route on [routes] is an entry-gated one: such a stack is never saved by tab switching (N1). */
+internal fun stackHoldsGatedRoute(routes: List<kotlin.reflect.KClass<*>>): Boolean = routes.any { it in entryGatedRoutes }
+
+/**
+ * N2: the owner-only screens are popped only when staff is on and nobody is signed in. The session is in memory, so
+ * after process death nobody is signed in and the pop still happens; a rotation with an Owner signed in keeps them.
+ * Unknown (null) never pops here: the gate itself covers unknown.
+ */
+internal fun shouldDropGatedRoutes(staffActive: Boolean?, signedInId: Long?): Boolean = staffActive == true && signedInId == null
+
+private fun NavHostController.currentStackHoldsGated(): Boolean = currentBackStack.value.any { entry ->
+    entryGatedRoutes.any { entry.destination.hasRoute(it) }
+}
+
+/** Pops every entry-gated screen off the stack (no-op for those not on it). */
+internal fun NavHostController.dropEntryGated() {
+    popBackStack<CloudRestoreRoute>(true)
+    popBackStack<CloudSignInRoute>(true)
+    popBackStack<CloudPayRoute>(true)
+    popBackStack<StaffRoute>(true)
+}
+
+@Composable
+private fun AppShell(
     isExpanded: Boolean,
     // 3.5: medium widths (portrait tablets) keep the rail; screens go two-pane only when expanded.
     useRail: Boolean = isExpanded,
@@ -193,6 +245,21 @@ fun AppNavHost(
     // was popped along with it, so closing yesterday never led on to opening today.
     val canPrompt = currentDestination != null && !isOpenDay && needsOnboarding == false &&
         !currentDestination.hasRoute(CloseDayRoute::class) && !currentDestination.hasRoute(DayClosedRoute::class)
+
+    // C1: these screens were opened by an Owner-gated tap. After a sign-out, or a restored back stack once staff is
+    // on, the next person must not land on them (a Cashier on the restore list could confirm a restore with no PIN).
+    val staffGateViewModel: StaffGateViewModel = hiltViewModel()
+    val staffActive by staffGateViewModel.staffActive.collectAsStateWithLifecycle()
+    val signedIn by staffGateViewModel.current.collectAsStateWithLifecycle()
+    val signOutTick = LocalSignOutTick.current
+    val firstTick = remember { signOutTick }
+    // Also keyed on the current entry: a tab restore with nobody signed in drops any owner-only screen that came back (N1).
+    LaunchedEffect(staffActive, signedIn?.id, currentDestination != null, navBackStackEntry?.id) {
+        if (shouldDropGatedRoutes(staffActive, signedIn?.id) && currentDestination != null) navController.dropEntryGated()
+    }
+    LaunchedEffect(signOutTick) {
+        if (signOutTick != firstTick) navController.dropEntryGated()
+    }
 
     // 7.8: a fresh install starts with onboarding, whose last step opens the first day.
     LaunchedEffect(needsOnboarding, currentDestination != null) {
@@ -388,7 +455,8 @@ fun AppNavHost(
             destination?.hasRoute(SupplierEditRoute::class) == true ||
             destination?.hasRoute(CloudSignInRoute::class) == true ||
             destination?.hasRoute(CloudPayRoute::class) == true ||
-            destination?.hasRoute(CloudRestoreRoute::class) == true
+            destination?.hasRoute(CloudRestoreRoute::class) == true ||
+            destination?.hasRoute(StaffRoute::class) == true
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
@@ -514,6 +582,9 @@ private fun NavContent(
             val backupReminderViewModel: BackupReminderViewModel = hiltViewModel()
             val backupReminder by backupReminderViewModel.reminder.collectAsStateWithLifecycle()
             val homeSnackbar = remember { SnackbarHostState() }
+            val staffGate: StaffGateViewModel = hiltViewModel()
+            val signedIn by staffGate.current.collectAsStateWithLifecycle()
+            val staffActive by staffGate.staffActive.collectAsStateWithLifecycle()
             val cloudViewModel: CloudViewModel = hiltViewModel()
             val cloudNotice by cloudViewModel.notice.collectAsStateWithLifecycle()
             LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { cloudViewModel.refresh() }
@@ -538,10 +609,15 @@ private fun NavContent(
                 onSeeAllSales = { navController.navigate(SalesRoute()) },
                 onOpenSale = { navController.navigate(SaleDetailRoute(it)) },
                 todaySummary = todaySummary,
+                signedInName = signedIn?.name,
+                onSwitchUser = staffGate::switchUser,
                 onDaySummary = { navController.navigate(DayClosedRoute(it)) },
                 onReopenDay = { dayId -> pinGate.run(R.string.pin_for_reopen) { homeViewModel.reopenDay(dayId) } },
                 backupReminder = backupReminder,
-                onBackUp = backup.backUp,
+                // A backup zip carries every PIN hash: with staff on (or not yet known) it needs an Owner, like Settings does.
+                onBackUp = {
+                    if (staffActive == false) backup.backUp() else pinGate.run(R.string.pin_for_backup, backup.backUp)
+                },
                 cloudNotice = cloudNotice,
                 onCloudNotice = { pinGate.run(R.string.pin_for_cloud) { navController.navigate(CloudPayRoute) } },
                 snackbarHostState = homeSnackbar,
@@ -749,7 +825,11 @@ private fun NavContent(
                 onCloudSignIn = { navController.navigate(CloudSignInRoute()) },
                 onCloudPay = { navController.navigate(CloudPayRoute) },
                 onCloudRestore = { navController.navigate(CloudRestoreRoute) },
+                onManageStaff = { navController.navigate(StaffRoute) { launchSingleTop = true } },
             )
+        }
+        composable<StaffRoute> {
+            StaffScreen(onBack = { navController.popBackStack<StaffRoute>(true) })
         }
     }
 }
@@ -761,9 +841,11 @@ internal fun NavHostController.navigateToTab(dest: NavDestination) {
     val inDayFlow = currentBackStack.value.any {
         it.destination.hasRoute(CloseDayRoute::class) || it.destination.hasRoute(DayClosedRoute::class)
     }
+    // N1: owner-only screens (restore, cloud, staff) are never saved, so a tab tap by the next person can't bring them back.
+    val saveStack = !inDayFlow && !currentStackHoldsGated()
     // Home is the start destination: go back to it rather than restore a stack saved for it.
     if (dest == NavDestination.HOME) {
-        if (!popBackStack<HomeRoute>(inclusive = false, saveState = !inDayFlow) &&
+        if (!popBackStack<HomeRoute>(inclusive = false, saveState = saveStack) &&
             currentDestination?.hasRoute(HomeRoute::class) != true
         ) {
             navigate(HomeRoute) { launchSingleTop = true }
@@ -772,7 +854,7 @@ internal fun NavHostController.navigateToTab(dest: NavDestination) {
     }
     navigate(dest.route) {
         popUpTo(graph.findStartDestination().id) {
-            saveState = !inDayFlow
+            saveState = saveStack
         }
         launchSingleTop = true
         restoreState = true

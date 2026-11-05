@@ -44,6 +44,11 @@ class TabNavigationTest {
             composable<EditProductRoute> {}
             composable<SuppliersRoute> {}
             composable<SupplierDetailRoute> {}
+            composable<SettingsRoute> {}
+            composable<CloudRestoreRoute> {}
+            composable<CloudSignInRoute> {}
+            composable<CloudPayRoute> {}
+            composable<StaffRoute> {}
         }
         return nav
     }
@@ -108,5 +113,57 @@ class TabNavigationTest {
 
         assertEquals(3L, nav.currentBackStackEntry!!.toRoute<StockRoute>().supplierId)
         assertFalse(nav.currentBackStack.value.any { it.destination.hasRoute(EditProductRoute::class) })
+    }
+
+    @Test
+    fun `Cloud restore is not brought back to the next person by the Settings tab`() {
+        val nav = navController()
+        nav.navigateToTab(NavDestination.SETTINGS)
+        nav.navigate(CloudRestoreRoute)
+
+        nav.navigateToTab(NavDestination.STOCK) // the Owner leaves through the rail
+        // (sign-out: nothing gated is on the current stack to drop)
+        nav.dropEntryGated()
+        nav.navigateToTab(NavDestination.SETTINGS) // the Cashier taps Settings
+
+        assertTrue(nav.currentDestination!!.hasRoute(SettingsRoute::class))
+        assertFalse(nav.currentBackStack.value.any { it.destination.hasRoute(CloudRestoreRoute::class) })
+    }
+
+    @Test
+    fun `Cloud restore is not saved when going Home either`() {
+        val nav = navController()
+        nav.navigateToTab(NavDestination.SETTINGS)
+        nav.navigate(CloudRestoreRoute)
+        nav.navigateToTab(NavDestination.HOME)
+        nav.navigateToTab(NavDestination.SETTINGS)
+        assertFalse(nav.currentBackStack.value.any { it.destination.hasRoute(CloudRestoreRoute::class) })
+    }
+
+    @Test
+    fun `an ordinary stack is still saved and restored`() {
+        val nav = navController()
+        nav.navigateToTab(NavDestination.STOCK)
+        nav.navigate(EditProductRoute(5))
+        nav.navigateToTab(NavDestination.SUPPLIERS)
+        nav.navigateToTab(NavDestination.STOCK)
+        assertTrue(nav.currentDestination!!.hasRoute(EditProductRoute::class))
+    }
+
+    @Test
+    fun `only stacks holding an owner-only route are not saved`() {
+        assertTrue(stackHoldsGatedRoute(listOf(HomeRoute::class, SettingsRoute::class, CloudRestoreRoute::class)))
+        assertTrue(stackHoldsGatedRoute(listOf(StaffRoute::class)))
+        assertFalse(stackHoldsGatedRoute(listOf(HomeRoute::class, SettingsRoute::class)))
+        assertFalse(stackHoldsGatedRoute(emptyList()))
+    }
+
+    @Test
+    fun `owner-only screens are popped only with staff on and nobody signed in`() {
+        assertFalse(shouldDropGatedRoutes(null, null))
+        assertFalse(shouldDropGatedRoutes(false, null))
+        assertTrue(shouldDropGatedRoutes(true, null))
+        assertFalse(shouldDropGatedRoutes(true, 7L))
+        assertFalse(shouldDropGatedRoutes(null, 7L))
     }
 }

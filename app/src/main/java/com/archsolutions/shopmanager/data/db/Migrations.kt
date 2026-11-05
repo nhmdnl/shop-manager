@@ -12,7 +12,7 @@ private const val UUID_SQL =
 private val V2_TABLES = listOf("category", "product", "customer", "business_day", "sale", "sale_item", "money_entry", "purchase")
 
 /** Frozen copy of the v2 trigger SQL (the live one is [SyncTriggers.create]); a snapshot must not change with later edits. */
-private fun createV2Triggers(db: SupportSQLiteDatabase) {
+internal fun createV2Triggers(db: SupportSQLiteDatabase) {
     val enabled = "WHEN (SELECT enabled FROM sync_state WHERE id = 1) = 1"
     for (t in V2_TABLES) {
         db.execSQL("CREATE TRIGGER sync_${t}_ai AFTER INSERT ON $t $enabled BEGIN INSERT INTO sync_outbox (tbl, uid, op) VALUES ('$t', NEW.uid, 'UPSERT'); END")
@@ -44,5 +44,15 @@ val MIGRATION_1_2: Migration = object : Migration(1, 2) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `sync_outbox` (`seq` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tbl` TEXT NOT NULL, `uid` TEXT NOT NULL, `op` TEXT NOT NULL)")
         db.execSQL("INSERT INTO sync_state (id, enabled, fillId, fillStartSeq) VALUES (1, 0, NULL, NULL)")
         createV2Triggers(db)
+    }
+}
+
+/** v3: the staff table (no sync trigger, not synced) and who rang up / voided a sale. */
+val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS `staff` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uid` TEXT NOT NULL, `name` TEXT NOT NULL, `role` TEXT NOT NULL, `pinHash` TEXT NOT NULL, `active` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_staff_uid` ON `staff` (`uid`)")
+        db.execSQL("ALTER TABLE `sale` ADD COLUMN `staffId` INTEGER")
+        db.execSQL("ALTER TABLE `sale` ADD COLUMN `voidedByStaffId` INTEGER")
     }
 }

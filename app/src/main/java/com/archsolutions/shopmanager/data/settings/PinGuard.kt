@@ -2,14 +2,7 @@ package com.archsolutions.shopmanager.data.settings
 
 import com.archsolutions.shopmanager.core.security.Pin
 import com.archsolutions.shopmanager.core.util.AppClock
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,11 +23,6 @@ class PinGuard @Inject constructor(
 ) {
     private var failures = 0
     private var lockedUntil = 0L
-
-    /** Kept warm, so a screen opened a moment ago already knows whether to ask. */
-    val required: StateFlow<Boolean> = settingsStore.settings
-        .map { it.pinEnabled && it.pinHash.isNotEmpty() }
-        .stateIn(CoroutineScope(SupervisorJob() + Dispatchers.Default), SharingStarted.Eagerly, false)
 
     @Synchronized
     fun lockedForMillis(): Long = (lockedUntil - clock.nowMillis()).coerceAtLeast(0L)

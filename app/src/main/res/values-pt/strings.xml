@@ -510,6 +510,10 @@
         <item quantity="one">Demasiadas tentativas. Aguarde 1 segundo.</item>
         <item quantity="other">Demasiadas tentativas. Aguarde %1$d segundos.</item>
     </plurals>
+    <plurals name="plurals_pin_wait_minutes">
+        <item quantity="one">Demasiadas tentativas. Aguarde 1 minuto.</item>
+        <item quantity="other">Demasiadas tentativas. Aguarde %1$d minutos.</item>
+    </plurals>
     <plurals name="plurals_backup_overdue">
         <item quantity="one">A última cópia foi há 1 dia</item>
         <item quantity="other">A última cópia foi há %1$d dias</item>

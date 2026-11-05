@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.stock
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -269,6 +270,7 @@ internal fun <T> PickerSheet(
     var query by rememberSaveable { mutableStateOf("") }
     val visible = if (query.isBlank()) options else options.filter { labelFor(it).contains(query.trim(), ignoreCase = true) }
 
+    OnSignOut(onDismiss)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
