@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -36,6 +37,9 @@ data class ShopSettings(
     /** When the automatic copy after closing a day last failed; null once one succeeds. */
     val autoBackupFailedAt: Long? = null,
     val onboardingDone: Boolean = false,
+    val staffEnabled: Boolean = false,
+    val recoveryHash: String = "",
+    val idleTimeoutMinutes: Int = 10,
 )
 
 @Singleton
@@ -59,6 +63,9 @@ class SettingsStore(
         val KEY_LAST_BACKUP = longPreferencesKey("last_backup")
         val KEY_AUTO_BACKUP_FAILED = longPreferencesKey("auto_backup_failed")
         val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+        val KEY_STAFF_ENABLED = booleanPreferencesKey("staff_enabled")
+        val KEY_RECOVERY_HASH = stringPreferencesKey("recovery_hash")
+        val KEY_IDLE_TIMEOUT_MINUTES = intPreferencesKey("idle_timeout_minutes")
     }
 
     val settings: Flow<ShopSettings> = dataStore.data.map { prefs ->
@@ -76,6 +83,9 @@ class SettingsStore(
             lastBackupAt = prefs[KEY_LAST_BACKUP],
             autoBackupFailedAt = prefs[KEY_AUTO_BACKUP_FAILED],
             onboardingDone = prefs[KEY_ONBOARDING_DONE] ?: false,
+            staffEnabled = prefs[KEY_STAFF_ENABLED] ?: false,
+            recoveryHash = prefs[KEY_RECOVERY_HASH] ?: "",
+            idleTimeoutMinutes = prefs[KEY_IDLE_TIMEOUT_MINUTES] ?: 10,
         )
     }
 
@@ -125,6 +135,18 @@ class SettingsStore(
 
     suspend fun setOnboardingDone(done: Boolean) {
         dataStore.edit { it[KEY_ONBOARDING_DONE] = done }
+    }
+
+    suspend fun setStaffEnabled(enabled: Boolean) {
+        dataStore.edit { it[KEY_STAFF_ENABLED] = enabled }
+    }
+
+    suspend fun setRecoveryHash(hash: String) {
+        dataStore.edit { it[KEY_RECOVERY_HASH] = hash }
+    }
+
+    suspend fun setIdleTimeoutMinutes(minutes: Int) {
+        dataStore.edit { it[KEY_IDLE_TIMEOUT_MINUTES] = minutes }
     }
 }
 
