@@ -55,7 +55,6 @@ import com.archsolutions.shopmanager.data.settings.SettingsStore
 import com.archsolutions.shopmanager.data.staff.StaffGuard
 import com.archsolutions.shopmanager.data.staff.StaffSession
 import com.archsolutions.shopmanager.domain.staff.GateDecision
-import com.archsolutions.shopmanager.domain.staff.Role
 import com.archsolutions.shopmanager.domain.staff.GateInputs
 import com.archsolutions.shopmanager.domain.staff.decide
 import com.archsolutions.shopmanager.domain.staff.permissionFor
@@ -63,7 +62,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -77,13 +75,8 @@ class PinViewModel @Inject constructor(
     settingsStore: SettingsStore,
 ) : ViewModel() {
     /** Null until the first real emission; an unknown state must never decide RUN. */
-    internal val gateState: StateFlow<GateInputs?> = combine(
-        settingsStore.settings,
-        staffSession.current,
-        pinGuard.required,
-    ) { settings, current, required ->
-        GateInputs(settings.staffEnabled, current?.let { Role.fromKey(it.role) }, required)
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    internal val gateState: StateFlow<GateInputs?> = gateInputsFlow(settingsStore.settings, staffSession.current)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     suspend fun check(pin: String): PinResult = pinGuard.check(pin)
 
