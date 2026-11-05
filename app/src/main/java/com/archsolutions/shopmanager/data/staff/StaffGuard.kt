@@ -106,11 +106,20 @@ class StaffGuard @Inject constructor(
             lockedFor(key)?.let { return@withLock RecoveryOutcome.Locked(it) }
             val fresh = repo.recoverOwner(ownerId, code, newPin)
             when (val r = record(key, fresh != null)) {
-                PinResult.Ok -> RecoveryOutcome.Ok(fresh!!)
+                PinResult.Ok -> {
+                    // Having just proved the Owner's recovery code, they must not sit out the shared Owner-PIN lock.
+                    resetCounter(OWNER_KEY)
+                    RecoveryOutcome.Ok(fresh!!)
+                }
                 is PinResult.Locked -> RecoveryOutcome.Locked(r.waitMillis)
                 is PinResult.Wrong -> RecoveryOutcome.WrongCode
             }
         }
+    }
+
+    @Synchronized
+    private fun resetCounter(key: String) {
+        counters.remove(key)
     }
 
     @Synchronized

@@ -106,6 +106,17 @@ class StaffGuardTest {
     }
 
     @Test
+    fun `a successful recovery clears the shared Owner PIN lock`() = runTest {
+        setUpAll()
+        repeat(5) { guard.approveAsOwner("0000") }
+        assertTrue(guard.approveAsOwner("1111") is PinResult.Locked)
+
+        assertTrue(guard.recover(ownerId, code, "5555") is RecoveryOutcome.Ok)
+
+        assertEquals(PinResult.Ok, guard.approveAsOwner("5555"))
+    }
+
+    @Test
     fun `recover has its own counter`() = runTest {
         setUpAll()
         repeat(4) { assertEquals(RecoveryOutcome.WrongCode, guard.recover(ownerId, "WRONGCODE", "5555")) }

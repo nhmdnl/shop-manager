@@ -510,6 +510,10 @@
         <item quantity="one">Majaribio mengi. Subiri sekunde 1.</item>
         <item quantity="other">Majaribio mengi. Subiri sekunde %1$d.</item>
     </plurals>
+    <plurals name="plurals_pin_wait_minutes">
+        <item quantity="one">Majaribio mengi. Subiri dakika 1.</item>
+        <item quantity="other">Majaribio mengi. Subiri dakika %1$d.</item>
+    </plurals>
     <plurals name="plurals_backup_overdue">
         <item quantity="one">Nakala ya mwisho ilikuwa siku 1 iliyopita</item>
         <item quantity="other">Nakala ya mwisho ilikuwa siku %1$d zilizopita</item>

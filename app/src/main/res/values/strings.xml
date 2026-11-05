@@ -531,6 +531,10 @@
         <item quantity="one">Too many tries. Wait 1 second.</item>
         <item quantity="other">Too many tries. Wait %1$d seconds.</item>
     </plurals>
+    <plurals name="plurals_pin_wait_minutes">
+        <item quantity="one">Too many tries. Wait 1 minute.</item>
+        <item quantity="other">Too many tries. Wait %1$d minutes.</item>
+    </plurals>
     <plurals name="plurals_backup_overdue">
         <item quantity="one">Last backup was 1 day ago</item>
         <item quantity="other">Last backup was %1$d days ago</item>

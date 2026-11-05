@@ -64,7 +64,7 @@ class StaffRepo(
      * the recovery hash, and the on flag is written last. [beforeEnable] runs with the Owner just before the flag flips.
      */
     suspend fun enableStaff(ownerName: String, ownerPin: String, beforeEnable: suspend (StaffEntity) -> Unit = {}): String {
-        check(!settings.settings.first().staffEnabled) { "Staff is already on" }
+        check(!staffActive.first()) { "Staff is already on" } // flag AND an active Owner; the flag alone would block recovering a shop with no Owner
         val existing = existingOwner()
         val owner: StaffEntity
         if (existing != null) {

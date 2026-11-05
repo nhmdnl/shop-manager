@@ -13,6 +13,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,6 +29,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
@@ -37,7 +42,10 @@ import com.archsolutions.shopmanager.domain.staff.Role
 import com.archsolutions.shopmanager.feature.pin.PinEntry
 import com.archsolutions.shopmanager.feature.pin.PinPad
 import com.archsolutions.shopmanager.feature.pin.pinFailureMessage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private const val SHOWN_CODE_MILLIS = 120_000L
 
 /** Full-screen sign-in: pick who is working, then type their PIN. Leaving it is the session's job, not this screen's. */
 @Composable
@@ -121,6 +129,22 @@ fun StaffSignInScreen(viewModel: StaffSignInViewModel = hiltViewModel(), modifie
             recover = viewModel::recover,
             onClose = { recovering = false },
         )
+    }
+    // Nobody is signed in here, so the new code must not wait for the next person: it goes when the app leaves the
+    // foreground, or after two minutes.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE) viewModel.codeWritten()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(shownCode) {
+        if (shownCode != null) {
+            delay(SHOWN_CODE_MILLIS)
+            viewModel.codeWritten()
+        }
     }
     shownCode?.let { code -> RecoveryCodeDialog(code = code, onWritten = viewModel::codeWritten) }
 }

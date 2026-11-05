@@ -251,9 +251,17 @@ internal fun pinFailureMessage(resources: android.content.res.Resources, result:
     is PinResult.Wrong -> resources.getQuantityString(R.plurals.plurals_pin_tries_left, result.triesLeft, result.triesLeft)
     is PinResult.Locked -> {
         val seconds = ceil(result.waitMillis / 1000.0).toInt()
-        resources.getQuantityString(R.plurals.plurals_pin_wait, seconds, seconds)
+        val minutes = lockWaitMinutes(seconds)
+        if (minutes == null) {
+            resources.getQuantityString(R.plurals.plurals_pin_wait, seconds, seconds)
+        } else {
+            resources.getQuantityString(R.plurals.plurals_pin_wait_minutes, minutes, minutes)
+        }
     }
 }
+
+/** Minutes to show for a lock wait of [seconds] (rounded up), or null below 60 s where seconds read better. */
+internal fun lockWaitMinutes(seconds: Int): Int? = if (seconds >= 60) (seconds + 59) / 60 else null
 
 @Composable
 internal fun PinPad(

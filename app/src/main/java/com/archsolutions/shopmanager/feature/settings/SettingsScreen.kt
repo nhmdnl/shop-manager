@@ -141,6 +141,11 @@ fun SettingsScreen(
             )
         },
     ) { paddingValues ->
+        // Unknown (still loading) shows nothing: neither the locked text nor the content.
+        if (staffOn == null) {
+            Box(modifier = Modifier.fillMaxSize().padding(paddingValues))
+            return@Scaffold
+        }
         if (!open) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(paddingValues).padding(24.dp),

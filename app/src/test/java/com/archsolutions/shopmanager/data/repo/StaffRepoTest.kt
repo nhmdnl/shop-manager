@@ -390,4 +390,16 @@ class StaffRepoTest {
         assertNull(repo.regenerateRecoveryCode(joan))
         assertNull(repo.regenerateRecoveryCode(9_999L))
     }
+
+    @Test
+    fun `setup recovers a shop whose flag is on but has no active Owner`() = runTest {
+        setUpRepo()
+        settings.setStaffEnabled(true)
+        assertFalse(repo.staffActive.first())
+
+        val code = repo.enableStaff("Mary", "1234")
+
+        assertTrue(code.isNotEmpty())
+        assertTrue(repo.staffActive.first())
+    }
 }
