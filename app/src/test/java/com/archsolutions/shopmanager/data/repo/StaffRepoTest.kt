@@ -201,20 +201,40 @@ class StaffRepoTest {
     }
 
     @Test
-    fun `enable, disable, enable again reuses the owner row`() = runTest {
+    fun `enable, disable, enable again needs the Owner PIN and keeps name, PIN and row`() = runTest {
         setUpRepo()
         val oldCode = repo.enableStaff("Mary", "1234")
-        val id = repo.staff.first().single().id
+        val before = repo.staff.first().single()
         repo.disableStaff()
-        val newCode = repo.enableStaff(" Maria ", "4321")
-        val all = repo.staff.first()
-        assertEquals(1, all.count { it.role == "OWNER" })
-        assertEquals(id, all.single().id)
-        assertEquals("Maria", all.single().name)
-        assertTrue(repo.verify(id, "4321"))
-        assertFalse(repo.verify(id, "1234"))
-        assertNull(repo.recoverOwner(id, oldCode, "0000"))
-        assertTrue(repo.recoverOwner(id, newCode, "5555") != null)
+
+        val newCode = repo.enableStaff("Ignored", "1234")
+
+        val after = repo.staff.first().single()
+        assertEquals(before, after)
+        assertEquals("Mary", after.name)
+        assertTrue(repo.verify(after.id, "1234"))
+        assertTrue(settings.settings.first().staffEnabled)
+        assertNull(repo.recoverOwner(after.id, oldCode, "0000"))
+        assertTrue(repo.recoverOwner(after.id, newCode, "5555") != null)
+    }
+
+    @Test
+    fun `re-enabling with a wrong Owner PIN refuses and changes nothing`() = runTest {
+        setUpRepo()
+        repo.enableStaff("Mary", "1234")
+        val before = repo.staff.first()
+        val hashBefore = settings.settings.first().recoveryHash
+        repo.disableStaff()
+
+        try {
+            repo.enableStaff("Eve", "9999")
+            fail("expected WrongOwnerPinException")
+        } catch (_: WrongOwnerPinException) {
+        }
+
+        assertEquals(before, repo.staff.first())
+        assertFalse(settings.settings.first().staffEnabled)
+        assertEquals(hashBefore, settings.settings.first().recoveryHash)
     }
 
     @Test
@@ -223,21 +243,97 @@ class StaffRepoTest {
         repo.enableStaff("Mary", "1234")
         val joe = repo.addStaff("Joe", Role.CASHIER, "1111")
         repo.disableStaff()
-        repo.enableStaff("Mary", "4321")
+        repo.enableStaff("Mary", "1234")
         assertEquals(2, repo.staff.first().size)
         assertTrue(repo.verify(joe, "1111"))
     }
 
     @Test
-    fun `off-then-on reactivates an inactive owner`() = runTest {
+    fun `off-then-on uses the first active Owner when the first one is switched off`() = runTest {
         setUpRepo()
         repo.enableStaff("Mary", "1234")
         val second = repo.addStaff("Joe", Role.OWNER, "5678")
         val first = repo.staff.first().first { it.id != second }.id
         repo.setActive(first, false)
         repo.disableStaff()
-        repo.enableStaff("Mary", "4321")
-        assertTrue(repo.verify(first, "4321"))
+        assertEquals(second, repo.existingOwner()!!.id)
+        try {
+            repo.enableStaff("Mary", "1234")
+            fail("the switched-off Owner's PIN must not work")
+        } catch (_: WrongOwnerPinException) {
+        }
+        repo.enableStaff("Mary", "5678")
+        assertFalse(repo.staff.first().first { it.id == first }.active)
+        assertEquals(2, repo.staff.first().size)
+    }
+
+    @Test
+    fun `a failed database step leaves staff off with no new recovery hash`() = runTest {
+        setUpRepo()
+        db.close()
+        try {
+            repo.enableStaff("Mary", "1234")
+            fail("expected the closed database to fail")
+        } catch (_: Exception) {
+        }
+        assertFalse(settings.settings.first().staffEnabled)
+        assertEquals("", settings.settings.first().recoveryHash)
+    }
+
+    @Test
+    fun `the on flag is the last write (recovery hash is already stored when beforeEnable runs)`() = runTest {
+        setUpRepo()
+        var enabledWhenCalled: Boolean? = null
+        var hashWhenCalled: String? = null
+        repo.enableStaff("Mary", "1234") {
+            enabledWhenCalled = settings.settings.first().staffEnabled
+            hashWhenCalled = settings.settings.first().recoveryHash
+        }
+        assertEquals(false, enabledWhenCalled)
+        assertTrue(hashWhenCalled!!.isNotEmpty())
+        assertTrue(settings.settings.first().staffEnabled)
+    }
+
+    @Test
+    fun `staffActive needs the setting and an active Owner`() = runTest {
+        setUpRepo()
+        // Setting on with no Owner row (a failed or restored state): behaves as staff off.
+        settings.setStaffEnabled(true)
+        assertFalse(repo.staffActive.first())
+
+        settings.setStaffEnabled(false)
+        repo.enableStaff("Mary", "1234")
+        assertTrue(repo.staffActive.first())
+        val mary = repo.staff.first().single().id
+        val joe = repo.addStaff("Joe", Role.OWNER, "5678")
+        repo.setActive(mary, false)
+        assertTrue(repo.staffActive.first())
+        repo.setActive(joe, false) // refused: last active Owner
+        assertTrue(repo.staffActive.first())
+        repo.disableStaff()
+        assertFalse(repo.staffActive.first())
+    }
+
+    @Test
+    fun `hashing and verifying run on the injected dispatcher, not the caller`() = runTest {
+        setUpRepo()
+        var dispatches = 0
+        val counting = object : kotlinx.coroutines.CoroutineDispatcher() {
+            override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) {
+                dispatches++
+                kotlinx.coroutines.Dispatchers.Default.dispatch(context, block)
+            }
+        }
+        val r = StaffRepo(db, db.staffDao(), settings, clock, pinIterations = 1_000, hashDispatcher = counting)
+        r.enableStaff("Mary", "1234")
+        val afterEnable = dispatches
+        assertTrue(afterEnable >= 2)
+        val id = r.staff.first().single().id
+        val joe = r.addStaff("Joe", Role.CASHIER, "1111")
+        assertTrue(r.verify(joe, "1111"))
+        r.resetPin(joe, "2222")
+        assertTrue(dispatches >= afterEnable + 3)
+        assertNotNull(r.regenerateRecoveryCode(id))
     }
 
     @Test

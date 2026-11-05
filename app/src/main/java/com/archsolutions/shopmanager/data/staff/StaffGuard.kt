@@ -2,7 +2,9 @@ package com.archsolutions.shopmanager.data.staff
 
 import com.archsolutions.shopmanager.core.security.Pin
 import com.archsolutions.shopmanager.core.util.AppClock
+import com.archsolutions.shopmanager.data.db.entities.StaffEntity
 import com.archsolutions.shopmanager.data.repo.StaffRepo
+import com.archsolutions.shopmanager.data.repo.WrongOwnerPinException
 import com.archsolutions.shopmanager.data.settings.PinResult
 import com.archsolutions.shopmanager.domain.staff.Role
 import kotlinx.coroutines.flow.first
@@ -17,9 +19,17 @@ sealed interface RecoveryOutcome {
     data class Locked(val waitMillis: Long) : RecoveryOutcome
 }
 
+sealed interface EnableOutcome {
+    data class Ok(val code: String) : EnableOutcome
+    data class Failed(val result: PinResult) : EnableOutcome
+}
+
 /**
- * Sign-in, Owner approval and recovery, each with its own wrong-try counter (5 tries, then 30 s),
- * one per person. Counts live for the process, like [com.archsolutions.shopmanager.data.settings.PinGuard].
+ * Sign-in, Owner approval and recovery with wrong-try counters: one per Cashier, and ONE shared "Owner PIN" counter
+ * for everything that guesses an Owner's PIN (an Owner's sign-in, [approveAsOwner], re-enabling staff), so alternating
+ * between those doors buys no extra tries. 5 wrong tries lock a key; each further lock doubles (30 s, 60 s, 120 s ...,
+ * at most 15 min), and a success resets it. Counts live for the process only, like
+ * [com.archsolutions.shopmanager.data.settings.PinGuard].
  */
 @Singleton
 class StaffGuard @Inject constructor(
@@ -30,6 +40,7 @@ class StaffGuard @Inject constructor(
     private class Counter {
         var failures = 0
         var lockedUntil = 0L
+        var locks = 0
     }
 
     private val counters = HashMap<String, Counter>()
@@ -46,7 +57,9 @@ class StaffGuard @Inject constructor(
         private set
 
     suspend fun signIn(staffId: Long, pin: String): PinResult {
-        val key = "staff:$staffId"
+        // An Owner's PIN is guessed on one shared counter whichever door is used; Cashiers get one counter each.
+        val known = repo.staff.first().firstOrNull { it.id == staffId && it.active }
+        val key = if (known != null && known.role == Role.OWNER.key) OWNER_KEY else "staff:$staffId"
         return mutexFor(key).withLock {
             lockedFor(key)?.let { return@withLock PinResult.Locked(it) }
             val person = repo.staff.first().firstOrNull { it.id == staffId && it.active }
@@ -71,6 +84,22 @@ class StaffGuard @Inject constructor(
         }
     }
 
+    /**
+     * Turns staff on. With an existing Owner row the right current Owner PIN is needed; wrong tries count on the shared
+     * Owner-PIN counter. [beforeEnable] runs with the Owner just before the flag flips (see [StaffRepo.enableStaff]).
+     */
+    suspend fun enableStaff(ownerName: String, ownerPin: String, beforeEnable: suspend (StaffEntity) -> Unit = {}): EnableOutcome =
+        mutexFor(OWNER_KEY).withLock {
+            lockedFor(OWNER_KEY)?.let { return@withLock EnableOutcome.Failed(PinResult.Locked(it)) }
+            try {
+                val code = repo.enableStaff(ownerName, ownerPin, beforeEnable)
+                record(OWNER_KEY, true)
+                EnableOutcome.Ok(code)
+            } catch (_: WrongOwnerPinException) {
+                EnableOutcome.Failed(record(OWNER_KEY, false))
+            }
+        }
+
     suspend fun recover(ownerId: Long, code: String, newPin: String): RecoveryOutcome {
         val key = "recovery"
         return mutexFor(key).withLock {
@@ -94,12 +123,14 @@ class StaffGuard @Inject constructor(
         return when {
             success -> {
                 c.failures = 0
+                c.locks = 0
                 PinResult.Ok
             }
             ++c.failures >= Pin.MAX_TRIES -> {
                 c.failures = 0
-                c.lockedUntil = clock.nowMillis() + Pin.LOCKOUT_MILLIS
-                PinResult.Locked(Pin.LOCKOUT_MILLIS)
+                val wait = lockoutMillis(c.locks++)
+                c.lockedUntil = clock.nowMillis() + wait
+                PinResult.Locked(wait)
             }
             else -> PinResult.Wrong(triesLeft = Pin.MAX_TRIES - c.failures)
         }
@@ -107,5 +138,10 @@ class StaffGuard @Inject constructor(
 
     private companion object {
         const val OWNER_KEY = "owner"
+        const val MAX_LOCKOUT_MILLIS = 15 * 60_000L
+
+        /** 30 s, 60 s, 120 s ... for the 1st, 2nd, 3rd lock, capped at 15 min. */
+        fun lockoutMillis(previousLocks: Int): Long =
+            if (previousLocks >= 5) MAX_LOCKOUT_MILLIS else minOf(Pin.LOCKOUT_MILLIS shl previousLocks, MAX_LOCKOUT_MILLIS)
     }
 }

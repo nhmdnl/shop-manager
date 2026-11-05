@@ -179,4 +179,75 @@ class StaffGuardTest {
         assertEquals(PinResult.Wrong(4), guard.approveAsOwner("1111"))
         assertNull(guard.lastApproverId)
     }
+
+    @Test
+    fun `an Owner's sign-in and the Owner approval share one counter`() = runTest {
+        setUpAll()
+        assertEquals(PinResult.Wrong(4), guard.signIn(ownerId, "0000"))
+        assertEquals(PinResult.Wrong(3), guard.approveAsOwner("0000"))
+        assertEquals(PinResult.Wrong(2), guard.signIn(ownerId, "0000"))
+        assertEquals(PinResult.Wrong(1), guard.approveAsOwner("0000"))
+        assertEquals(PinResult.Locked(Pin.LOCKOUT_MILLIS), guard.signIn(ownerId, "0000"))
+        // Both doors are shut, with the right PIN too.
+        assertTrue(guard.approveAsOwner("1111") is PinResult.Locked)
+        assertTrue(guard.signIn(ownerId, "1111") is PinResult.Locked)
+        assertNull(session.currentId)
+        // Cashier counters stay separate.
+        assertEquals(PinResult.Ok, guard.signIn(cashierA, "2222"))
+    }
+
+    @Test
+    fun `an Owner's success resets the shared counter`() = runTest {
+        setUpAll()
+        repeat(3) { guard.approveAsOwner("0000") }
+        assertEquals(PinResult.Ok, guard.signIn(ownerId, "1111"))
+        assertEquals(PinResult.Wrong(4), guard.approveAsOwner("0000"))
+    }
+
+    @Test
+    fun `each lock doubles up to 15 minutes and a success resets the escalation`() = runTest {
+        setUpAll()
+        suspend fun burn(): PinResult { var r: PinResult = PinResult.Ok; repeat(5) { r = guard.approveAsOwner("0000") }; return r }
+        val expected = listOf(30_000L, 60_000L, 120_000L, 240_000L, 480_000L, 900_000L, 900_000L)
+        for (wait in expected) {
+            assertEquals(PinResult.Locked(wait), burn())
+            clock.now += wait
+        }
+        // A success resets the ladder back to 30 s.
+        assertEquals(PinResult.Ok, guard.approveAsOwner("1111"))
+        assertEquals(PinResult.Locked(30_000L), burn())
+    }
+
+    @Test
+    fun `the lock is still in force for the whole doubled time`() = runTest {
+        setUpAll()
+        repeat(5) { guard.approveAsOwner("0000") }
+        clock.now += Pin.LOCKOUT_MILLIS
+        repeat(5) { guard.approveAsOwner("0000") }
+        clock.now += Pin.LOCKOUT_MILLIS * 2 - 1
+        assertTrue(guard.approveAsOwner("1111") is PinResult.Locked)
+        clock.now += 1
+        assertEquals(PinResult.Ok, guard.approveAsOwner("1111"))
+    }
+
+    @Test
+    fun `cashier sign-in locks escalate too`() = runTest {
+        setUpAll()
+        repeat(5) { guard.signIn(cashierA, "0000") }
+        clock.now += Pin.LOCKOUT_MILLIS
+        repeat(4) { guard.signIn(cashierA, "0000") }
+        assertEquals(PinResult.Locked(Pin.LOCKOUT_MILLIS * 2), guard.signIn(cashierA, "0000"))
+    }
+
+    @Test
+    fun `re-enabling staff counts wrong Owner PINs on the shared counter`() = runTest {
+        setUpAll()
+        repo.disableStaff()
+        assertEquals(PinResult.Wrong(4), guard.approveAsOwner("0000"))
+        assertEquals(EnableOutcome.Failed(PinResult.Wrong(3)), guard.enableStaff("x", "0000"))
+        assertTrue(guard.enableStaff("x", "0000") is EnableOutcome.Failed)
+        assertTrue(guard.enableStaff("x", "0000") is EnableOutcome.Failed)
+        assertEquals(EnableOutcome.Failed(PinResult.Locked(Pin.LOCKOUT_MILLIS)), guard.enableStaff("x", "0000"))
+        assertTrue(guard.enableStaff("x", "1111") is EnableOutcome.Failed)
+    }
 }
