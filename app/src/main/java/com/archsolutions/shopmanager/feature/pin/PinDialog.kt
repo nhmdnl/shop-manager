@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
@@ -51,45 +52,86 @@ import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButto
 import com.archsolutions.shopmanager.core.security.Pin
 import com.archsolutions.shopmanager.data.settings.PinGuard
 import com.archsolutions.shopmanager.data.settings.PinResult
+import com.archsolutions.shopmanager.data.settings.SettingsStore
+import com.archsolutions.shopmanager.data.staff.StaffGuard
+import com.archsolutions.shopmanager.data.staff.StaffSession
+import com.archsolutions.shopmanager.domain.staff.GateDecision
+import com.archsolutions.shopmanager.domain.staff.Role
+import com.archsolutions.shopmanager.domain.staff.decideGate
+import com.archsolutions.shopmanager.domain.staff.permissionFor
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.math.ceil
 
+/** What the gate needs to decide; collected so a sign-in or a settings change takes effect at once. */
+internal data class GateState(val staffEnabled: Boolean = false, val role: Role? = null, val sharedPinRequired: Boolean = false)
+
 @HiltViewModel
 class PinViewModel @Inject constructor(
     private val pinGuard: PinGuard,
+    private val staffSession: StaffSession,
+    private val staffGuard: StaffGuard,
+    settingsStore: SettingsStore,
 ) : ViewModel() {
-    val required = pinGuard.required
+    internal val gateState: StateFlow<GateState> = combine(
+        settingsStore.settings,
+        staffSession.current,
+        pinGuard.required,
+    ) { settings, current, required ->
+        GateState(settings.staffEnabled, current?.let { Role.fromKey(it.role) }, required)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GateState())
 
     suspend fun check(pin: String): PinResult = pinGuard.check(pin)
-}
 
-/** Asks for the PIN before an action when one is set (addendum C4); otherwise runs it straight away. */
-@Stable
-class PinGate internal constructor(private val required: State<Boolean>) {
-    internal var request by mutableStateOf<PinRequest?>(null)
+    suspend fun checkOwner(pin: String): PinResult = staffGuard.approveAsOwner(pin)
 
-    fun run(@StringRes purpose: Int, action: () -> Unit) {
-        if (required.value) request = PinRequest(purpose, action) else action()
+    /** Runs [action] with the approving Owner (if any) visible as [StaffSession.actingId], then clears it. */
+    fun runApproved(ownerApproved: Boolean, action: () -> Unit) {
+        staffSession.approvedBy = if (ownerApproved) staffGuard.lastApproverId else null
+        try {
+            action()
+        } finally {
+            staffSession.approvedBy = null
+        }
     }
 }
 
-internal data class PinRequest(@StringRes val purpose: Int, val onSuccess: () -> Unit)
+/** Asks for the PIN before an action: the shared PIN when staff is off (addendum C4), an Owner's PIN when the signed-in role can't do it; otherwise runs it straight away. */
+@Stable
+class PinGate internal constructor(private val state: State<GateState>, private val runApproved: (Boolean, () -> Unit) -> Unit) {
+    internal var request by mutableStateOf<PinRequest?>(null)
+
+    fun run(@StringRes purpose: Int, action: () -> Unit) {
+        val s = state.value
+        when (decideGate(s.staffEnabled, s.role, permissionFor(purpose), s.sharedPinRequired)) {
+            GateDecision.RUN -> runApproved(false, action)
+            GateDecision.ASK_SHARED_PIN -> request = PinRequest(purpose, ownerPin = false, action)
+            GateDecision.ASK_OWNER_PIN -> request = PinRequest(purpose, ownerPin = true, action)
+        }
+    }
+}
+
+internal data class PinRequest(@StringRes val purpose: Int, val ownerPin: Boolean, val onSuccess: () -> Unit)
 
 /** A [PinGate] for this screen; the PIN dialog shows here while a request is waiting. */
 @Composable
 fun rememberPinGate(viewModel: PinViewModel = hiltViewModel()): PinGate {
-    val required = viewModel.required.collectAsStateWithLifecycle()
-    val gate = remember(required) { PinGate(required) }
+    val state = viewModel.gateState.collectAsStateWithLifecycle()
+    val gate = remember(state) { PinGate(state, viewModel::runApproved) }
     gate.request?.let { request ->
         PinCheckDialog(
+            title = stringResource(if (request.ownerPin) R.string.pin_owner_needed else R.string.pin_enter),
             purpose = stringResource(request.purpose),
-            check = viewModel::check,
+            check = if (request.ownerPin) viewModel::checkOwner else viewModel::check,
             onDismiss = { gate.request = null },
             onSuccess = {
                 gate.request = null
-                request.onSuccess()
+                viewModel.runApproved(request.ownerPin, request.onSuccess)
             },
         )
     }
@@ -97,13 +139,13 @@ fun rememberPinGate(viewModel: PinViewModel = hiltViewModel()): PinGate {
 }
 
 @Composable
-private fun PinCheckDialog(purpose: String, check: suspend (String) -> PinResult, onDismiss: () -> Unit, onSuccess: () -> Unit) {
+private fun PinCheckDialog(title: String, purpose: String, check: suspend (String) -> PinResult, onDismiss: () -> Unit, onSuccess: () -> Unit) {
     val resources = LocalContext.current.resources
     val scope = rememberCoroutineScope()
     var digits by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
     PinKeypadDialog(
-        title = stringResource(R.string.pin_enter),
+        title = title,
         subtitle = purpose,
         digits = digits,
         message = message,

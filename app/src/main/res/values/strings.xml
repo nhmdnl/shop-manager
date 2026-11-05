@@ -486,6 +486,7 @@
     <string name="settings_currency_value">%1$s · Ugandan shilling</string>
     <!-- PIN, backup and restore (M9) -->
     <string name="pin_enter">Enter PIN</string>
+    <string name="pin_owner_needed">Owner PIN needed</string>
     <string name="pin_for_void">Needed to void a sale</string>
     <string name="pin_for_stock">Needed to correct stock</string>
     <string name="pin_for_close">Needed to close the day</string>
