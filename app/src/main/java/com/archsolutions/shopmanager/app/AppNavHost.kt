@@ -186,6 +186,20 @@ fun AppNavHost(
 /** Screens reached only through an Owner-gated tap (restore, cloud sign-in/pay, staff). Nothing else may keep them open. */
 internal val entryGatedRoutes = listOf(CloudRestoreRoute::class, CloudSignInRoute::class, CloudPayRoute::class, StaffRoute::class)
 
+/** True when any route on [routes] is an entry-gated one: such a stack is never saved by tab switching (N1). */
+internal fun stackHoldsGatedRoute(routes: List<kotlin.reflect.KClass<*>>): Boolean = routes.any { it in entryGatedRoutes }
+
+/**
+ * N2: the owner-only screens are popped only when staff is on and nobody is signed in. The session is in memory, so
+ * after process death nobody is signed in and the pop still happens; a rotation with an Owner signed in keeps them.
+ * Unknown (null) never pops here: the gate itself covers unknown.
+ */
+internal fun shouldDropGatedRoutes(staffActive: Boolean?, signedInId: Long?): Boolean = staffActive == true && signedInId == null
+
+private fun NavHostController.currentStackHoldsGated(): Boolean = currentBackStack.value.any { entry ->
+    entryGatedRoutes.any { entry.destination.hasRoute(it) }
+}
+
 /** Pops every entry-gated screen off the stack (no-op for those not on it). */
 internal fun NavHostController.dropEntryGated() {
     popBackStack<CloudRestoreRoute>(true)
@@ -236,10 +250,12 @@ private fun AppShell(
     // on, the next person must not land on them (a Cashier on the restore list could confirm a restore with no PIN).
     val staffGateViewModel: StaffGateViewModel = hiltViewModel()
     val staffActive by staffGateViewModel.staffActive.collectAsStateWithLifecycle()
+    val signedIn by staffGateViewModel.current.collectAsStateWithLifecycle()
     val signOutTick = LocalSignOutTick.current
     val firstTick = remember { signOutTick }
-    LaunchedEffect(staffActive, currentDestination != null) {
-        if (staffActive == true && currentDestination != null) navController.dropEntryGated()
+    // Also keyed on the current entry: a tab restore with nobody signed in drops any owner-only screen that came back (N1).
+    LaunchedEffect(staffActive, signedIn?.id, currentDestination != null, navBackStackEntry?.id) {
+        if (shouldDropGatedRoutes(staffActive, signedIn?.id) && currentDestination != null) navController.dropEntryGated()
     }
     LaunchedEffect(signOutTick) {
         if (signOutTick != firstTick) navController.dropEntryGated()
@@ -825,9 +841,11 @@ internal fun NavHostController.navigateToTab(dest: NavDestination) {
     val inDayFlow = currentBackStack.value.any {
         it.destination.hasRoute(CloseDayRoute::class) || it.destination.hasRoute(DayClosedRoute::class)
     }
+    // N1: owner-only screens (restore, cloud, staff) are never saved, so a tab tap by the next person can't bring them back.
+    val saveStack = !inDayFlow && !currentStackHoldsGated()
     // Home is the start destination: go back to it rather than restore a stack saved for it.
     if (dest == NavDestination.HOME) {
-        if (!popBackStack<HomeRoute>(inclusive = false, saveState = !inDayFlow) &&
+        if (!popBackStack<HomeRoute>(inclusive = false, saveState = saveStack) &&
             currentDestination?.hasRoute(HomeRoute::class) != true
         ) {
             navigate(HomeRoute) { launchSingleTop = true }
@@ -836,7 +854,7 @@ internal fun NavHostController.navigateToTab(dest: NavDestination) {
     }
     navigate(dest.route) {
         popUpTo(graph.findStartDestination().id) {
-            saveState = !inDayFlow
+            saveState = saveStack
         }
         launchSingleTop = true
         restoreState = true
