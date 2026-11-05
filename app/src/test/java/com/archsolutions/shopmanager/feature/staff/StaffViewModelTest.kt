@@ -249,4 +249,57 @@ class StaffViewModelTest {
         assertTrue(vm.checkSharedPin("0000") is PinResult.Wrong)
         assertEquals(PinResult.Ok, vm.checkSharedPin("4321"))
     }
+
+    @Test
+    fun `regenerate shows the code once, then it is gone after confirm and on sign-out`() = runTest {
+        build()
+        vm.setUp("Grace", "1111")
+        vm.codeWritten()
+
+        val code = vm.newRecoveryCode()!!
+
+        assertEquals(code, vm.shownCode.value)
+        vm.codeWritten()
+        assertNull(vm.shownCode.value)
+
+        vm.newRecoveryCode()
+        assertNotNull(vm.shownCode.value)
+        session.signOut()
+        vm.discardCode()
+        assertNull(vm.shownCode.value)
+        // Nobody signed in: nothing to regenerate for, and nothing shown.
+        assertNull(vm.newRecoveryCode())
+        assertNull(vm.shownCode.value)
+    }
+
+    @Test
+    fun `regenerate is refused for a signed-in cashier`() = runTest {
+        build()
+        vm.setUp("Grace", "1111")
+        vm.codeWritten()
+        val amina = repo.addStaff("Amina", Role.CASHIER, "2222")
+        session.signIn(repo.staff.first().first { it.id == amina })
+
+        assertNull(vm.newRecoveryCode())
+        assertNull(vm.shownCode.value)
+    }
+
+    @Test
+    fun `a signed-in cashier cannot unlock the staff screen even with an owner approval, an owner can, unknown role cannot`() = runTest {
+        build()
+        vm.setUp("Grace", "1111")
+        val owner = session.current.value!!
+        assertTrue(vm.signedInOwner.value)
+        assertTrue(canOpenStaffScreen(Role.OWNER, true))
+
+        val amina = repo.addStaff("Amina", Role.CASHIER, "2222")
+        session.signIn(repo.staff.first().first { it.id == amina })
+        session.approvedBy = owner.id
+
+        assertFalse(vm.signedInOwner.value)
+        assertFalse(canOpenStaffScreen(Role.CASHIER, true))
+        assertFalse(canOpenStaffScreen(null, true))
+        assertFalse(canOpenStaffScreen(Role.OWNER, null))
+        assertFalse(canOpenStaffScreen(Role.OWNER, false))
+    }
 }

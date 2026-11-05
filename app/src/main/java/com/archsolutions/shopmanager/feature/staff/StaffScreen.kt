@@ -78,14 +78,18 @@ fun StaffScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel: St
     val lastOwnerMessage = stringResource(R.string.staff_last_owner)
     val blankMessage = stringResource(R.string.staff_name_blank)
 
-    LaunchedEffect(Unit) { pinGate.run(R.string.pin_for_staff) { unlocked = true } }
+    val isOwner by viewModel.signedInOwner.collectAsStateWithLifecycle()
+    val codeToShow by viewModel.shownCode.collectAsStateWithLifecycle()
+    // Re-gated on every entry (restore, deep link); only a signed-in Owner gets in, an approval from one never does.
+    LaunchedEffect(isOwner) { if (isOwner) pinGate.run(R.string.pin_for_staff) { unlocked = true } else unlocked = false }
     OnSignOut {
+        viewModel.discardCode()
         dialog = null
         unlocked = false
         onBack()
     }
     // Unknown or off is locked: this screen only exists while staff is on.
-    val open = unlocked && staffEnabled == true
+    val open = unlocked && canOpenStaffScreen(if (isOwner) Role.OWNER else null, staffEnabled)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -112,11 +116,13 @@ fun StaffScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel: St
                 verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
             ) {
                 Text(stringResource(R.string.staff_locked), style = MaterialTheme.typography.bodyLarge, color = colors.ink)
-                SecondaryButton(
-                    text = stringResource(R.string.staff_unlock),
-                    onClick = { pinGate.run(R.string.pin_for_staff) { unlocked = true } },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                if (isOwner) {
+                    SecondaryButton(
+                        text = stringResource(R.string.staff_unlock),
+                        onClick = { pinGate.run(R.string.pin_for_staff) { unlocked = true } },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
             return@Scaffold
         }
@@ -134,6 +140,11 @@ fun StaffScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel: St
                     )
                 }
             }
+            SecondaryButton(
+                text = stringResource(R.string.staff_new_code),
+                onClick = { scope.launch { viewModel.newRecoveryCode() } },
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            )
             PrimaryButton(
                 text = stringResource(R.string.staff_add),
                 onClick = { dialog = StaffDialogState.Adding },
@@ -141,6 +152,8 @@ fun StaffScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel: St
             )
         }
     }
+
+    codeToShow?.let { code -> RecoveryCodeDialog(code = code, onWritten = viewModel::codeWritten) }
 
     when (val d = dialog) {
         null -> Unit

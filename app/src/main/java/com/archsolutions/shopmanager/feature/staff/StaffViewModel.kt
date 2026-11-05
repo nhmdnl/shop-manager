@@ -31,6 +31,9 @@ class WrongSharedPinException : IllegalStateException("The shared PIN does not m
 /** A PIN is exactly [Pin.LENGTH] ASCII digits; the repo does not check this, so every entry point does. */
 fun isValidPin(pin: String): Boolean = pin.length == Pin.LENGTH && pin.all { it in '0'..'9' }
 
+/** The Staff screen needs the SIGNED-IN person to be an Owner and staff to be on; an Owner's approval of one action does not count. Unknown is closed. */
+fun canOpenStaffScreen(signedInRole: Role?, staffEnabled: Boolean?): Boolean = staffEnabled == true && signedInRole == Role.OWNER
+
 /** Setup, the staff list and turning staff off. Owner-only: the screens are reached through the Owner PIN gate. */
 @HiltViewModel
 class StaffViewModel @Inject constructor(
@@ -54,6 +57,11 @@ class StaffViewModel @Inject constructor(
     val currentId: StateFlow<Long?> = session.current.map { it?.id }
         .stateIn(viewModelScope, SharingStarted.Eagerly, session.currentId)
 
+    /** True only while an active Owner is signed in; never true through an approval. */
+    val signedInOwner: StateFlow<Boolean> = session.current
+        .map { it != null && it.active && Role.fromKey(it.role) == Role.OWNER }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     private val _shownCode = MutableStateFlow<String?>(null)
 
     /**
@@ -69,6 +77,18 @@ class StaffViewModel @Inject constructor(
     /** Drops a code nobody confirmed (sign-out), so the next person never sees it. */
     fun discardCode() {
         _shownCode.value = null
+    }
+
+    /**
+     * A fresh recovery code for the signed-in Owner, shown once through [shownCode]; null (nothing shown) for anyone
+     * else. The old code stops working at once.
+     */
+    suspend fun newRecoveryCode(): String? {
+        val me = session.current.value ?: return null
+        if (Role.fromKey(me.role) != Role.OWNER) return null
+        val code = repo.regenerateRecoveryCode(me.id) ?: return null
+        _shownCode.value = code
+        return code
     }
 
     /** The shared PIN check for the confirm step of setup; same 5-tries-then-30-s rule as the PIN gate. */

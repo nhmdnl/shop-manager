@@ -589,7 +589,7 @@
     <string name="settings_staff_off">Turn off staff</string>
     <string name="settings_staff_off_action">Turn off</string>
     <string name="settings_staff_off_title">Turn off staff sign-in?</string>
-    <string name="settings_staff_off_body">Everyone can use the app without signing in, and the shared PIN setting comes back. Staff and past sales are kept.</string>
+    <string name="settings_staff_off_body">Everyone can use the app without signing in, and the shared PIN setting comes back. Staff and past sales are kept. Setting staff up again reuses the first Owner and resets that Owner\'s PIN.</string>
     <string name="staff_setup_confirm_title">Type the shared PIN</string>
     <string name="staff_setup_confirm_hint">It becomes the Owner\'s PIN.</string>
     <string name="staff_setup_name_title">Who is the Owner?</string>
@@ -612,7 +612,8 @@
     <string name="staff_switch_off">Switch off</string>
     <string name="staff_switch_on">Switch on</string>
     <string name="staff_last_owner">At least one active Owner is required.</string>
-    <string name="staff_locked">Owner PIN needed to manage staff.</string>
+    <string name="staff_locked">Sign in as an Owner to manage staff.</string>
+    <string name="staff_new_code">New recovery code</string>
     <string name="staff_unlock">Enter PIN</string>
     <string name="staff_forgot_pin">Forgot the Owner PIN</string>
     <string name="staff_recovery_title">Recover the Owner PIN</string>

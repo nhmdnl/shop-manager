@@ -136,6 +136,7 @@ fun StaffSetupFlow(sharedPinSet: Boolean, viewModel: StaffViewModel, onClose: ()
     var ownerPin by remember { mutableStateOf<String?>(null) }
     var typed by remember { mutableStateOf<String?>(null) }
     var failed by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     OnSignOut {
         ownerPin = null
@@ -174,6 +175,8 @@ fun StaffSetupFlow(sharedPinSet: Boolean, viewModel: StaffViewModel, onClose: ()
             },
             error = if (failed) stringResource(R.string.staff_setup_failed) else null,
             onConfirm = { name ->
+                if (busy) return@NameDialog
+                busy = true
                 scope.launch {
                     try {
                         viewModel.setUp(name, pin)
@@ -181,8 +184,10 @@ fun StaffSetupFlow(sharedPinSet: Boolean, viewModel: StaffViewModel, onClose: ()
                         onClose()
                     } catch (_: IllegalArgumentException) {
                         failed = true
+                        busy = false
                     } catch (_: IllegalStateException) {
                         failed = true
+                        busy = false
                     }
                 }
             },

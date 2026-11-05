@@ -96,6 +96,14 @@ class StaffRepo(
         return fresh
     }
 
+    /** A fresh recovery code for an active Owner (the old one stops working); null for anyone else. Returned plain once, stored hashed. */
+    suspend fun regenerateRecoveryCode(ownerId: Long): String? {
+        val owner = staffDao.getByIdDirect(ownerId)?.takeIf { it.active && it.role == Role.OWNER.key } ?: return null
+        val fresh = RecoveryCode.generate()
+        db.withTransaction { settings.setRecoveryHash(hash(RecoveryCode.normalize(fresh))) }
+        return fresh
+    }
+
     private fun hash(secret: String) = PinHasher.hash(secret, pinIterations)
 
     private fun cleanName(name: String): String =

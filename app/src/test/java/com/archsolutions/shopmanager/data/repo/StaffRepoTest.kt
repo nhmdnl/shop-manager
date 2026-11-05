@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -271,5 +272,26 @@ class StaffRepoTest {
     fun `verify on a missing id is false`() = runTest {
         setUpRepo()
         assertFalse(repo.verify(999L, "1234"))
+    }
+
+    @Test
+    fun `regenerate returns a new code, old code stops working, new code works, cashier or inactive id returns null, unknown id returns null`() = kotlinx.coroutines.test.runTest {
+        setUpRepo()
+        val old = repo.enableStaff("Grace", "1111")
+        val grace = repo.staff.first().single().id
+        val cashier = repo.addStaff("Amina", Role.CASHIER, "2222")
+        val joan = repo.addStaff("Joan", Role.OWNER, "3333")
+
+        val fresh = repo.regenerateRecoveryCode(grace)!!
+
+        assertTrue(Regex("[A-Z2-9]{4}-[A-Z2-9]{4}").matches(fresh))
+        assertTrue(fresh != old)
+        assertNull(repo.recoverOwner(grace, old, "4444"))
+        assertNotNull(repo.recoverOwner(grace, fresh, "4444"))
+
+        assertNull(repo.regenerateRecoveryCode(cashier))
+        repo.setActive(joan, false)
+        assertNull(repo.regenerateRecoveryCode(joan))
+        assertNull(repo.regenerateRecoveryCode(9_999L))
     }
 }
