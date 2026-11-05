@@ -29,14 +29,21 @@ class StaffRepo(
 
     val staff: Flow<List<StaffEntity>> = staffDao.getAll()
 
-    /** Creates the first Owner and turns staff on. Returns the recovery code to show once. */
+    /** Turns staff on: creates the first Owner, or reuses the existing one after an off-then-on. Throws if already on. Returns the recovery code to show once. */
     suspend fun enableStaff(ownerName: String, ownerPin: String): String {
         val name = cleanName(ownerName)
         val code = RecoveryCode.generate()
         db.withTransaction {
-            staffDao.insert(
-                StaffEntity(name = name, role = Role.OWNER.key, pinHash = hash(ownerPin), createdAt = clock.nowMillis()),
-            )
+            check(!settings.settings.first().staffEnabled) { "Staff is already on" }
+            val owner = staffDao.getAll().first().filter { it.role == Role.OWNER.key }.minByOrNull { it.id }
+            if (owner != null) {
+                // Off-then-on: reuse the first Owner row so the old PIN stops working and no duplicate appears.
+                staffDao.update(owner.copy(name = name, pinHash = hash(ownerPin), active = true))
+            } else {
+                staffDao.insert(
+                    StaffEntity(name = name, role = Role.OWNER.key, pinHash = hash(ownerPin), createdAt = clock.nowMillis()),
+                )
+            }
             settings.setRecoveryHash(hash(RecoveryCode.normalize(code)))
             settings.setStaffEnabled(true)
         }

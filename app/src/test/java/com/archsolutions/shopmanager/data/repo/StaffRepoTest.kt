@@ -184,4 +184,92 @@ class StaffRepoTest {
         assertFalse(settings.settings.first().staffEnabled)
         assertEquals(2, repo.staff.first().size)
     }
+
+    @Test
+    fun `enableStaff twice throws and leaves one owner`() = runTest {
+        setUpRepo()
+        repo.enableStaff("Mary", "1234")
+        try {
+            repo.enableStaff("Mary2", "5678")
+            fail("expected IllegalStateException")
+        } catch (_: IllegalStateException) {
+        }
+        val all = repo.staff.first()
+        assertEquals(1, all.size)
+        assertTrue(repo.verify(all[0].id, "1234"))
+    }
+
+    @Test
+    fun `enable, disable, enable again reuses the owner row`() = runTest {
+        setUpRepo()
+        val oldCode = repo.enableStaff("Mary", "1234")
+        val id = repo.staff.first().single().id
+        repo.disableStaff()
+        val newCode = repo.enableStaff(" Maria ", "4321")
+        val all = repo.staff.first()
+        assertEquals(1, all.count { it.role == "OWNER" })
+        assertEquals(id, all.single().id)
+        assertEquals("Maria", all.single().name)
+        assertTrue(repo.verify(id, "4321"))
+        assertFalse(repo.verify(id, "1234"))
+        assertNull(repo.recoverOwner(id, oldCode, "0000"))
+        assertTrue(repo.recoverOwner(id, newCode, "5555") != null)
+    }
+
+    @Test
+    fun `other staff survive off-then-on`() = runTest {
+        setUpRepo()
+        repo.enableStaff("Mary", "1234")
+        val joe = repo.addStaff("Joe", Role.CASHIER, "1111")
+        repo.disableStaff()
+        repo.enableStaff("Mary", "4321")
+        assertEquals(2, repo.staff.first().size)
+        assertTrue(repo.verify(joe, "1111"))
+    }
+
+    @Test
+    fun `off-then-on reactivates an inactive owner`() = runTest {
+        setUpRepo()
+        repo.enableStaff("Mary", "1234")
+        val second = repo.addStaff("Joe", Role.OWNER, "5678")
+        val first = repo.staff.first().first { it.id != second }.id
+        repo.setActive(first, false)
+        repo.disableStaff()
+        repo.enableStaff("Mary", "4321")
+        assertTrue(repo.verify(first, "4321"))
+    }
+
+    @Test
+    fun `recoverOwner with a cashier id returns null`() = runTest {
+        setUpRepo()
+        val code = repo.enableStaff("Mary", "1234")
+        val cashier = repo.addStaff("Joe", Role.CASHIER, "1111")
+        assertNull(repo.recoverOwner(cashier, code, "0000"))
+        assertTrue(repo.verify(cashier, "1111"))
+    }
+
+    @Test
+    fun `recoverOwner with an inactive owner id returns null`() = runTest {
+        setUpRepo()
+        val code = repo.enableStaff("Mary", "1234")
+        val second = repo.addStaff("Joe", Role.OWNER, "5678")
+        assertTrue(repo.setActive(second, false))
+        assertNull(repo.recoverOwner(second, code, "0000"))
+    }
+
+    @Test
+    fun `setActive can reactivate a deactivated person`() = runTest {
+        setUpRepo()
+        repo.enableStaff("Mary", "1234")
+        val id = repo.addStaff("Joe", Role.CASHIER, "1111")
+        repo.setActive(id, false)
+        assertTrue(repo.setActive(id, true))
+        assertTrue(repo.verify(id, "1111"))
+    }
+
+    @Test
+    fun `verify on a missing id is false`() = runTest {
+        setUpRepo()
+        assertFalse(repo.verify(999L, "1234"))
+    }
 }
