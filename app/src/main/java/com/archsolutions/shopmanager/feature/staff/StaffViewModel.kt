@@ -147,26 +147,47 @@ class StaffViewModel @Inject constructor(
      */
     suspend fun reEnable(ownerPin: String): PinResult {
         if (!isValidPin(ownerPin)) return PinResult.Wrong(0)
-        return when (val outcome = enable("", ownerPin)) {
+        // Already on, or another try is running: nothing was enabled by this call, and it must not crash the caller.
+        val outcome = try {
+            enable("", ownerPin)
+        } catch (_: IllegalStateException) {
+            return PinResult.Wrong(0)
+        }
+        return when (outcome) {
             is EnableOutcome.Ok -> PinResult.Ok
             is EnableOutcome.Failed -> outcome.result
         }
     }
 
+    private val enabling = java.util.concurrent.atomic.AtomicBoolean(false)
+
     private suspend fun enable(name: String, pin: String): EnableOutcome {
-        val before = session.current.value
-        // The new Owner is signed in just ahead of the flag flipping; if it then fails, put the session back as it was.
-        fun undo() {
-            if (session.current.value?.id != before?.id) before?.let(session::signIn) ?: session.signOut()
+        // A second call for the same flow while one runs is refused, never run alongside (N3).
+        check(enabling.compareAndSet(false, true)) { "Staff is already being turned on" }
+        try {
+            val before = session.current.value
+            var signedInByThisCall: StaffEntity? = null
+            // The new Owner is signed in just ahead of the flag flipping; if it then fails, put the session back as it
+            // was, but only when the session still holds the person THIS call signed in (never somebody else).
+            fun undo() {
+                val mine = signedInByThisCall ?: return
+                if (session.current.value?.id != mine.id) return
+                before?.let(session::signIn) ?: session.signOut()
+            }
+            val outcome = try {
+                guard.enableStaff(name, pin, beforeEnable = { owner ->
+                    session.signIn(owner)
+                    signedInByThisCall = owner
+                })
+            } catch (e: Exception) {
+                undo()
+                throw e
+            }
+            if (outcome is EnableOutcome.Ok) _shownCode.value = outcome.code else undo()
+            return outcome
+        } finally {
+            enabling.set(false)
         }
-        val outcome = try {
-            guard.enableStaff(name, pin, beforeEnable = session::signIn)
-        } catch (e: Exception) {
-            undo()
-            throw e
-        }
-        if (outcome is EnableOutcome.Ok) _shownCode.value = outcome.code else undo()
-        return outcome
     }
 
     suspend fun add(name: String, role: Role, pin: String): StaffInputProblem? {

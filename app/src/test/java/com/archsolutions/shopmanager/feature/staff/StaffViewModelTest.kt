@@ -15,6 +15,7 @@ import com.archsolutions.shopmanager.data.staff.StaffSession
 import com.archsolutions.shopmanager.domain.staff.Role
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -425,5 +426,56 @@ class StaffViewModelTest {
         assertEquals(before, repo.staff.first().single())
         assertFalse(settings.settings.first().staffEnabled)
         assertNull(session.currentId)
+    }
+
+    @Test
+    fun `two concurrent identical wrong re-enable attempts count one failure`() = runTest {
+        build()
+        vm.setUp("Grace", "1111")
+        vm.turnOff().join()
+        session.signOut()
+
+        val first = async { vm.reEnable("0000") }
+        val second = async { vm.reEnable("0000") }
+        first.await()
+        second.await()
+
+        // One counted failure so far: the next wrong try leaves 3, not 2.
+        assertEquals(PinResult.Wrong(3), vm.reEnable("0000"))
+    }
+
+    @Test
+    fun `a duplicate re-enable while one succeeded does not sign the Owner out or drop the code`() = runTest {
+        build()
+        vm.setUp("Grace", "1111")
+        vm.codeWritten()
+        vm.turnOff().join()
+        session.signOut()
+
+        val first = async { vm.reEnable("1111") }
+        val second = async { vm.reEnable("1111") } // must neither throw nor undo
+        assertEquals(PinResult.Ok, first.await())
+        second.await()
+
+        assertNotNull(session.currentId)
+        assertNotNull(vm.shownCode.value)
+        assertTrue(settings.settings.first().staffEnabled)
+        // And a later one against an already-on shop is harmless too.
+        vm.reEnable("1111")
+        assertNotNull(session.currentId)
+        assertNotNull(vm.shownCode.value)
+    }
+
+    @Test
+    fun `a failed re-enable does not sign out somebody who was signed in`() = runTest {
+        build()
+        vm.setUp("Grace", "1111")
+        vm.turnOff().join()
+        val grace = repo.staff.first().single()
+        session.signIn(grace)
+
+        vm.reEnable("0000")
+
+        assertEquals(grace.id, session.currentId)
     }
 }

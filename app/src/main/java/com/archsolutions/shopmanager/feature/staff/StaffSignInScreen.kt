@@ -32,9 +32,9 @@ import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
-import com.archsolutions.shopmanager.core.security.Pin
 import com.archsolutions.shopmanager.data.settings.PinResult
 import com.archsolutions.shopmanager.domain.staff.Role
+import com.archsolutions.shopmanager.feature.pin.PinEntry
 import com.archsolutions.shopmanager.feature.pin.PinPad
 import com.archsolutions.shopmanager.feature.pin.pinFailureMessage
 import kotlinx.coroutines.launch
@@ -48,7 +48,7 @@ fun StaffSignInScreen(viewModel: StaffSignInViewModel = hiltViewModel(), modifie
     val picked = people.firstOrNull { it.id == pickedId }
     val resources = LocalContext.current.resources
     val scope = rememberCoroutineScope()
-    var digits by remember(pickedId) { mutableStateOf("") }
+    val entry = remember(pickedId) { PinEntry() }
     var message by remember(pickedId) { mutableStateOf<String?>(null) }
     var recovering by remember { mutableStateOf(false) }
     val shownCode by viewModel.shownCode.collectAsStateWithLifecycle()
@@ -86,22 +86,25 @@ fun StaffSignInScreen(viewModel: StaffSignInViewModel = hiltViewModel(), modifie
                 PinPad(
                     title = picked.name,
                     subtitle = stringResource(R.string.staff_signin_pin_hint),
-                    digits = digits,
+                    digits = entry.digits,
                     message = message,
                     onDigit = { digit ->
-                        if (digits.length < Pin.LENGTH) digits += digit
-                        if (digits.length == Pin.LENGTH) {
-                            val entered = digits
+                        entry.digit(digit)?.let { entered ->
                             scope.launch {
-                                val result: PinResult = viewModel.enter(entered)
-                                if (result != PinResult.Ok) {
-                                    message = pinFailureMessage(resources, result)
-                                    digits = ""
+                                var failed = false
+                                try {
+                                    val result: PinResult = viewModel.enter(entered)
+                                    if (result != PinResult.Ok) {
+                                        failed = true
+                                        message = pinFailureMessage(resources, result)
+                                    }
+                                } finally {
+                                    entry.finish(clear = failed)
                                 }
                             }
                         }
                     },
-                    onBackspace = { digits = digits.dropLast(1) },
+                    onBackspace = entry::backspace,
                 )
                 SecondaryButton(
                     text = stringResource(R.string.staff_signin_someone_else),

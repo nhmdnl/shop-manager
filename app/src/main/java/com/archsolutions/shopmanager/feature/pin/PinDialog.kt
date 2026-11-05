@@ -155,29 +155,32 @@ fun rememberPinGate(viewModel: PinViewModel = hiltViewModel()): PinGate {
 internal fun PinCheckDialog(title: String, purpose: String, check: suspend (String) -> PinResult, onDismiss: () -> Unit, onSuccess: () -> Unit) {
     val resources = LocalContext.current.resources
     val scope = rememberCoroutineScope()
-    var digits by remember { mutableStateOf("") }
+    val entry = remember { PinEntry() }
     var message by remember { mutableStateOf<String?>(null) }
     PinKeypadDialog(
         title = title,
         subtitle = purpose,
-        digits = digits,
+        digits = entry.digits,
         message = message,
         onDigit = { digit ->
-            if (digits.length < Pin.LENGTH) digits += digit
-            if (digits.length == Pin.LENGTH) {
-                val entered = digits
+            entry.digit(digit)?.let { entered ->
                 scope.launch {
-                    val result = check(entered)
-                    if (result == PinResult.Ok) {
-                        onSuccess()
-                    } else {
-                        message = pinFailureMessage(resources, result)
-                        digits = ""
+                    var failed = false
+                    try {
+                        val result = check(entered)
+                        if (result == PinResult.Ok) {
+                            onSuccess()
+                        } else {
+                            failed = true
+                            message = pinFailureMessage(resources, result)
+                        }
+                    } finally {
+                        entry.finish(clear = failed)
                     }
                 }
             }
         },
-        onBackspace = { digits = digits.dropLast(1) },
+        onBackspace = entry::backspace,
         onDismiss = onDismiss,
     )
 }
