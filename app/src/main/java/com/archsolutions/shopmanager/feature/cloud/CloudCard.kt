@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.cloud
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,6 +43,7 @@ fun CloudSettingsCard(
     if (!card.visible) return
     val pinGate = rememberPinGate()
     var confirmingUnlink by remember { mutableStateOf(false) }
+    OnSignOut { confirmingUnlink = false }
     // The lines are written in the app language; write them again when it changes.
     val locale = LocalConfiguration.current.locales[0]
     LaunchedEffect(locale) { viewModel.refreshTexts() }

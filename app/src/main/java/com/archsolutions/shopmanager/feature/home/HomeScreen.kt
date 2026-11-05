@@ -70,6 +70,7 @@ import com.archsolutions.shopmanager.core.designsystem.components.InkButton
 import com.archsolutions.shopmanager.core.designsystem.components.LockedActionButton
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import com.archsolutions.shopmanager.core.designsystem.components.SectionLabel
 import com.archsolutions.shopmanager.core.designsystem.components.ShopCard
 import com.archsolutions.shopmanager.core.money.Money
@@ -123,6 +124,7 @@ fun HomeScreen(
     val tradingOpen = gateState is DayGateState.Ready
     val dayClosed = gateState is DayGateState.TodayClosed
     var confirmReopen by remember { mutableStateOf(false) }
+    OnSignOut { confirmReopen = false }
     val newSaleLocked = stringResource(if (dayClosed) R.string.selling_opens_tomorrow else R.string.action_new_sale)
 
     Scaffold(

@@ -173,9 +173,10 @@ fun AppNavHost(
 ) {
     val needsOnboarding by gateViewModel.needsOnboarding.collectAsStateWithLifecycle()
     Box(modifier = modifier.fillMaxSize()) {
-        AppShell(isExpanded, useRail, openCloseDay, onCloseDayOpened, navController, settingsViewModel, gateViewModel)
-        // Unknown (still loading) counts as onboarding: the gate must not flash over the splash.
-        StaffGate(onboarding = needsOnboarding != false)
+        // Unknown onboarding stays null: the gate fails closed until it and the staff setting are read.
+        StaffGate(onboarding = needsOnboarding) {
+            AppShell(isExpanded, useRail, openCloseDay, onCloseDayOpened, navController, settingsViewModel, gateViewModel)
+        }
     }
 }
 

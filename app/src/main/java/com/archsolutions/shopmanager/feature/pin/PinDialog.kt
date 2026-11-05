@@ -55,6 +55,7 @@ import com.archsolutions.shopmanager.data.settings.PinResult
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import com.archsolutions.shopmanager.data.staff.StaffGuard
 import com.archsolutions.shopmanager.data.staff.StaffSession
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import com.archsolutions.shopmanager.domain.staff.GateDecision
 import com.archsolutions.shopmanager.domain.staff.GateInputs
 import com.archsolutions.shopmanager.domain.staff.decide
@@ -122,6 +123,7 @@ internal data class PinRequest(@StringRes val purpose: Int, val ownerPin: Boolea
 fun rememberPinGate(viewModel: PinViewModel = hiltViewModel()): PinGate {
     val scope = rememberCoroutineScope()
     val gate = remember(viewModel, scope) { PinGate(viewModel.gateState, scope, viewModel::runApproved) }
+    OnSignOut { gate.request = null }
     gate.request?.let { request ->
         PinCheckDialog(
             title = stringResource(if (request.ownerPin) R.string.pin_owner_needed else R.string.pin_enter),

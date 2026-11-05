@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.settings
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -397,6 +398,7 @@ private fun DailyBalanceSettingsCard(
 private fun ReminderTimeRow(time: String, onTimeChange: (String) -> Unit) {
     val colors = LocalShopColors.current
     var picking by remember { mutableStateOf(false) }
+    OnSignOut { picking = false }
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -460,6 +462,7 @@ private fun ShopDataSettingsCard(
     var editingName by remember { mutableStateOf(false) }
     var choosingPin by remember { mutableStateOf(false) }
     var confirmingRestore by remember { mutableStateOf(false) }
+    OnSignOut { editingName = false; choosingPin = false; confirmingRestore = false }
     val lastBackup = settings.lastBackupAt?.let { at ->
         val time = DayFormat.time(at, zoneId)
         val sameDay = Instant.ofEpochMilli(at).atZone(zoneId).toLocalDate() == LocalDate.now(zoneId)

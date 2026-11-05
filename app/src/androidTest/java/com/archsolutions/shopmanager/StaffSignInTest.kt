@@ -1,6 +1,20 @@
 package com.archsolutions.shopmanager
 
 import android.content.Context
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.window.Dialog
+import com.archsolutions.shopmanager.domain.staff.SignInGate
+import com.archsolutions.shopmanager.feature.staff.LocalSignOutTick
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
+import com.archsolutions.shopmanager.feature.staff.StaffGateLayer
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -175,6 +189,42 @@ class StaffSignInTest {
         val expected = context.resources.getQuantityString(R.plurals.plurals_pin_tries_left, 4, 4)
         composeRule.waitUntil(timeoutMillis = 5_000) { composeRule.onAllNodesWithText(expected).fetchSemanticsNodes().isNotEmpty() }
         assertNothingClipped()
+    }
+
+    @Test
+    fun whileStaffStateIsUnknownTheAppContentIsNotReachable() {
+        var clicked = false
+        composeRule.setContent {
+            ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
+                StaffGateLayer(SignInGate.COVER, signOutTick = 0, signIn = { Text("sign-in list") }) {
+                    Button(onClick = { clicked = true }) { Text("Sell") }
+                }
+            }
+        }
+
+        // Not in the accessibility tree, and not tappable at its position either.
+        assertTrue(composeRule.onAllNodesWithText("Sell").fetchSemanticsNodes().isEmpty())
+        assertTrue(composeRule.onAllNodesWithText("sign-in list").fetchSemanticsNodes().isEmpty())
+        composeRule.onRoot().performTouchInput { click(center) }
+        composeRule.waitForIdle()
+        assertFalse(clicked)
+    }
+
+    @Test
+    fun signingOutDismissesAnOpenPinDialog() {
+        var tick by mutableIntStateOf(0)
+        composeRule.setContent {
+            CompositionLocalProvider(LocalSignOutTick provides tick) {
+                var open by remember { mutableStateOf(true) }
+                OnSignOut { open = false }
+                if (open) Dialog(onDismissRequest = {}) { Text("Enter PIN") }
+            }
+        }
+        composeRule.onNodeWithText("Enter PIN").assertIsDisplayed()
+
+        tick++
+
+        composeRule.waitUntil(timeoutMillis = 5_000) { composeRule.onAllNodesWithText("Enter PIN").fetchSemanticsNodes().isEmpty() }
     }
 
     /** Every text node: nothing ellipsised, no line wider than its box, no cut height, inside the phone width. */
