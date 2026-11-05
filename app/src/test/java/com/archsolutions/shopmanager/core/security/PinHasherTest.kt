@@ -39,4 +39,18 @@ class PinHasherTest {
         assertTrue(PinHasher.matches("0042", stored))
         assertFalse(PinHasher.matches("42", stored))
     }
+
+    @Test
+    fun `absurd iteration count is rejected quickly`() {
+        val start = System.nanoTime()
+        assertFalse(PinHasher.matches("1234", "pbkdf2\$2147483647\$ab\$cd"))
+        assertFalse(PinHasher.matches("1234", "pbkdf2\$1000001\$ab\$cd"))
+        assertTrue((System.nanoTime() - start) / 1_000_000 < 500)
+    }
+
+    @Test
+    fun `malformed hex is rejected`() {
+        listOf("pbkdf2\$1000\$+a\$cd", "pbkdf2\$1000\$abc\$cd", "pbkdf2\$1000\$ab\$zz")
+            .forEach { assertFalse(it, PinHasher.matches("1234", it)) }
+    }
 }

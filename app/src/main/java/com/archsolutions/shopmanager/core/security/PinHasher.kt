@@ -8,6 +8,7 @@ import javax.crypto.spec.PBEKeySpec
 /** Per-person PIN hashing: "pbkdf2$<iterations>$<saltHex>$<hashHex>" (PBKDF2WithHmacSHA256). */
 object PinHasher {
     const val ITERATIONS = 120_000
+    private const val MAX_ITERATIONS = 1_000_000
     private const val SALT_BYTES = 16
     private const val KEY_BITS = 256
 
@@ -19,7 +20,7 @@ object PinHasher {
     fun matches(pin: String, stored: String): Boolean {
         val parts = stored.split('$')
         if (parts.size != 4 || parts[0] != "pbkdf2") return false
-        val iterations = parts[1].toIntOrNull()?.takeIf { it > 0 } ?: return false
+        val iterations = parts[1].toIntOrNull()?.takeIf { it in 1..MAX_ITERATIONS } ?: return false
         val salt = parts[2].fromHex() ?: return false
         val expected = parts[3].fromHex() ?: return false
         if (salt.isEmpty() || expected.isEmpty()) return false
@@ -34,11 +35,7 @@ object PinHasher {
     private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
 
     private fun String.fromHex(): ByteArray? {
-        if (length % 2 != 0 || any { Character.digit(it, 16) < 0 }) return null
-        return try {
-            ByteArray(length / 2) { substring(it * 2, it * 2 + 2).toInt(16).toByte() }
-        } catch (e: NumberFormatException) {
-            null
-        }
+        if (length % 2 != 0 || any { it !in '0'..'9' && it !in 'a'..'f' && it !in 'A'..'F' }) return null
+        return ByteArray(length / 2) { substring(it * 2, it * 2 + 2).toInt(16).toByte() }
     }
 }
