@@ -34,6 +34,7 @@ import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
 import com.archsolutions.shopmanager.core.security.Pin
 import com.archsolutions.shopmanager.data.settings.PinResult
+import com.archsolutions.shopmanager.domain.staff.Role
 import com.archsolutions.shopmanager.feature.pin.PinPad
 import com.archsolutions.shopmanager.feature.pin.pinFailureMessage
 import kotlinx.coroutines.launch
@@ -49,6 +50,8 @@ fun StaffSignInScreen(viewModel: StaffSignInViewModel = hiltViewModel(), modifie
     val scope = rememberCoroutineScope()
     var digits by remember(pickedId) { mutableStateOf("") }
     var message by remember(pickedId) { mutableStateOf<String?>(null) }
+    var recovering by remember { mutableStateOf(false) }
+    val shownCode by viewModel.shownCode.collectAsStateWithLifecycle()
 
     Box(modifier = modifier.fillMaxSize().background(colors.paper), contentAlignment = Alignment.Center) {
         Column(
@@ -70,6 +73,14 @@ fun StaffSignInScreen(viewModel: StaffSignInViewModel = hiltViewModel(), modifie
                 )
                 people.forEach { person ->
                     SecondaryButton(text = person.name, onClick = { viewModel.pick(person.id) }, modifier = Modifier.fillMaxWidth())
+                }
+                val owners = people.filter { it.role == Role.OWNER.key }
+                if (owners.isNotEmpty()) {
+                    SecondaryButton(
+                        text = stringResource(R.string.staff_forgot_pin),
+                        onClick = { recovering = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             } else {
                 PinPad(
@@ -100,4 +111,13 @@ fun StaffSignInScreen(viewModel: StaffSignInViewModel = hiltViewModel(), modifie
             }
         }
     }
+
+    if (recovering) {
+        OwnerRecoveryFlow(
+            owners = people.filter { it.role == Role.OWNER.key },
+            recover = viewModel::recover,
+            onClose = { recovering = false },
+        )
+    }
+    shownCode?.let { code -> RecoveryCodeDialog(code = code, onWritten = viewModel::codeWritten) }
 }

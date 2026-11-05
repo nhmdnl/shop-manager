@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.archsolutions.shopmanager.data.db.entities.StaffEntity
 import com.archsolutions.shopmanager.data.repo.StaffRepo
 import com.archsolutions.shopmanager.data.settings.PinResult
+import com.archsolutions.shopmanager.data.staff.RecoveryOutcome
 import com.archsolutions.shopmanager.data.staff.StaffGuard
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,5 +45,22 @@ class StaffSignInViewModel @Inject constructor(
         val result = staffGuard.signIn(id, pin)
         if (result == PinResult.Ok) _picked.value = null
         return result
+    }
+
+    private val _shownCode = MutableStateFlow<String?>(null)
+
+    /** The new recovery code after a recovery, until the person confirms they wrote it down; never saved or logged. */
+    val shownCode: StateFlow<String?> = _shownCode.asStateFlow()
+
+    fun codeWritten() {
+        _shownCode.value = null
+    }
+
+    /** Sets a new PIN for the Owner when [code] is right (own 5-tries lock); the fresh code lands in [shownCode]. */
+    suspend fun recover(ownerId: Long, code: String, newPin: String): RecoveryOutcome {
+        require(isValidPin(newPin)) { "PIN must be 4 digits" }
+        val outcome = staffGuard.recover(ownerId, code, newPin)
+        if (outcome is RecoveryOutcome.Ok) _shownCode.value = outcome.newCode
+        return outcome
     }
 }

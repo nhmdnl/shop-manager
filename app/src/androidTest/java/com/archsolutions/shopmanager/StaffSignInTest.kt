@@ -10,7 +10,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.window.Dialog
 import com.archsolutions.shopmanager.domain.staff.SignInGate
@@ -101,6 +103,7 @@ class StaffSignInTest {
     }
     private val session = StaffSession(clock)
     private var cashierId = 0L
+    private var recoveryCode = ""
 
     @After
     fun tearDown() {
@@ -115,7 +118,7 @@ class StaffSignInTest {
     private fun staffShop(): StaffSignInViewModel = runBlocking {
         val settings = SettingsStore(PreferenceDataStoreFactory.create(scope = scope, produceFile = { File(context.cacheDir, "signin_${System.nanoTime()}.preferences_pb") }))
         val repo = StaffRepo(db, db.staffDao(), settings, clock, pinIterations = 1_000)
-        repo.enableStaff("Grace", "1111")
+        recoveryCode = repo.enableStaff("Grace", "1111")
         cashierId = repo.addStaff("Amina", Role.CASHIER, "2222")
         val peter = repo.addStaff("Peter", Role.CASHIER, "3333")
         repo.setActive(peter, false)
@@ -165,6 +168,39 @@ class StaffSignInTest {
         val expected = context.resources.getQuantityString(R.plurals.plurals_pin_tries_left, 4, 4)
         composeRule.waitUntil(timeoutMillis = 5_000) { composeRule.onAllNodesWithText(expected).fetchSemanticsNodes().isNotEmpty() }
         assertEquals(null, session.currentId)
+    }
+
+    @Test
+    fun forgotOwnerPinAcceptsTheCodeSetsANewPinAndShowsANewCode() {
+        val viewModel = staffShop()
+        composeRule.setContent {
+            val current by session.current.collectAsState()
+            ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
+                if (shouldShowSignIn(staffEnabled = true, signedIn = current != null, onboarding = false)) StaffSignInScreen(viewModel)
+            }
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.staff_forgot_pin)).performClick()
+        composeRule.onNode(hasSetTextAction()).performTextInput(recoveryCode)
+        composeRule.onNodeWithText(context.getString(R.string.action_next)).performClick()
+        tapPin("5555")
+        tapPin("5555")
+
+        // The new code is on screen until it is confirmed, and it is not the old one.
+        composeRule.waitUntil(timeoutMillis = 5_000) { viewModel.shownCode.value != null }
+        val newCode = viewModel.shownCode.value!!
+        assertTrue(Regex("[A-Z2-9]{4}-[A-Z2-9]{4}").matches(newCode))
+        assertTrue(newCode != recoveryCode)
+        composeRule.onNodeWithText(newCode).assertIsDisplayed()
+
+        composeRule.onNodeWithText(context.getString(R.string.staff_code_written)).performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000) { composeRule.onAllNodesWithText(newCode).fetchSemanticsNodes().isEmpty() }
+        assertEquals(null, viewModel.shownCode.value)
+
+        // The new PIN signs the Owner in.
+        composeRule.onNodeWithText("Grace").performClick()
+        tapPin("5555")
+        composeRule.waitUntil(timeoutMillis = 5_000) { session.current.value?.name == "Grace" }
     }
 
     @Test

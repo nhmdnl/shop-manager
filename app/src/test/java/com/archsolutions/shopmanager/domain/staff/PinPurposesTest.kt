@@ -26,5 +26,6 @@ class PinPurposesTest {
         assertEquals(Permission.ADMIN_SETTINGS, permissionFor(R.string.pin_for_restore))
         assertEquals(Permission.ADMIN_SETTINGS, permissionFor(R.string.pin_for_settings))
         assertEquals(Permission.ADMIN_SETTINGS, permissionFor(R.string.pin_for_cloud))
+        assertEquals(Permission.MANAGE_STAFF, permissionFor(R.string.pin_for_staff))
     }
 }

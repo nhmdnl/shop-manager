@@ -147,8 +147,9 @@ fun rememberPinGate(viewModel: PinViewModel = hiltViewModel()): PinGate {
     return gate
 }
 
+/** One PIN check on a keypad dialog; [check] decides. Reused by the staff setup's shared-PIN confirm step. */
 @Composable
-private fun PinCheckDialog(title: String, purpose: String, check: suspend (String) -> PinResult, onDismiss: () -> Unit, onSuccess: () -> Unit) {
+internal fun PinCheckDialog(title: String, purpose: String, check: suspend (String) -> PinResult, onDismiss: () -> Unit, onSuccess: () -> Unit) {
     val resources = LocalContext.current.resources
     val scope = rememberCoroutineScope()
     var digits by remember { mutableStateOf("") }
@@ -180,14 +181,14 @@ private fun PinCheckDialog(title: String, purpose: String, check: suspend (Strin
 
 /** Choosing a new PIN: enter it, then enter it again (Settings). */
 @Composable
-fun SetPinDialog(onDismiss: () -> Unit, onSet: (String) -> Unit) {
+fun SetPinDialog(onDismiss: () -> Unit, onSet: (String) -> Unit, hint: String = stringResource(R.string.pin_set_hint)) {
     var first by remember { mutableStateOf<String?>(null) }
     var digits by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
     val mismatch = stringResource(R.string.pin_mismatch)
     PinKeypadDialog(
         title = stringResource(if (first == null) R.string.pin_set_title else R.string.pin_confirm_title),
-        subtitle = stringResource(R.string.pin_set_hint),
+        subtitle = hint,
         digits = digits,
         message = message,
         onDigit = { digit ->

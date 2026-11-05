@@ -1,6 +1,11 @@
 package com.archsolutions.shopmanager.feature.settings
 
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.archsolutions.shopmanager.feature.staff.OnSignOut
+import com.archsolutions.shopmanager.feature.staff.RecoveryCodeDialog
+import com.archsolutions.shopmanager.feature.staff.StaffSetupFlow
+import com.archsolutions.shopmanager.feature.staff.StaffViewModel
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -93,6 +98,7 @@ fun SettingsScreen(
     onCloudSignIn: () -> Unit = {},
     onCloudPay: () -> Unit = {},
     onCloudRestore: () -> Unit = {},
+    onManageStaff: () -> Unit = {},
 ) {
     val colors = LocalShopColors.current
     val settings by viewModel.settings.collectAsState()
@@ -176,6 +182,7 @@ fun SettingsScreen(
                         onPinSet = viewModel::setPin,
                         onPinOff = viewModel::disablePin,
                     )
+                    StaffSettingsCard(settings = settings, onManageStaff = onManageStaff)
                     CloudSettingsCard(onSignIn = onCloudSignIn, onPay = onCloudPay, onRestore = onCloudRestore)
                 }
             }
@@ -216,6 +223,7 @@ fun SettingsScreen(
                     onPinSet = viewModel::setPin,
                     onPinOff = viewModel::disablePin,
                 )
+                StaffSettingsCard(settings = settings, onManageStaff = onManageStaff)
                 CloudSettingsCard(onSignIn = onCloudSignIn, onPay = onCloudPay, onRestore = onCloudRestore)
             }
         }
@@ -495,15 +503,18 @@ private fun ShopDataSettingsCard(
             SettingRow(title = stringResource(R.string.settings_restore), subtitle = stringResource(R.string.settings_restore_desc)) {
                 RowChip(text = stringResource(R.string.action_restore), onClick = { pinGate.run(R.string.pin_for_restore) { confirmingRestore = true } })
             }
-            SwitchRow(
-                title = stringResource(R.string.settings_pin),
-                subtitle = stringResource(R.string.settings_pin_desc),
-                checked = settings.pinEnabled,
-                onCheckedChange = { on -> if (on) choosingPin = true else pinGate.run(R.string.pin_for_settings, onPinOff) },
-            )
-            if (settings.pinEnabled) {
-                SettingRow(title = stringResource(R.string.settings_change_pin)) {
-                    RowChip(text = stringResource(R.string.action_change), onClick = { pinGate.run(R.string.pin_for_settings) { choosingPin = true } })
+            // With staff on, each person has their own PIN and the shared one is unused, so its rows go.
+            if (!settings.staffEnabled) {
+                SwitchRow(
+                    title = stringResource(R.string.settings_pin),
+                    subtitle = stringResource(R.string.settings_pin_desc),
+                    checked = settings.pinEnabled,
+                    onCheckedChange = { on -> if (on) choosingPin = true else pinGate.run(R.string.pin_for_settings, onPinOff) },
+                )
+                if (settings.pinEnabled) {
+                    SettingRow(title = stringResource(R.string.settings_change_pin)) {
+                        RowChip(text = stringResource(R.string.action_change), onClick = { pinGate.run(R.string.pin_for_settings) { choosingPin = true } })
+                    }
                 }
             }
         }
@@ -556,6 +567,101 @@ private fun ShopDataSettingsCard(
                 choosingPin = false
                 onPinSet(pin)
             },
+        )
+    }
+}
+
+/** Staff sign-in: set it up, manage people, idle sign-out, turn it off. Every entry asks for the Owner PIN (shared PIN while staff is off). */
+@Composable
+private fun StaffSettingsCard(settings: ShopSettings, onManageStaff: () -> Unit, viewModel: StaffViewModel = hiltViewModel()) {
+    val pinGate = rememberPinGate()
+    val codeToShow by viewModel.shownCode.collectAsState()
+    var settingUp by remember { mutableStateOf(false) }
+    var editingIdle by remember { mutableStateOf(false) }
+    var confirmingOff by remember { mutableStateOf(false) }
+    // Anything half-typed or half-confirmed must not wait for the next person; an unconfirmed code is dropped too.
+    OnSignOut {
+        settingUp = false
+        editingIdle = false
+        confirmingOff = false
+        viewModel.discardCode()
+    }
+
+    ShopCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            SectionLabel(text = stringResource(R.string.settings_staff_section))
+            if (!settings.staffEnabled) {
+                SettingRow(title = stringResource(R.string.settings_staff_setup), subtitle = stringResource(R.string.settings_staff_setup_desc)) {
+                    RowChip(text = stringResource(R.string.settings_staff_setup_action), onClick = { pinGate.run(R.string.pin_for_staff) { settingUp = true } })
+                }
+            } else {
+                SettingRow(title = stringResource(R.string.settings_staff_manage)) {
+                    // The staff screen asks for the Owner PIN itself when it opens.
+                    RowChip(text = stringResource(R.string.settings_staff_manage_action), onClick = onManageStaff)
+                }
+                SettingRow(title = stringResource(R.string.settings_staff_idle), subtitle = stringResource(R.string.settings_staff_idle_desc)) {
+                    RowChip(text = settings.idleTimeoutMinutes.toString(), onClick = { pinGate.run(R.string.pin_for_staff) { editingIdle = true } })
+                }
+                SettingRow(title = stringResource(R.string.settings_staff_off)) {
+                    RowChip(text = stringResource(R.string.settings_staff_off_action), onClick = { pinGate.run(R.string.pin_for_staff) { confirmingOff = true } })
+                }
+            }
+        }
+    }
+
+    if (settingUp) {
+        StaffSetupFlow(
+            sharedPinSet = settings.pinEnabled && settings.pinHash.isNotEmpty(),
+            viewModel = viewModel,
+            onClose = { settingUp = false },
+        )
+    }
+    codeToShow?.let { code -> RecoveryCodeDialog(code = code, onWritten = viewModel::codeWritten) }
+    if (editingIdle) {
+        var text by remember { mutableStateOf(settings.idleTimeoutMinutes.toString()) }
+        val minutes = text.toIntOrNull()?.takeIf { it in StaffViewModel.MIN_IDLE_MINUTES..StaffViewModel.MAX_IDLE_MINUTES }
+        AlertDialog(
+            onDismissRequest = { editingIdle = false },
+            title = { Text(stringResource(R.string.settings_staff_idle)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ShopTextField(
+                        value = text,
+                        onValueChange = { text = it.filter(Char::isDigit).take(2) },
+                        placeholder = "",
+                        keyboardType = KeyboardType.Number,
+                    )
+                    if (minutes == null) {
+                        Text(stringResource(R.string.settings_staff_idle_invalid), style = MaterialTheme.typography.bodyMedium, color = LocalShopColors.current.rust)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        minutes?.let(viewModel::setIdleMinutes)
+                        editingIdle = false
+                    },
+                    enabled = minutes != null,
+                ) { Text(stringResource(R.string.action_save)) }
+            },
+            dismissButton = { TextButton(onClick = { editingIdle = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
+    if (confirmingOff) {
+        AlertDialog(
+            onDismissRequest = { confirmingOff = false },
+            title = { Text(stringResource(R.string.settings_staff_off_title)) },
+            text = { Text(stringResource(R.string.settings_staff_off_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmingOff = false
+                        viewModel.turnOff()
+                    },
+                ) { Text(stringResource(R.string.settings_staff_off_action)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmingOff = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }

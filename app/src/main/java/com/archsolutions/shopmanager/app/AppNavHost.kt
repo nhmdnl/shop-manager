@@ -106,6 +106,7 @@ import kotlinx.serialization.Serializable
 import com.archsolutions.shopmanager.feature.pin.rememberPinGate
 import com.archsolutions.shopmanager.feature.staff.StaffGate
 import com.archsolutions.shopmanager.feature.staff.StaffGateViewModel
+import com.archsolutions.shopmanager.feature.staff.StaffScreen
 import com.archsolutions.shopmanager.feature.backup.BackupReminderViewModel
 import com.archsolutions.shopmanager.feature.backup.rememberBackupActions
 import com.archsolutions.shopmanager.data.backup.AutoBackupWorker
@@ -140,6 +141,7 @@ import com.archsolutions.shopmanager.feature.day.PastDayScreen
 @Serializable data class SupplierEditRoute(val id: Long = 0L) // 0 = new supplier
 @Serializable object CloudPayRoute
 @Serializable object CloudRestoreRoute
+@Serializable object StaffRoute
 @Serializable data class CloudSignInRoute(val purpose: String = "LINK") // LINK goes back when linked; RESTORE goes on to CloudRestoreRoute
 
 enum class NavDestination(
@@ -412,7 +414,8 @@ private fun AppShell(
             destination?.hasRoute(SupplierEditRoute::class) == true ||
             destination?.hasRoute(CloudSignInRoute::class) == true ||
             destination?.hasRoute(CloudPayRoute::class) == true ||
-            destination?.hasRoute(CloudRestoreRoute::class) == true
+            destination?.hasRoute(CloudRestoreRoute::class) == true ||
+            destination?.hasRoute(StaffRoute::class) == true
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
@@ -777,7 +780,11 @@ private fun NavContent(
                 onCloudSignIn = { navController.navigate(CloudSignInRoute()) },
                 onCloudPay = { navController.navigate(CloudPayRoute) },
                 onCloudRestore = { navController.navigate(CloudRestoreRoute) },
+                onManageStaff = { navController.navigate(StaffRoute) { launchSingleTop = true } },
             )
+        }
+        composable<StaffRoute> {
+            StaffScreen(onBack = { navController.popBackStack() })
         }
     }
 }
