@@ -24,7 +24,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,9 +56,11 @@ import com.archsolutions.shopmanager.data.staff.StaffGuard
 import com.archsolutions.shopmanager.data.staff.StaffSession
 import com.archsolutions.shopmanager.domain.staff.GateDecision
 import com.archsolutions.shopmanager.domain.staff.Role
-import com.archsolutions.shopmanager.domain.staff.decideGate
+import com.archsolutions.shopmanager.domain.staff.GateInputs
+import com.archsolutions.shopmanager.domain.staff.decide
 import com.archsolutions.shopmanager.domain.staff.permissionFor
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -68,9 +69,6 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.math.ceil
 
-/** What the gate needs to decide; collected so a sign-in or a settings change takes effect at once. */
-internal data class GateState(val staffEnabled: Boolean = false, val role: Role? = null, val sharedPinRequired: Boolean = false)
-
 @HiltViewModel
 class PinViewModel @Inject constructor(
     private val pinGuard: PinGuard,
@@ -78,13 +76,14 @@ class PinViewModel @Inject constructor(
     private val staffGuard: StaffGuard,
     settingsStore: SettingsStore,
 ) : ViewModel() {
-    internal val gateState: StateFlow<GateState> = combine(
+    /** Null until the first real emission; an unknown state must never decide RUN. */
+    internal val gateState: StateFlow<GateInputs?> = combine(
         settingsStore.settings,
         staffSession.current,
         pinGuard.required,
     ) { settings, current, required ->
-        GateState(settings.staffEnabled, current?.let { Role.fromKey(it.role) }, required)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GateState())
+        GateInputs(settings.staffEnabled, current?.let { Role.fromKey(it.role) }, required)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     suspend fun check(pin: String): PinResult = pinGuard.check(pin)
 
@@ -92,6 +91,7 @@ class PinViewModel @Inject constructor(
 
     /** Runs [action] with the approving Owner (if any) visible as [StaffSession.actingId], then clears it. */
     fun runApproved(ownerApproved: Boolean, action: () -> Unit) {
+        // An action that reads actingId must do so synchronously, before launching a coroutine (ruling R1).
         staffSession.approvedBy = if (ownerApproved) staffGuard.lastApproverId else null
         try {
             action()
@@ -103,15 +103,20 @@ class PinViewModel @Inject constructor(
 
 /** Asks for the PIN before an action: the shared PIN when staff is off (addendum C4), an Owner's PIN when the signed-in role can't do it; otherwise runs it straight away. */
 @Stable
-class PinGate internal constructor(private val state: State<GateState>, private val runApproved: (Boolean, () -> Unit) -> Unit) {
+class PinGate internal constructor(
+    private val state: StateFlow<GateInputs?>,
+    private val scope: CoroutineScope,
+    private val runApproved: (Boolean, () -> Unit) -> Unit,
+) {
     internal var request by mutableStateOf<PinRequest?>(null)
 
     fun run(@StringRes purpose: Int, action: () -> Unit) {
-        val s = state.value
-        when (decideGate(s.staffEnabled, s.role, permissionFor(purpose), s.sharedPinRequired)) {
-            GateDecision.RUN -> runApproved(false, action)
-            GateDecision.ASK_SHARED_PIN -> request = PinRequest(purpose, ownerPin = false, action)
-            GateDecision.ASK_OWNER_PIN -> request = PinRequest(purpose, ownerPin = true, action)
+        scope.launch {
+            when (state.decide(permissionFor(purpose))) {
+                GateDecision.RUN -> runApproved(false, action)
+                GateDecision.ASK_SHARED_PIN -> request = PinRequest(purpose, ownerPin = false, action)
+                GateDecision.ASK_OWNER_PIN -> request = PinRequest(purpose, ownerPin = true, action)
+            }
         }
     }
 }
@@ -121,8 +126,8 @@ internal data class PinRequest(@StringRes val purpose: Int, val ownerPin: Boolea
 /** A [PinGate] for this screen; the PIN dialog shows here while a request is waiting. */
 @Composable
 fun rememberPinGate(viewModel: PinViewModel = hiltViewModel()): PinGate {
-    val state = viewModel.gateState.collectAsStateWithLifecycle()
-    val gate = remember(state) { PinGate(state, viewModel::runApproved) }
+    val scope = rememberCoroutineScope()
+    val gate = remember(viewModel, scope) { PinGate(viewModel.gateState, scope, viewModel::runApproved) }
     gate.request?.let { request ->
         PinCheckDialog(
             title = stringResource(if (request.ownerPin) R.string.pin_owner_needed else R.string.pin_enter),
