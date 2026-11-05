@@ -104,6 +104,7 @@ import com.archsolutions.shopmanager.feature.suppliers.SupplierEditScreen
 import com.archsolutions.shopmanager.feature.suppliers.SuppliersScreen
 import kotlinx.serialization.Serializable
 import com.archsolutions.shopmanager.feature.pin.rememberPinGate
+import com.archsolutions.shopmanager.feature.staff.LocalSignOutTick
 import com.archsolutions.shopmanager.feature.staff.StaffGate
 import com.archsolutions.shopmanager.feature.staff.StaffGateViewModel
 import com.archsolutions.shopmanager.feature.staff.StaffScreen
@@ -182,6 +183,17 @@ fun AppNavHost(
     }
 }
 
+/** Screens reached only through an Owner-gated tap (restore, cloud sign-in/pay, staff). Nothing else may keep them open. */
+internal val entryGatedRoutes = listOf(CloudRestoreRoute::class, CloudSignInRoute::class, CloudPayRoute::class, StaffRoute::class)
+
+/** Pops every entry-gated screen off the stack (no-op for those not on it). */
+internal fun NavHostController.dropEntryGated() {
+    popBackStack<CloudRestoreRoute>(true)
+    popBackStack<CloudSignInRoute>(true)
+    popBackStack<CloudPayRoute>(true)
+    popBackStack<StaffRoute>(true)
+}
+
 @Composable
 private fun AppShell(
     isExpanded: Boolean,
@@ -219,6 +231,19 @@ private fun AppShell(
     // was popped along with it, so closing yesterday never led on to opening today.
     val canPrompt = currentDestination != null && !isOpenDay && needsOnboarding == false &&
         !currentDestination.hasRoute(CloseDayRoute::class) && !currentDestination.hasRoute(DayClosedRoute::class)
+
+    // C1: these screens were opened by an Owner-gated tap. After a sign-out, or a restored back stack once staff is
+    // on, the next person must not land on them (a Cashier on the restore list could confirm a restore with no PIN).
+    val staffGateViewModel: StaffGateViewModel = hiltViewModel()
+    val staffActive by staffGateViewModel.staffActive.collectAsStateWithLifecycle()
+    val signOutTick = LocalSignOutTick.current
+    val firstTick = remember { signOutTick }
+    LaunchedEffect(staffActive, currentDestination != null) {
+        if (staffActive == true && currentDestination != null) navController.dropEntryGated()
+    }
+    LaunchedEffect(signOutTick) {
+        if (signOutTick != firstTick) navController.dropEntryGated()
+    }
 
     // 7.8: a fresh install starts with onboarding, whose last step opens the first day.
     LaunchedEffect(needsOnboarding, currentDestination != null) {
@@ -543,6 +568,7 @@ private fun NavContent(
             val homeSnackbar = remember { SnackbarHostState() }
             val staffGate: StaffGateViewModel = hiltViewModel()
             val signedIn by staffGate.current.collectAsStateWithLifecycle()
+            val staffActive by staffGate.staffActive.collectAsStateWithLifecycle()
             val cloudViewModel: CloudViewModel = hiltViewModel()
             val cloudNotice by cloudViewModel.notice.collectAsStateWithLifecycle()
             LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { cloudViewModel.refresh() }
@@ -572,7 +598,10 @@ private fun NavContent(
                 onDaySummary = { navController.navigate(DayClosedRoute(it)) },
                 onReopenDay = { dayId -> pinGate.run(R.string.pin_for_reopen) { homeViewModel.reopenDay(dayId) } },
                 backupReminder = backupReminder,
-                onBackUp = backup.backUp,
+                // A backup zip carries every PIN hash: with staff on (or not yet known) it needs an Owner, like Settings does.
+                onBackUp = {
+                    if (staffActive == false) backup.backUp() else pinGate.run(R.string.pin_for_backup, backup.backUp)
+                },
                 cloudNotice = cloudNotice,
                 onCloudNotice = { pinGate.run(R.string.pin_for_cloud) { navController.navigate(CloudPayRoute) } },
                 snackbarHostState = homeSnackbar,
@@ -784,7 +813,7 @@ private fun NavContent(
             )
         }
         composable<StaffRoute> {
-            StaffScreen(onBack = { navController.popBackStack() })
+            StaffScreen(onBack = { navController.popBackStack<StaffRoute>(true) })
         }
     }
 }

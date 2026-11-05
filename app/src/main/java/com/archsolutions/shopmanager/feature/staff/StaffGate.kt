@@ -25,6 +25,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.core.designsystem.LocalUserActivity
 import com.archsolutions.shopmanager.domain.staff.SignInGate
 import com.archsolutions.shopmanager.domain.staff.signInGate
 import kotlinx.coroutines.delay
@@ -38,10 +39,10 @@ private const val IDLE_CHECK_MILLIS = 15_000L
  */
 @Composable
 fun StaffGate(onboarding: Boolean?, viewModel: StaffGateViewModel = hiltViewModel(), content: @Composable () -> Unit) {
-    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val staffActive by viewModel.staffActive.collectAsStateWithLifecycle()
     val current by viewModel.current.collectAsStateWithLifecycle()
     val tick by viewModel.signOutTick.collectAsStateWithLifecycle()
-    val gate = signInGate(settings?.staffEnabled, signedIn = current != null, onboarding = onboarding)
+    val gate = signInGate(staffActive, signedIn = current != null, onboarding = onboarding)
     val covered = gate != SignInGate.NONE
     val focusManager = LocalFocusManager.current
 
@@ -55,7 +56,7 @@ fun StaffGate(onboarding: Boolean?, viewModel: StaffGateViewModel = hiltViewMode
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.checkIdle() }
     LaunchedEffect(covered) { if (covered) focusManager.clearFocus(force = true) }
 
-    StaffGateLayer(gate, tick, content = content)
+    StaffGateLayer(gate, tick, onActivity = viewModel::touch, content = content)
 }
 
 /** The layering for a known [gate] state; stateless so it can be tested without Hilt. */
@@ -63,12 +64,13 @@ fun StaffGate(onboarding: Boolean?, viewModel: StaffGateViewModel = hiltViewMode
 internal fun StaffGateLayer(
     gate: SignInGate,
     signOutTick: Int,
+    onActivity: () -> Unit = {},
     signIn: @Composable () -> Unit = { StaffSignInScreen() },
     content: @Composable () -> Unit,
 ) {
     val covered = gate != SignInGate.NONE
     Box(Modifier.fillMaxSize()) {
-        CompositionLocalProvider(LocalSignOutTick provides signOutTick) {
+        CompositionLocalProvider(LocalSignOutTick provides signOutTick, LocalUserActivity provides onActivity) {
             Box(
                 if (covered) Modifier.fillMaxSize().clearAndSetSemantics {}.focusProperties { canFocus = false }
                 else Modifier.fillMaxSize(),

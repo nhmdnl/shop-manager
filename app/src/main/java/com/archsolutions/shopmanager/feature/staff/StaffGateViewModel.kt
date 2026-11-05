@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,6 +26,10 @@ class StaffGateViewModel @Inject constructor(
 ) : ViewModel() {
     /** Null until the first read: the gate treats unknown as covered, never as staff off. */
     val settings: StateFlow<ShopSettings?> = settingsStore.settings
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Staff on with an active Owner (the repo's rule); null until known, which the gate treats as covered, never as off. */
+    val staffActive: StateFlow<Boolean?> = staffRepo.staffActive.map<Boolean, Boolean?> { it }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
     val current: StateFlow<StaffEntity?> = session.current
 
@@ -53,4 +58,7 @@ class StaffGateViewModel @Inject constructor(
     fun checkIdle() = settings.value?.let { session.checkIdle(it.idleTimeoutMinutes) }
 
     fun switchUser() = session.signOut()
+
+    /** Keeps the idle clock fresh for activity that never reaches the Activity (dialog keypads, soft-keyboard typing). */
+    fun touch() = session.touch()
 }

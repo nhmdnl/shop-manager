@@ -498,6 +498,7 @@
     <string name="pin_for_close">Needed to close the day</string>
     <string name="pin_for_reopen">Needed to reopen the day</string>
     <string name="pin_for_restore">Needed to restore a backup</string>
+    <string name="pin_for_backup">Needed to back up the shop data</string>
     <string name="pin_for_settings">Needed to change the PIN</string>
     <string name="pin_set_title">Choose a 4-digit PIN</string>
     <string name="pin_confirm_title">Enter the PIN again</string>
@@ -589,9 +590,13 @@
     <string name="settings_staff_off">Turn off staff</string>
     <string name="settings_staff_off_action">Turn off</string>
     <string name="settings_staff_off_title">Turn off staff sign-in?</string>
-    <string name="settings_staff_off_body">Everyone can use the app without signing in, and the shared PIN setting comes back. Staff and past sales are kept. Setting staff up again reuses the first Owner and resets that Owner\'s PIN.</string>
+    <string name="settings_staff_off_body">Everyone can use the app without signing in, and the shared PIN setting comes back. Staff and past sales are kept. Turning staff on again needs the Owner\'s current PIN; the Owner and their PIN stay as they are.</string>
     <string name="staff_setup_confirm_title">Type the shared PIN</string>
-    <string name="staff_setup_confirm_hint">It becomes the Owner\'s PIN.</string>
+    <string name="staff_setup_confirm_hint">Next you choose a new Owner PIN.</string>
+    <string name="staff_setup_newpin_hint">Choose a new Owner PIN. Staff may know the old shared PIN, so do not reuse it.</string>
+    <string name="staff_setup_newpin_same">That is the old shared PIN. Choose a different one.</string>
+    <string name="staff_reenable_title">Enter the Owner PIN</string>
+    <string name="staff_reenable_hint">Staff was turned off before. Type the Owner\'s current PIN to turn it on again. If it is forgotten, staff cannot be turned on again; the shop keeps working without sign-in.</string>
     <string name="staff_setup_name_title">Who is the Owner?</string>
     <string name="staff_name_placeholder">Name</string>
     <string name="staff_name_blank">Enter a name.</string>
@@ -604,6 +609,11 @@
     <string name="staff_add_title">New person</string>
     <string name="staff_role_cashier">Cashier</string>
     <string name="staff_role_owner">Owner</string>
+    <string name="staff_tags_separator">" · "</string>
+    <plurals name="plurals_staff_idle_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
     <string name="staff_you">You</string>
     <string name="staff_inactive">Switched off</string>
     <string name="staff_rename">Rename</string>
@@ -612,6 +622,7 @@
     <string name="staff_switch_off">Switch off</string>
     <string name="staff_switch_on">Switch on</string>
     <string name="staff_last_owner">At least one active Owner is required.</string>
+    <string name="settings_locked">Sign in as an Owner to open Settings.</string>
     <string name="staff_locked">Sign in as an Owner to manage staff.</string>
     <string name="staff_new_code">New recovery code</string>
     <string name="staff_unlock">Enter PIN</string>

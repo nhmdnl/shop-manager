@@ -7,13 +7,16 @@ import com.archsolutions.shopmanager.data.repo.StaffRepo
 import com.archsolutions.shopmanager.data.settings.PinResult
 import com.archsolutions.shopmanager.data.staff.RecoveryOutcome
 import com.archsolutions.shopmanager.data.staff.StaffGuard
+import com.archsolutions.shopmanager.data.staff.StaffSession
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /** The sign-in screen: who is working (active staff only), then their PIN. */
@@ -21,6 +24,7 @@ import javax.inject.Inject
 class StaffSignInViewModel @Inject constructor(
     staffRepo: StaffRepo,
     private val staffGuard: StaffGuard,
+    session: StaffSession,
 ) : ViewModel() {
     val people: StateFlow<List<StaffEntity>> = staffRepo.staff
         .map { all -> all.filter { it.active } }
@@ -62,5 +66,16 @@ class StaffSignInViewModel @Inject constructor(
         val outcome = staffGuard.recover(ownerId, code, newPin)
         if (outcome is RecoveryOutcome.Ok) _shownCode.value = outcome.newCode
         return outcome
+    }
+
+    init {
+        // Whenever the signed-in person changes (idle or Switch-user sign-out, a new sign-in) a half-done pick and a
+        // recovery code nobody confirmed are nobody's to see any more.
+        viewModelScope.launch {
+            session.current.drop(1).collect {
+                _picked.value = null
+                _shownCode.value = null
+            }
+        }
     }
 }

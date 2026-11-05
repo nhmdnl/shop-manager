@@ -206,7 +206,7 @@ fun SaleDetailScreen(
 
     if (showVoidSheet) {
         VoidSaleSheet(
-            pinEnabled = state.pinEnabled,
+            pinNeeded = state.pinNeeded,
             voiding = state.voiding,
             onDismiss = { showVoidSheet = false },
             onVoid = { reason, note -> pinGate.run(R.string.pin_for_void) { viewModel.void(reason, note) } },
@@ -239,7 +239,7 @@ private fun DetailRow(label: String, value: String, muted: Boolean = false) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VoidSaleSheet(
-    pinEnabled: Boolean,
+    pinNeeded: Boolean,
     voiding: Boolean,
     onDismiss: () -> Unit,
     onVoid: (reason: String, note: String) -> Unit,
@@ -294,7 +294,7 @@ private fun VoidSaleSheet(
                 onValueChange = { note = it },
                 placeholder = stringResource(R.string.note_placeholder),
             )
-            if (pinEnabled) {
+            if (pinNeeded) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

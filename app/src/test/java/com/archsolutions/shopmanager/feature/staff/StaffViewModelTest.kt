@@ -10,6 +10,7 @@ import com.archsolutions.shopmanager.data.repo.StaffRepo
 import com.archsolutions.shopmanager.data.settings.PinGuard
 import com.archsolutions.shopmanager.data.settings.PinResult
 import com.archsolutions.shopmanager.data.settings.SettingsStore
+import com.archsolutions.shopmanager.data.staff.StaffGuard
 import com.archsolutions.shopmanager.data.staff.StaffSession
 import com.archsolutions.shopmanager.domain.staff.Role
 import kotlinx.coroutines.Dispatchers
@@ -70,7 +71,7 @@ class StaffViewModelTest {
         )
         repo = StaffRepo(db, db.staffDao(), settings, clock, pinIterations = 1_000)
         session = StaffSession(clock)
-        vm = StaffViewModel(repo, session, settings, PinGuard(settings, clock))
+        vm = StaffViewModel(repo, session, settings, PinGuard(settings, clock), StaffGuard(repo, session, clock))
     }
 
     @Test
@@ -79,7 +80,7 @@ class StaffViewModelTest {
         settings.setPin(enabled = true, hash = Pin.hash("4321"))
 
         try {
-            vm.setUp("Grace", "1111")
+            vm.setUp("Grace", "1111", sharedPin = "0000")
             fail("expected the wrong shared PIN to stop setup")
         } catch (_: WrongSharedPinException) {
         }
@@ -87,10 +88,21 @@ class StaffViewModelTest {
         assertTrue(repo.staff.first().isEmpty())
         assertNull(vm.shownCode.value)
 
-        val code = vm.setUp("Grace", "4321")
+        // Reusing the old shared PIN as the Owner PIN is refused: staff may know it.
+        try {
+            vm.setUp("Grace", "4321", sharedPin = "4321")
+            fail("expected the old shared PIN to be refused as the new Owner PIN")
+        } catch (_: IllegalArgumentException) {
+        }
+        assertFalse(settings.settings.first().staffEnabled)
+
+        val code = vm.setUp("Grace", "5555", sharedPin = "4321")
 
         assertTrue(settings.settings.first().staffEnabled)
-        assertEquals("Grace", repo.staff.first().single().name)
+        val owner = repo.staff.first().single()
+        assertEquals("Grace", owner.name)
+        assertTrue(repo.verify(owner.id, "5555"))
+        assertFalse(repo.verify(owner.id, "4321"))
         assertNotNull(code)
     }
 
@@ -169,11 +181,11 @@ class StaffViewModelTest {
     fun `deactivating the signed-in person signs them out at once`() = runTest {
         build()
         vm.setUp("Grace", "1111")
-        val amina = repo.addStaff("Amina", Role.CASHIER, "2222")
-        session.signIn(repo.staff.first().first { it.id == amina })
-        assertEquals(amina, session.currentId)
+        val grace = session.currentId!!
+        repo.addStaff("Joan", Role.OWNER, "2222")
 
-        assertTrue(vm.toggleActive(amina))
+        // Another Owner exists, so Grace may switch herself off; she is signed out at once.
+        assertTrue(vm.toggleActive(grace))
 
         assertNull(session.currentId)
     }
@@ -301,5 +313,117 @@ class StaffViewModelTest {
         assertFalse(canOpenStaffScreen(null, true))
         assertFalse(canOpenStaffScreen(Role.OWNER, null))
         assertFalse(canOpenStaffScreen(Role.OWNER, false))
+    }
+
+    private suspend fun signInCashier(): Long {
+        val amina = repo.addStaff("Amina", Role.CASHIER, "2222")
+        session.signIn(repo.staff.first().first { it.id == amina })
+        return amina
+    }
+
+    @Test
+    fun `a signed-in cashier is refused add rename resetPin and toggleActive even with an owner approval`() = runTest {
+        build()
+        vm.setUp("Grace", "1111")
+        val owner = session.current.value!!
+        val joe = repo.addStaff("Joe", Role.CASHIER, "3333")
+        val amina = signInCashier()
+        session.approvedBy = owner.id
+
+        assertEquals(StaffInputProblem.NOT_OWNER, vm.add("Evil", Role.OWNER, "9999"))
+        assertEquals(StaffInputProblem.NOT_OWNER, vm.rename(joe, "Renamed"))
+        assertEquals(StaffInputProblem.NOT_OWNER, vm.resetPin(joe, "9999"))
+        assertEquals(StaffInputProblem.NOT_OWNER, vm.resetPin(owner.id, "9999"))
+        assertFalse(vm.toggleActive(joe))
+
+        assertNull(repo.staff.first().firstOrNull { it.name == "Evil" })
+        assertEquals("Joe", repo.staff.first().first { it.id == joe }.name)
+        assertTrue(repo.verify(joe, "3333"))
+        assertTrue(repo.verify(owner.id, "1111"))
+        assertTrue(repo.staff.first().first { it.id == joe }.active)
+        assertTrue(amina != joe)
+    }
+
+    @Test
+    fun `an Owner can add rename reset a cashier PIN and toggle, but cannot reset another Owner PIN`() = runTest {
+        build()
+        vm.setUp("Grace", "1111")
+        val grace = session.currentId!!
+        assertNull(vm.add("Joan", Role.OWNER, "2222"))
+        val joan = repo.staff.first().first { it.name == "Joan" }.id
+        assertNull(vm.add("Amina", Role.CASHIER, "3333"))
+        val amina = repo.staff.first().first { it.name == "Amina" }.id
+
+        assertNull(vm.rename(amina, "Amina K"))
+        assertNull(vm.resetPin(amina, "4444"))
+        assertTrue(repo.verify(amina, "4444"))
+        assertNull(vm.resetPin(grace, "5555"))
+        assertTrue(repo.verify(grace, "5555"))
+        assertEquals(StaffInputProblem.NOT_OWNER, vm.resetPin(joan, "9999"))
+        assertTrue(repo.verify(joan, "2222"))
+        assertTrue(vm.toggleActive(amina))
+    }
+
+    @Test
+    fun `nobody signed in is refused too`() = runTest {
+        build()
+        vm.setUp("Grace", "1111")
+        session.signOut()
+
+        assertEquals(StaffInputProblem.NOT_OWNER, vm.add("X", Role.CASHIER, "2222"))
+        assertFalse(vm.toggleActive(repo.staff.first().single().id))
+    }
+
+    @Test
+    fun `re-enabling after turn off asks for the existing Owner PIN and keeps the Owner`() = runTest {
+        build()
+        vm.setUp("Grace", "1111")
+        vm.codeWritten()
+        val grace = repo.staff.first().single()
+        vm.turnOff().join()
+        assertTrue(vm.hasExistingOwner())
+
+        assertEquals(PinResult.Wrong(4), vm.reEnable("0000"))
+        assertFalse(settings.settings.first().staffEnabled)
+        assertNull(session.currentId)
+        assertNull(vm.shownCode.value)
+
+        assertEquals(PinResult.Ok, vm.reEnable("1111"))
+        assertTrue(settings.settings.first().staffEnabled)
+        val after = repo.staff.first().single()
+        assertEquals(grace.id, after.id)
+        assertEquals("Grace", after.name)
+        assertEquals(grace.pinHash, after.pinHash)
+        assertEquals(grace.id, session.currentId)
+        assertNotNull(vm.shownCode.value)
+    }
+
+    @Test
+    fun `re-enable wrong tries lock on the shared Owner PIN counter`() = runTest {
+        build()
+        vm.setUp("Grace", "1111")
+        vm.turnOff().join()
+
+        repeat(4) { vm.reEnable("0000") }
+        assertTrue(vm.reEnable("0000") is PinResult.Locked)
+        assertTrue(vm.reEnable("1111") is PinResult.Locked)
+        assertFalse(settings.settings.first().staffEnabled)
+    }
+
+    @Test
+    fun `setUp refuses when an Owner already exists and does not change the Owner`() = runTest {
+        build()
+        vm.setUp("Grace", "1111")
+        val before = repo.staff.first().single()
+        vm.turnOff().join()
+
+        try {
+            vm.setUp("Eve", "9999")
+            fail("expected setUp to refuse over an existing Owner")
+        } catch (_: IllegalStateException) {
+        }
+        assertEquals(before, repo.staff.first().single())
+        assertFalse(settings.settings.first().staffEnabled)
+        assertNull(session.currentId)
     }
 }

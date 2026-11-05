@@ -48,9 +48,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.core.designsystem.LocalUserActivity
 import com.archsolutions.shopmanager.core.designsystem.fontScaled
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
 import com.archsolutions.shopmanager.core.security.Pin
+import com.archsolutions.shopmanager.data.repo.StaffRepo
 import com.archsolutions.shopmanager.data.settings.PinGuard
 import com.archsolutions.shopmanager.data.settings.PinResult
 import com.archsolutions.shopmanager.data.settings.SettingsStore
@@ -77,9 +79,10 @@ class PinViewModel @Inject constructor(
     private val staffSession: StaffSession,
     private val staffGuard: StaffGuard,
     settingsStore: SettingsStore,
+    staffRepo: StaffRepo,
 ) : ViewModel() {
     /** Null until the first real emission; an unknown state must never decide RUN. */
-    internal val gateState: StateFlow<GateInputs?> = gateInputsFlow(settingsStore.settings, staffSession.current)
+    internal val gateState: StateFlow<GateInputs?> = gateInputsFlow(settingsStore.settings, staffSession.current, staffRepo.staffActive)
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     suspend fun check(pin: String): PinResult = pinGuard.check(pin)
@@ -259,6 +262,7 @@ internal fun PinPad(
     onBackspace: () -> Unit,
 ) {
     val colors = LocalShopColors.current
+    val activity = LocalUserActivity.current
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(
             modifier = Modifier.size(52.dp).clip(CircleShape).background(colors.greenTint),
@@ -292,10 +296,10 @@ internal fun PinPad(
                 row.forEach { key ->
                     when (key) {
                         "" -> Spacer(modifier = Modifier.weight(1f))
-                        BACKSPACE -> KeypadKey(onClick = onBackspace, modifier = Modifier.weight(1f)) {
+                        BACKSPACE -> KeypadKey(onClick = { activity(); onBackspace() }, modifier = Modifier.weight(1f)) {
                             Icon(Icons.AutoMirrored.Outlined.Backspace, contentDescription = stringResource(R.string.pin_backspace), tint = colors.ink)
                         }
-                        else -> KeypadKey(onClick = { onDigit(key) }, modifier = Modifier.weight(1f)) {
+                        else -> KeypadKey(onClick = { activity(); onDigit(key) }, modifier = Modifier.weight(1f)) {
                             Text(key, fontFamily = DisplayFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, color = colors.ink)
                         }
                     }

@@ -97,6 +97,12 @@ class MainActivity : AppCompatActivity() {
         return super.dispatchTouchEvent(ev)
     }
 
+    // Hardware keys and other non-touch input count too.
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        staffSession.touch()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.action == CloseReminder.ACTION_CLOSE_DAY) openCloseDay = true

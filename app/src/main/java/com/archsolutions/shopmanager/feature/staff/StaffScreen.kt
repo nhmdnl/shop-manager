@@ -224,7 +224,7 @@ private fun PersonCard(person: StaffEntity, isYou: Boolean, onRename: () -> Unit
                 if (isYou) stringResource(R.string.staff_you) else null,
                 if (!person.active) stringResource(R.string.staff_inactive) else null,
             )
-            Text(tags.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = colors.muted)
+            Text(tags.joinToString(stringResource(R.string.staff_tags_separator)), style = MaterialTheme.typography.bodySmall, color = colors.muted)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ActionChip(stringResource(R.string.staff_rename), onRename)
                 if (canResetPin) ActionChip(stringResource(R.string.staff_reset_pin), onResetPin)

@@ -6,6 +6,7 @@ import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import com.archsolutions.shopmanager.feature.staff.RecoveryCodeDialog
 import com.archsolutions.shopmanager.feature.staff.StaffSetupFlow
 import com.archsolutions.shopmanager.feature.staff.StaffViewModel
+import com.archsolutions.shopmanager.feature.staff.canOpenSettings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -54,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -103,6 +105,12 @@ fun SettingsScreen(
     val colors = LocalShopColors.current
     val settings by viewModel.settings.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val staffViewModel: StaffViewModel = hiltViewModel()
+    val staffOn by staffViewModel.staffEnabled.collectAsState()
+    val signedInRole by staffViewModel.signedInRole.collectAsState()
+    // With staff on, Settings (backup, restore, cloud) is for a signed-in Owner only; unknown is closed. Live state, so
+    // a sign-out or a different person signing in re-gates it at once.
+    val open = canOpenSettings(signedInRole, staffOn)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -133,6 +141,16 @@ fun SettingsScreen(
             )
         },
     ) { paddingValues ->
+        if (!open) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(paddingValues).padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
+            ) {
+                Text(stringResource(R.string.settings_locked), style = MaterialTheme.typography.bodyLarge, color = colors.ink)
+            }
+            return@Scaffold
+        }
         if (isExpanded) {
             // Tablet Two-Column Layout
             Row(
@@ -181,8 +199,9 @@ fun SettingsScreen(
                         onShopNameChange = viewModel::setShopName,
                         onPinSet = viewModel::setPin,
                         onPinOff = viewModel::disablePin,
+                        staffOn = staffOn == true,
                     )
-                    StaffSettingsCard(settings = settings, onManageStaff = onManageStaff)
+                    StaffSettingsCard(settings = settings, staffOn = staffOn == true, onManageStaff = onManageStaff)
                     CloudSettingsCard(onSignIn = onCloudSignIn, onPay = onCloudPay, onRestore = onCloudRestore)
                 }
             }
@@ -222,8 +241,9 @@ fun SettingsScreen(
                     onShopNameChange = viewModel::setShopName,
                     onPinSet = viewModel::setPin,
                     onPinOff = viewModel::disablePin,
+                    staffOn = staffOn == true,
                 )
-                StaffSettingsCard(settings = settings, onManageStaff = onManageStaff)
+                StaffSettingsCard(settings = settings, staffOn = staffOn == true, onManageStaff = onManageStaff)
                 CloudSettingsCard(onSignIn = onCloudSignIn, onPay = onCloudPay, onRestore = onCloudRestore)
             }
         }
@@ -462,6 +482,7 @@ private fun ShopDataSettingsCard(
     onShopNameChange: (String) -> Unit,
     onPinSet: (String) -> Unit,
     onPinOff: () -> Unit,
+    staffOn: Boolean,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val pinGate = rememberPinGate()
@@ -504,7 +525,7 @@ private fun ShopDataSettingsCard(
                 RowChip(text = stringResource(R.string.action_restore), onClick = { pinGate.run(R.string.pin_for_restore) { confirmingRestore = true } })
             }
             // With staff on, each person has their own PIN and the shared one is unused, so its rows go.
-            if (!settings.staffEnabled) {
+            if (!staffOn) {
                 SwitchRow(
                     title = stringResource(R.string.settings_pin),
                     subtitle = stringResource(R.string.settings_pin_desc),
@@ -573,7 +594,7 @@ private fun ShopDataSettingsCard(
 
 /** Staff sign-in: set it up, manage people, idle sign-out, turn it off. Every entry asks for the Owner PIN (shared PIN while staff is off). */
 @Composable
-private fun StaffSettingsCard(settings: ShopSettings, onManageStaff: () -> Unit, viewModel: StaffViewModel = hiltViewModel()) {
+private fun StaffSettingsCard(settings: ShopSettings, staffOn: Boolean, onManageStaff: () -> Unit, viewModel: StaffViewModel = hiltViewModel()) {
     val pinGate = rememberPinGate()
     val codeToShow by viewModel.shownCode.collectAsState()
     var settingUp by remember { mutableStateOf(false) }
@@ -590,7 +611,7 @@ private fun StaffSettingsCard(settings: ShopSettings, onManageStaff: () -> Unit,
     ShopCard(modifier = Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             SectionLabel(text = stringResource(R.string.settings_staff_section))
-            if (!settings.staffEnabled) {
+            if (!staffOn) {
                 SettingRow(title = stringResource(R.string.settings_staff_setup), subtitle = stringResource(R.string.settings_staff_setup_desc)) {
                     RowChip(text = stringResource(R.string.settings_staff_setup_action), onClick = { pinGate.run(R.string.pin_for_staff) { settingUp = true } })
                 }
@@ -600,7 +621,7 @@ private fun StaffSettingsCard(settings: ShopSettings, onManageStaff: () -> Unit,
                     RowChip(text = stringResource(R.string.settings_staff_manage_action), onClick = onManageStaff)
                 }
                 SettingRow(title = stringResource(R.string.settings_staff_idle), subtitle = stringResource(R.string.settings_staff_idle_desc)) {
-                    RowChip(text = settings.idleTimeoutMinutes.toString(), onClick = { pinGate.run(R.string.pin_for_staff) { editingIdle = true } })
+                    RowChip(text = pluralStringResource(R.plurals.plurals_staff_idle_minutes, settings.idleTimeoutMinutes, settings.idleTimeoutMinutes), onClick = { pinGate.run(R.string.pin_for_staff) { editingIdle = true } })
                 }
                 SettingRow(title = stringResource(R.string.settings_staff_off)) {
                     RowChip(text = stringResource(R.string.settings_staff_off_action), onClick = { pinGate.run(R.string.pin_for_staff) { confirmingOff = true } })

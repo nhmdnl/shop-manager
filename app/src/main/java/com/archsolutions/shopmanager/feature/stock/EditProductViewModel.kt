@@ -9,8 +9,12 @@ import com.archsolutions.shopmanager.data.db.entities.ProductSupplierEntity
 import com.archsolutions.shopmanager.data.db.entities.SupplierEntity
 import com.archsolutions.shopmanager.data.db.entities.Unit as ProductUnit
 import com.archsolutions.shopmanager.data.repo.ProductRepo
+import com.archsolutions.shopmanager.data.repo.StaffRepo
 import com.archsolutions.shopmanager.data.repo.SupplierRepo
 import com.archsolutions.shopmanager.data.settings.SettingsStore
+import com.archsolutions.shopmanager.data.staff.StaffSession
+import com.archsolutions.shopmanager.domain.staff.Permission
+import com.archsolutions.shopmanager.feature.pin.pinNeededFlow
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,7 +53,8 @@ data class EditProductUiState(
     val lowStock: Boolean = false,
     val categories: List<CategoryEntity> = emptyList(),
     val suppliers: List<SupplierEntity> = emptyList(),
-    val pinEnabled: Boolean = false,
+    /** The stock correction will ask for a PIN: the real gate decision. */
+    val pinNeeded: Boolean = false,
     val saving: Boolean = false,
     val saved: Boolean = false,
 ) {
@@ -67,6 +72,8 @@ class EditProductViewModel @Inject constructor(
     private val productRepo: ProductRepo,
     private val supplierRepo: SupplierRepo,
     settingsStore: SettingsStore,
+    staffSession: StaffSession,
+    staffRepo: StaffRepo,
 ) : ViewModel() {
     // EditProductRoute(id) uses 0 for a new product.
     private val productId: Long = savedStateHandle.get<Long>("id") ?: 0L
@@ -80,8 +87,8 @@ class EditProductViewModel @Inject constructor(
         liveProduct,
         productRepo.getCategories(),
         supplierRepo.getAllActive(),
-        settingsStore.settings.map { it.pinEnabled },
-    ) { (currentForm, flag), product, categories, suppliers, pinEnabled ->
+        pinNeededFlow(settingsStore.settings, staffSession.current, staffRepo.staffActive, Permission.CORRECT_STOCK),
+    ) { (currentForm, flag), product, categories, suppliers, pinNeeded ->
         EditProductUiState(
             loaded = currentForm != null,
             isNew = productId == 0L,
@@ -90,7 +97,7 @@ class EditProductViewModel @Inject constructor(
             lowStock = product != null && product.stockQty <= product.lowStockLevel,
             categories = categories,
             suppliers = suppliers,
-            pinEnabled = pinEnabled,
+            pinNeeded = pinNeeded,
             saving = flag.first,
             saved = flag.second,
         )

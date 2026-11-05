@@ -14,6 +14,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -127,45 +129,71 @@ fun NameDialog(
 }
 
 /**
- * Turning staff on: the shared PIN again when there is one (it becomes the Owner PIN), else a new PIN; then the
- * Owner's name; then [StaffViewModel.setUp]. The recovery code is shown by the caller from [StaffViewModel.shownCode].
- * Everything typed lives only in this composable, so closing it (including on sign-out) forgets it.
+ * Turning staff on. If an Owner row already exists (staff was turned off before), only that Owner's current PIN is asked
+ * ([StaffViewModel.reEnable]); a forgotten PIN cannot get past this and the shop keeps working with staff off. A first
+ * set-up asks the old shared PIN when there is one (to prove it is the owner), then a NEW Owner PIN (staff may know the
+ * shared one), then the Owner's name, then [StaffViewModel.setUp]. The recovery code is shown by the caller from
+ * [StaffViewModel.shownCode]. Everything typed lives only in this composable, so closing it (including on sign-out)
+ * forgets it.
  */
 @Composable
 fun StaffSetupFlow(sharedPinSet: Boolean, viewModel: StaffViewModel, onClose: () -> Unit) {
-    var ownerPin by remember { mutableStateOf<String?>(null) }
+    var existingOwner by remember { mutableStateOf<Boolean?>(null) }
+    var sharedPin by remember { mutableStateOf<String?>(null) }
     var typed by remember { mutableStateOf<String?>(null) }
+    var ownerPin by remember { mutableStateOf<String?>(null) }
+    var sameAsShared by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     OnSignOut {
-        ownerPin = null
+        sharedPin = null
         typed = null
+        ownerPin = null
         onClose()
     }
+    LaunchedEffect(Unit) { existingOwner = viewModel.hasExistingOwner() }
 
     val pin = ownerPin
-    if (pin == null) {
-        if (sharedPinSet) {
-            PinCheckDialog(
-                title = stringResource(R.string.staff_setup_confirm_title),
-                purpose = stringResource(R.string.staff_setup_confirm_hint),
-                check = { entered ->
-                    val result = viewModel.checkSharedPin(entered)
-                    if (result == PinResult.Ok) typed = entered
-                    result
-                },
+    when {
+        existingOwner == null -> Unit
+        existingOwner == true -> PinCheckDialog(
+            title = stringResource(R.string.staff_reenable_title),
+            purpose = stringResource(R.string.staff_reenable_hint),
+            check = viewModel::reEnable,
+            onDismiss = onClose,
+            onSuccess = onClose,
+        )
+        sharedPinSet && sharedPin == null -> PinCheckDialog(
+            title = stringResource(R.string.staff_setup_confirm_title),
+            purpose = stringResource(R.string.staff_setup_confirm_hint),
+            check = { entered ->
+                val result = viewModel.checkSharedPin(entered)
+                if (result == PinResult.Ok) typed = entered
+                result
+            },
+            onDismiss = onClose,
+            onSuccess = {
+                sharedPin = typed
+                typed = null
+            },
+        )
+        pin == null -> key(sameAsShared) {
+            SetPinDialog(
                 onDismiss = onClose,
-                onSuccess = {
-                    ownerPin = typed
-                    typed = null
+                onSet = { chosen ->
+                    if (chosen == sharedPin) sameAsShared = true else ownerPin = chosen
                 },
+                hint = stringResource(
+                    when {
+                        sameAsShared -> R.string.staff_setup_newpin_same
+                        sharedPinSet -> R.string.staff_setup_newpin_hint
+                        else -> R.string.pin_staff_hint
+                    },
+                ),
             )
-        } else {
-            SetPinDialog(onDismiss = onClose, onSet = { ownerPin = it }, hint = stringResource(R.string.pin_staff_hint))
         }
-    } else {
-        NameDialog(
+        else -> NameDialog(
             title = stringResource(R.string.staff_setup_name_title),
             initial = "",
             confirmText = stringResource(R.string.action_next),
@@ -179,8 +207,9 @@ fun StaffSetupFlow(sharedPinSet: Boolean, viewModel: StaffViewModel, onClose: ()
                 busy = true
                 scope.launch {
                     try {
-                        viewModel.setUp(name, pin)
+                        viewModel.setUp(name, pin, sharedPin)
                         ownerPin = null
+                        sharedPin = null
                         onClose()
                     } catch (_: IllegalArgumentException) {
                         failed = true
