@@ -24,6 +24,7 @@ class StaffSession @Inject constructor(private val clock: AppClock) {
     val actingId: Long? get() = approvedBy ?: currentId
 
     fun signIn(staff: StaffEntity) {
+        approvedBy = null
         lastTouch = clock.nowMillis()
         _current.value = staff
     }
@@ -37,8 +38,13 @@ class StaffSession @Inject constructor(private val clock: AppClock) {
         lastTouch = clock.nowMillis()
     }
 
+    /** A timeout of 0 or less means never sign out automatically. */
     fun checkIdle(timeoutMinutes: Int) {
-        if (_current.value != null && clock.nowMillis() - lastTouch >= timeoutMinutes * 60_000L) signOut()
+        if (timeoutMinutes <= 0) return
+        val seen = _current.value ?: return
+        if (clock.nowMillis() - lastTouch >= timeoutMinutes * 60_000L && _current.compareAndSet(seen, null)) {
+            approvedBy = null
+        }
     }
 
     fun onDeactivated(staffId: Long) {

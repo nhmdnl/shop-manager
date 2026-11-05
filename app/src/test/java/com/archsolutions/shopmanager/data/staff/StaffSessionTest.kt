@@ -56,4 +56,40 @@ class StaffSessionTest {
         session.approvedBy = null
         assertEquals(1L, session.actingId)
     }
+
+    @Test
+    fun `signIn resets the idle timer`() {
+        val clock = FakeClock()
+        val session = StaffSession(clock)
+        clock.now += 10 * 60_000L
+        session.signIn(person(1))
+        session.checkIdle(5)
+        assertNotNull(session.current.value)
+    }
+
+    @Test
+    fun `touch while signed out is harmless`() {
+        val session = StaffSession(FakeClock())
+        session.touch()
+        session.checkIdle(5)
+        assertNull(session.current.value)
+    }
+
+    @Test
+    fun `a timeout of zero never signs out`() {
+        val clock = FakeClock()
+        val session = StaffSession(clock)
+        session.signIn(person(1))
+        clock.now += 1_000 * 60_000L
+        session.checkIdle(0)
+        assertNotNull(session.current.value)
+    }
+
+    @Test
+    fun `signIn clears a stale approval`() {
+        val session = StaffSession(FakeClock())
+        session.approvedBy = 9L
+        session.signIn(person(1))
+        assertNull(session.approvedBy)
+    }
 }

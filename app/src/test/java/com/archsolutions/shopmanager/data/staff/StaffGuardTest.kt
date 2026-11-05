@@ -10,6 +10,8 @@ import com.archsolutions.shopmanager.data.repo.StaffRepo
 import com.archsolutions.shopmanager.data.settings.PinResult
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import com.archsolutions.shopmanager.domain.staff.Role
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -114,5 +116,67 @@ class StaffGuardTest {
         assertEquals(PinResult.Wrong(4), guard.approveAsOwner("0000"))
         clock.now += Pin.LOCKOUT_MILLIS
         assertTrue(guard.recover(ownerId, code, "5555") is RecoveryOutcome.Ok)
+    }
+
+    @Test
+    fun `parallel wrong attempts never exceed 5 tries before the lock`() = runTest {
+        setUpAll()
+        val results = (1..12).map { async { guard.signIn(cashierA, "0000") } }.awaitAll()
+        assertEquals(4, results.count { it is PinResult.Wrong })
+        assertEquals(8, results.count { it is PinResult.Locked })
+    }
+
+    @Test
+    fun `correct pin during a lock is still Locked`() = runTest {
+        setUpAll()
+        val results = (1..5).map { async { guard.signIn(cashierA, "0000") } }.awaitAll() +
+            async { guard.signIn(cashierA, "2222") }.await()
+        assertTrue(results.last() is PinResult.Locked)
+        assertNull(session.currentId)
+    }
+
+    @Test
+    fun `lastApproverId is cleared by a later failed attempt`() = runTest {
+        setUpAll()
+        assertEquals(PinResult.Ok, guard.approveAsOwner("1111"))
+        assertEquals(ownerId, guard.lastApproverId)
+        assertTrue(guard.approveAsOwner("0000") is PinResult.Wrong)
+        assertNull(guard.lastApproverId)
+    }
+
+    @Test
+    fun `a correct sign-in resets that person's counter`() = runTest {
+        setUpAll()
+        repeat(4) { guard.signIn(cashierA, "0000") }
+        assertEquals(PinResult.Ok, guard.signIn(cashierA, "2222"))
+        assertEquals(PinResult.Wrong(4), guard.signIn(cashierA, "0000"))
+    }
+
+    @Test
+    fun `approveAsOwner locks after 5 failures, 29 s locked, 30 s open`() = runTest {
+        setUpAll()
+        repeat(4) { assertTrue(guard.approveAsOwner("0000") is PinResult.Wrong) }
+        assertEquals(PinResult.Locked(Pin.LOCKOUT_MILLIS), guard.approveAsOwner("0000"))
+        clock.now += 29_000
+        assertTrue(guard.approveAsOwner("1111") is PinResult.Locked)
+        clock.now += 1_000
+        assertEquals(PinResult.Ok, guard.approveAsOwner("1111"))
+    }
+
+    @Test
+    fun `inactive person cannot sign in and still counts toward their lock`() = runTest {
+        setUpAll()
+        assertTrue(repo.setActive(cashierA, false))
+        repeat(4) { assertTrue(guard.signIn(cashierA, "2222") is PinResult.Wrong) }
+        assertTrue(guard.signIn(cashierA, "2222") is PinResult.Locked)
+        assertNull(session.currentId)
+    }
+
+    @Test
+    fun `approveAsOwner with zero active owners is a failure, no crash`() = runTest {
+        setUpAll()
+        db.staffDao().update(db.staffDao().getByIdDirect(ownerId)!!.copy(active = false))
+        assertEquals(PinResult.Wrong(4), guard.approveAsOwner("1111"))
+        assertNull(guard.lastApproverId)
     }
 }
