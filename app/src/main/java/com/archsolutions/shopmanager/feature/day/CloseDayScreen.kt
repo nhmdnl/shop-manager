@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.day
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -685,6 +686,7 @@ private fun CloseDayCompact(
         }
     }
 
+    OnSignOut { showCounter = false }
     if (showCounter) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val scope = rememberCoroutineScope()

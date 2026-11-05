@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.stock
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -344,6 +345,7 @@ private fun CorrectStockSheet(
     val change = counted - stockQty
     val close: () -> Unit = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } }
 
+    OnSignOut(onDismiss)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = colors.surface) {
         Column(
             modifier = Modifier

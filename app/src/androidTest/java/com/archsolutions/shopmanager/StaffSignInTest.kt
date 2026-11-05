@@ -1,7 +1,9 @@
 package com.archsolutions.shopmanager
 
 import android.content.Context
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -225,6 +227,30 @@ class StaffSignInTest {
         tick++
 
         composeRule.waitUntil(timeoutMillis = 5_000) { composeRule.onAllNodesWithText("Enter PIN").fetchSemanticsNodes().isEmpty() }
+    }
+
+    @Test
+    fun signingOutDismissesAnOpenAlertDialog() {
+        var tick by mutableIntStateOf(0)
+        composeRule.setContent {
+            CompositionLocalProvider(LocalSignOutTick provides tick) {
+                var open by remember { mutableStateOf(true) }
+                OnSignOut { open = false }
+                if (open) {
+                    AlertDialog(
+                        onDismissRequest = {},
+                        title = { Text("Restore?") },
+                        text = { Text("Replaces everything") },
+                        confirmButton = { TextButton(onClick = {}) { Text("Replace") } },
+                    )
+                }
+            }
+        }
+        composeRule.onNodeWithText("Replace").assertIsDisplayed()
+
+        tick++
+
+        composeRule.waitUntil(timeoutMillis = 5_000) { composeRule.onAllNodesWithText("Replace").fetchSemanticsNodes().isEmpty() }
     }
 
     /** Every text node: nothing ellipsised, no line wider than its box, no cut height, inside the phone width. */

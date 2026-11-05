@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.suppliers
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -329,6 +330,7 @@ private fun OrderQtyDialog(item: ReorderItem, onDismiss: () -> Unit, onSave: (Lo
     val colors = LocalShopColors.current
     var text by remember { mutableStateOf(item.qty.toString()) }
     val qty = text.toLongOrNull()
+    OnSignOut(onDismiss)
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = colors.surface,

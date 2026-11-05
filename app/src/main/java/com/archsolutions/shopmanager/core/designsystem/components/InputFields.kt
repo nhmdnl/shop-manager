@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.core.designsystem.components
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -374,6 +375,7 @@ fun <T> ShopDropdown(
                 )
             }
         }
+        OnSignOut { expanded = false }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },

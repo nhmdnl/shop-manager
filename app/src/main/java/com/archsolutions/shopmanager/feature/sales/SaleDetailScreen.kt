@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.sales
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -256,6 +257,7 @@ private fun VoidSaleSheet(
     var note by rememberSaveable { mutableStateOf("") }
     val close: () -> Unit = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } }
 
+    OnSignOut(onDismiss)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = colors.surface) {
         Column(
             modifier = Modifier

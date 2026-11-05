@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.cloud
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import android.text.format.Formatter
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -131,6 +132,8 @@ fun CloudRestoreScreen(
         }
     }
 
+    // The previous person's pending restore must not wait for the next one.
+    OnSignOut(viewModel::cancel)
     state.confirm?.let { picked ->
         AlertDialog(
             onDismissRequest = viewModel::cancel,

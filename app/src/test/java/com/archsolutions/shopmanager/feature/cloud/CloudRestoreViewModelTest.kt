@@ -120,6 +120,17 @@ class CloudRestoreViewModelTest {
         assertNull(vm.state.value.confirm)
     }
 
+    @Test fun `a sign-out dismissal drops the pending confirm so the next person cannot finish the restore`() = runTest(dispatcher) {
+        val vm = vm()
+        vm.pick(MID)
+        vm.cancel() // what the screen calls on sign-out
+        vm.confirmRestore(); runCurrent()
+
+        assertNull(vm.state.value.confirm)
+        assertNull(fake.downloaded)
+        assertNull(fake.restoredFrom)
+    }
+
     @Test fun `confirm downloads and stages restore`() = runTest(dispatcher) {
         val vm = vm()
         vm.pick(MID)

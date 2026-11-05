@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.day
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -186,6 +187,7 @@ internal fun RecordMoneyForm(
         )
     }
 
+    OnSignOut(viewModel::dismissOverpayment)
     if (confirmOverpayment) {
         val customer = state.selectedCustomer
         AlertDialog(

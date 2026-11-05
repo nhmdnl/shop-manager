@@ -28,6 +28,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,6 +56,7 @@ import com.archsolutions.shopmanager.data.settings.PinResult
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import com.archsolutions.shopmanager.data.staff.StaffGuard
 import com.archsolutions.shopmanager.data.staff.StaffSession
+import com.archsolutions.shopmanager.feature.staff.LocalSignOutTick
 import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import com.archsolutions.shopmanager.domain.staff.GateDecision
 import com.archsolutions.shopmanager.domain.staff.GateInputs
@@ -102,12 +104,17 @@ class PinGate internal constructor(
     private val state: StateFlow<GateInputs?>,
     private val scope: CoroutineScope,
     private val runApproved: (Boolean, () -> Unit) -> Unit,
+    private val signOutTick: () -> Int = { 0 },
 ) {
     internal var request by mutableStateOf<PinRequest?>(null)
 
     fun run(@StringRes purpose: Int, action: () -> Unit) {
         scope.launch {
-            when (state.decide(permissionFor(purpose))) {
+            val tickAtStart = signOutTick()
+            val decision = state.decide(permissionFor(purpose))
+            // Somebody signed out while this waited for the first real state: it was asked for by someone no longer here.
+            if (signOutTick() != tickAtStart) return@launch
+            when (decision) {
                 GateDecision.RUN -> runApproved(false, action)
                 GateDecision.ASK_SHARED_PIN -> request = PinRequest(purpose, ownerPin = false, action)
                 GateDecision.ASK_OWNER_PIN -> request = PinRequest(purpose, ownerPin = true, action)
@@ -122,7 +129,8 @@ internal data class PinRequest(@StringRes val purpose: Int, val ownerPin: Boolea
 @Composable
 fun rememberPinGate(viewModel: PinViewModel = hiltViewModel()): PinGate {
     val scope = rememberCoroutineScope()
-    val gate = remember(viewModel, scope) { PinGate(viewModel.gateState, scope, viewModel::runApproved) }
+    val tick by rememberUpdatedState(LocalSignOutTick.current)
+    val gate = remember(viewModel, scope) { PinGate(viewModel.gateState, scope, viewModel::runApproved) { tick } }
     OnSignOut { gate.request = null }
     gate.request?.let { request ->
         PinCheckDialog(
