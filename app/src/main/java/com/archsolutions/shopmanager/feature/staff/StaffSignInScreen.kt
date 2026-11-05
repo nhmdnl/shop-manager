@@ -131,11 +131,15 @@ fun StaffSignInScreen(viewModel: StaffSignInViewModel = hiltViewModel(), modifie
         )
     }
     // Nobody is signed in here, so the new code must not wait for the next person: it goes when the app leaves the
-    // foreground, or after two minutes.
+    // foreground (not on a rotation or font-scale change, which recreate the Activity while the owner is still
+    // writing it down), or after two minutes.
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
     DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE) viewModel.codeWritten()
+            if (event == Lifecycle.Event.ON_STOP && context.findActivity()?.isChangingConfigurations != true) {
+                viewModel.codeWritten()
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
