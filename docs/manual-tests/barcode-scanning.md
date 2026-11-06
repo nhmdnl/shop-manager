@@ -39,3 +39,13 @@ a real camera and a crash while scanning is worse than the metrics. Follow-up: t
 5. Open an existing product that has a barcode. Expected: no warning for its own barcode.
 6. Rotate the screen after scanning. Expected: the code stays in the field.
 7. With staff sign-in on, sign out while the scanner is open. Expected: the app returns to sign-in; no scanner left over after signing in.
+
+## Stock: scan to find a product
+
+1. Open Stock (phone and tablet). Expected: a Scan button beside the search field (absent on a device with no camera).
+2. Tap Scan (twice quickly). Expected: one scanner screen. Scan a barcode that belongs to a product. Expected: one beep, the scanner closes, Edit product opens for that product; the search field is unchanged. Go back: Stock does not reopen the product.
+3. Scan a barcode no active product has. Expected: back on Stock with "Not found: CODE" and Add this product; the search field and list are unchanged.
+4. Tap Add this product. Expected: New product with the barcode filled in. Save it, return to Stock, scan the same code: that product opens.
+5. Scan the barcode of an archived (inactive) product. Expected: Not found.
+6. With the Not found banner showing, sign out (staff). Expected: no banner after signing in again.
+7. Rotate or open Edit product then go back after a found scan. Expected: no second Edit product, no repeated banner.

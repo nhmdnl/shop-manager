@@ -705,6 +705,8 @@ private fun NavContent(
                 onNewProduct = { navController.navigate(EditProductRoute()) },
                 onEditProduct = { navController.navigate(EditProductRoute(it)) },
                 onAddPurchase = { navController.navigate(AddPurchaseRoute(productId = it)) },
+                onScan = { navController.navigate(ScanOnceRoute) { launchSingleTop = true } },
+                onAddScanned = { navController.navigate(EditProductRoute(barcode = it)) },
             )
         }
         composable<AddPurchaseRoute> {
@@ -724,7 +726,7 @@ private fun NavContent(
                 onScan = { navController.navigate(ScanOnceRoute) { launchSingleTop = true } },
             )
         }
-        // Single-shot scanner: hands the first code back to the screen below it (Edit product now, Stock later).
+        // Single-shot scanner: hands the first code back to the screen below it (Edit product, Stock).
         composable<ScanOnceRoute> {
             ScanOnceHost(
                 onCode = { code ->
