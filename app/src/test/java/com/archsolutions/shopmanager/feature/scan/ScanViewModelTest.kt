@@ -112,4 +112,14 @@ class ScanViewModelTest {
         assertEquals(ScanUiState(), vm.state.value)
         assertTrue(known.isEmpty())
     }
+
+    @Test fun `clearNotFound empties the banner and a restore keeps it empty`() {
+        val saved = SavedStateHandle()
+        val vm = vm(saved)
+        vm.onCode(ScannedCode("9999")) { known += it }
+        assertEquals("9999", vm.state.value.notFound)
+        vm.clearNotFound()
+        assertNull(vm.state.value.notFound)
+        assertNull(vm(saved).state.value.notFound)
+    }
 }

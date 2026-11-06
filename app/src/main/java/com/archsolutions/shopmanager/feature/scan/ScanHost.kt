@@ -35,7 +35,10 @@ fun ScanHost(
         continuous = continuous,
         state = state,
         onCode = { viewModel.onCode(it, onKnown) },
-        onAddProduct = onAddProduct,
+        onAddProduct = { code ->
+            viewModel.clearNotFound()
+            onAddProduct(code)
+        },
         onDone = onDone,
     )
 }

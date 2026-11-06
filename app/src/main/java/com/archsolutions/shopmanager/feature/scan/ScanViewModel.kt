@@ -61,6 +61,11 @@ class ScanViewModel internal constructor(
         }
     }
 
+    /** Drops the "Not found" banner (the host is taking the code to Add this product), in saved state too. */
+    fun clearNotFound() {
+        persist(_state.updateAndGet { it.copy(notFound = null) })
+    }
+
     private fun persist(next: ScanUiState) {
         saved[K_COUNT] = next.count
         saved[K_LAST] = next.last
