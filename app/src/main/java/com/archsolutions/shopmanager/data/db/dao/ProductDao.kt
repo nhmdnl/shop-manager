@@ -46,6 +46,12 @@ interface ProductDao {
     @Query("SELECT * FROM product WHERE active = 1 AND (name LIKE '%' || :query || '%' OR barcode LIKE '%' || :query || '%') ORDER BY name ASC")
     fun search(query: String): Flow<List<ProductEntity>>
 
+    @Query("SELECT * FROM product WHERE active = 1 AND barcode IN (:codes) ORDER BY id LIMIT 1")
+    suspend fun findActiveByBarcodes(codes: List<String>): ProductEntity?
+
+    @Query("SELECT * FROM product WHERE active = 1 AND barcode IN (:codes) AND id != :exceptId ORDER BY id LIMIT 1")
+    suspend fun findOtherByBarcodes(codes: List<String>, exceptId: Long): ProductEntity?
+
     @Query("SELECT CAST(COALESCE(SUM(stockQty * costPrice), 0) AS INTEGER) FROM product WHERE active = 1")
     fun getTotalStockValue(): Flow<Long>
 

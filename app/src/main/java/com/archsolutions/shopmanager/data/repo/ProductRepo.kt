@@ -9,6 +9,7 @@ import com.archsolutions.shopmanager.data.db.entities.MovementType
 import com.archsolutions.shopmanager.data.db.entities.ProductEntity
 import com.archsolutions.shopmanager.data.db.entities.ProductSupplierEntity
 import com.archsolutions.shopmanager.data.db.entities.StockMovementEntity
+import com.archsolutions.shopmanager.domain.Barcodes
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 import javax.inject.Inject
@@ -37,6 +38,18 @@ class ProductRepo @Inject constructor(
     fun getByCategory(categoryId: Long): Flow<List<ProductEntity>> = productDao.getByCategory(categoryId)
 
     fun search(query: String): Flow<List<ProductEntity>> = productDao.search(query)
+
+    /** The active product with this barcode (any UPC/EAN spelling); lowest id on duplicates. */
+    suspend fun findByBarcode(code: String): ProductEntity? {
+        val codes = Barcodes.candidates(code)
+        return if (codes.isEmpty()) null else productDao.findActiveByBarcodes(codes)
+    }
+
+    /** Another active product already using this barcode, or null. */
+    suspend fun productUsingBarcode(code: String, exceptId: Long): ProductEntity? {
+        val codes = Barcodes.candidates(code)
+        return if (codes.isEmpty()) null else productDao.findOtherByBarcodes(codes, exceptId)
+    }
 
     fun getTotalStockValue(): Flow<Long> = productDao.getTotalStockValue()
 
