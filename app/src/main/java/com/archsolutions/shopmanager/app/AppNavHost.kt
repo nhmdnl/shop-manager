@@ -662,7 +662,7 @@ private fun NavContent(
                         onDone = { navController.popIfResumed(entry) },
                     )
                 } else {
-                    LaunchedEffect(Unit) { navController.popBackStack() }
+                    LaunchedEffect(Unit) { if (navController.currentBackStackEntry?.id == entry.id) navController.popBackStack() }
                 }
             }
             composable<CheckoutRoute> { entry ->
@@ -747,7 +747,7 @@ private fun NavContent(
                     onDone = { navController.popIfResumed(entry) },
                 )
             } else {
-                LaunchedEffect(Unit) { navController.popBackStack() }
+                LaunchedEffect(Unit) { if (navController.currentBackStackEntry?.id == entry.id) navController.popBackStack() }
             }
         }
         composable<EditProductRoute> { entry ->

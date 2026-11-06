@@ -47,10 +47,12 @@ class ScanViewModel internal constructor(
      * Looks the code up; for a known product runs [onKnown] first, then counts it. Repeats inside the window do nothing.
      * A failing lookup or [onKnown] is logged and the scan is treated as not handled (state unchanged).
      */
-    fun onCode(code: ScannedCode, onKnown: suspend (ProductEntity) -> Unit) {
+    fun onCode(code: ScannedCode, onAccepted: () -> Unit = {}, onKnown: suspend (ProductEntity) -> Unit) {
         viewModelScope.launch {
             try {
                 val outcome = controller.handle(code)
+                // Only a code the session accepted counts as user activity; a barcode left in view must not keep a staff session alive.
+                if (outcome !is ScanOutcome.Ignored) onAccepted()
                 if (outcome is ScanOutcome.Known) onKnown(outcome.product)
                 persist(_state.updateAndGet { it.reduce(outcome) { p -> p.name } })
             } catch (e: CancellationException) {

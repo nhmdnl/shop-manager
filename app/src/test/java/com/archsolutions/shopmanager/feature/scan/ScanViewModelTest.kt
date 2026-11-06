@@ -73,6 +73,17 @@ class ScanViewModelTest {
         assertEquals(2, vm.state.value.count)
     }
 
+    @Test fun `only an accepted code counts as user activity`() {
+        val vm = vm()
+        var pings = 0
+        vm.onCode(ScannedCode("6001"), { pings++ }) { known += it }
+        clock.now += 500
+        vm.onCode(ScannedCode("6001"), { pings++ }) { known += it } // same code still in view: ignored
+        assertEquals(1, pings)
+        vm.onCode(ScannedCode("9999"), { pings++ }) { known += it } // a new unknown code is accepted too
+        assertEquals(2, pings)
+    }
+
     @Test fun `a second known scan of another code is counted`() {
         val vm = vm()
         vm.onCode(ScannedCode("6001")) { known += it }

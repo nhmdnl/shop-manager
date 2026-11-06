@@ -6,6 +6,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import java.util.concurrent.atomic.AtomicBoolean
+import com.archsolutions.shopmanager.core.designsystem.LocalUserActivity
 import com.archsolutions.shopmanager.core.scan.CameraPermission
 import com.archsolutions.shopmanager.core.scan.ScanFeedback
 import com.archsolutions.shopmanager.core.scan.ScanSource
@@ -30,13 +31,14 @@ fun ScanHost(
     permission: CameraPermission = rememberCameraPermission(),
 ) {
     val state by viewModel.state.collectAsState()
+    val userActivity = LocalUserActivity.current
     ScanScreen(
         source = source,
         feedback = feedback,
         permission = permission,
         continuous = continuous,
         state = state,
-        onCode = { viewModel.onCode(it, onKnown) },
+        onCode = { viewModel.onCode(it, userActivity, onKnown) },
         onAddProduct = { code ->
             viewModel.clearNotFound()
             onAddProduct(code)
@@ -59,6 +61,7 @@ fun ScanOnceHost(
     permission: CameraPermission = rememberCameraPermission(),
 ) {
     val delivered = remember { AtomicBoolean(false) }
+    val userActivity = LocalUserActivity.current
     ScanScreen(
         source = source,
         feedback = feedback,
@@ -68,6 +71,7 @@ fun ScanOnceHost(
         onCode = { scanned ->
             val text = scanned.text.trim()
             if (text.isNotEmpty() && delivered.compareAndSet(false, true)) {
+                userActivity()
                 feedback.success()
                 onCode(text)
             }
