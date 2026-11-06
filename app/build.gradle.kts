@@ -20,7 +20,7 @@ android {
     defaultConfig {
         applicationId = "com.archsolutions.shopmanager"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -90,6 +90,11 @@ android {
 
 kotlin {
     jvmToolchain(17)
+}
+
+// Robolectric runs SDK 36 (the target SDK) only on Java 21; the app itself still compiles for Java 17.
+tasks.withType<Test>().configureEach {
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
 }
 
 dependencies {
