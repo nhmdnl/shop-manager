@@ -140,6 +140,9 @@ import com.archsolutions.shopmanager.feature.day.PastDayScreen
 @Serializable data class DaySummaryRoute(val dayId: Long) // a closed day's record, read-only (Reports > Days)
 @Serializable data class SupplierDetailRoute(val id: Long)
 @Serializable data class SupplierEditRoute(val id: Long = 0L) // 0 = new supplier
+@Serializable object ScanSellRoute // continuous scanner inside SellGraph (wired in the Sell host)
+@Serializable object ScanPurchaseRoute // continuous scanner for Record purchase
+@Serializable object ScanOnceRoute // single-shot scanner (Edit product barcode, Stock lookup)
 @Serializable object CloudPayRoute
 @Serializable object CloudRestoreRoute
 @Serializable object StaffRoute

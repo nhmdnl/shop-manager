@@ -708,4 +708,21 @@
     <string name="cloud_restore_confirm">Replace everything on this tablet with the backup from %1$s?</string>
     <string name="cloud_restore_replace">Replace</string>
     <string name="onboarding_restore_cloud">Restore from Arch-SME Cloud</string>
+
+    <!-- Barcode scanning -->
+    <string name="scan_action">Scan</string>
+    <plurals name="scan_items_count">
+        <item quantity="one">%1$d item scanned</item>
+        <item quantity="other">%1$d items scanned</item>
+    </plurals>
+    <string name="scan_last_item">Last: %1$s</string>
+    <string name="scan_not_found">Not found: %1$s</string>
+    <string name="scan_add_product">Add this product</string>
+    <string name="scan_done">Done</string>
+    <string name="scan_cancel">Cancel</string>
+    <string name="scan_permission_needed">Allow the camera to scan barcodes.</string>
+    <string name="scan_permission_allow">Allow camera</string>
+    <string name="scan_open_settings">Open settings</string>
+    <string name="scan_torch">Torch</string>
+    <string name="scan_aim_hint">Point the camera at a barcode</string>
 </resources>

@@ -1,0 +1,198 @@
+package com.archsolutions.shopmanager.feature.scan
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FlashOff
+import androidx.compose.material.icons.outlined.FlashOn
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.archsolutions.shopmanager.R
+import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
+import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
+import com.archsolutions.shopmanager.core.scan.CameraPermission
+import com.archsolutions.shopmanager.core.scan.CameraPermissionState
+import com.archsolutions.shopmanager.core.scan.ScanFeedback
+import com.archsolutions.shopmanager.core.scan.ScanSource
+import com.archsolutions.shopmanager.core.scan.ScannedCode
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
+
+const val SCAN_PREVIEW_AREA_TAG = "scan_preview_area"
+
+/**
+ * Full-screen scanner. [continuous] keeps scanning with a running count (Sell, Purchases) and ends with Done;
+ * single-shot has Cancel (the host closes the screen on the first known code). Leaving the composition, or a
+ * sign-out, releases the camera because the preview leaves the tree.
+ */
+@Composable
+fun ScanScreen(
+    source: ScanSource,
+    feedback: ScanFeedback,
+    permission: CameraPermission,
+    continuous: Boolean,
+    state: ScanUiState,
+    onCode: (ScannedCode) -> Unit,
+    onAddProduct: (String) -> Unit,
+    onDone: () -> Unit,
+) {
+    val colors = LocalShopColors.current
+    val granted = permission.state == CameraPermissionState.Granted
+    val latestOnCode by rememberUpdatedState(onCode)
+    val hasTorch by source.hasTorch.collectAsStateWithLifecycle()
+    var torchOn by remember { mutableStateOf(false) }
+
+    OnSignOut { onDone() }
+    LaunchedEffect(hasTorch) { if (!hasTorch) torchOn = false } // an unbound camera has its torch off
+
+    // Only while the permission is there is anything decoded; the flow is hot, so no old code is replayed.
+    LaunchedEffect(source, granted) {
+        if (granted) source.codes.collect { latestOnCode(it) }
+    }
+    // One beep or tone per new result (not on the first composition, e.g. after rotation).
+    var seenResults by remember { mutableStateOf(state.results) }
+    LaunchedEffect(state.results) {
+        if (state.results != seenResults) {
+            seenResults = state.results
+            if (state.notFound != null) feedback.failure() else feedback.success()
+        }
+    }
+
+    Column(Modifier.fillMaxSize().background(colors.paper)) {
+        Box(Modifier.weight(1f).heightIn(min = 120.dp).fillMaxWidth().testTag(SCAN_PREVIEW_AREA_TAG)) {
+            if (granted) {
+                source.Preview(Modifier.fillMaxSize())
+                Box(
+                    Modifier
+                        .align(Alignment.Center)
+                        .fillMaxWidth(0.7f)
+                        .fillMaxHeight(0.4f)
+                        .border(3.dp, Color.White.copy(alpha = 0.9f), RoundedCornerShape(16.dp)),
+                )
+                if (hasTorch) {
+                    SecondaryButton(
+                        text = stringResource(R.string.scan_torch),
+                        onClick = {
+                            torchOn = !torchOn
+                            source.setTorch(torchOn)
+                        },
+                        leadingIcon = if (torchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
+                        height = 48.dp,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(12.dp).background(colors.surface, RoundedCornerShape(14.dp)),
+                    )
+                }
+            } else {
+                PermissionPanel(permission)
+            }
+        }
+
+        Column(
+            Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (granted && continuous) {
+                Column(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }) {
+                    Text(
+                        pluralStringResource(R.plurals.scan_items_count, state.count, state.count),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.ink,
+                    )
+                    state.last?.let {
+                        Text(stringResource(R.string.scan_last_item, it), style = MaterialTheme.typography.bodyLarge, color = colors.muted)
+                    }
+                }
+            }
+            if (granted && state.notFound == null && state.last == null) {
+                Text(stringResource(R.string.scan_aim_hint), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
+            }
+            state.notFound?.let { code ->
+                Column(
+                    Modifier.fillMaxWidth().background(colors.rustTint, RoundedCornerShape(12.dp)).padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.scan_not_found, code),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.rust,
+                        modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Assertive },
+                    )
+                    SecondaryButton(
+                        text = stringResource(R.string.scan_add_product),
+                        onClick = { onAddProduct(code) },
+                        height = 48.dp,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+            // One green primary action: Done while scanning in a list; otherwise the permission or Cancel buttons lead.
+            if (continuous && granted) {
+                PrimaryButton(text = stringResource(R.string.scan_done), onClick = onDone, height = 56.dp)
+            } else {
+                SecondaryButton(
+                    text = stringResource(if (continuous) R.string.scan_done else R.string.scan_cancel),
+                    onClick = onDone,
+                    height = 56.dp,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+/** Shown instead of the preview when the camera permission is missing: one line and what to do about it. */
+@Composable
+private fun PermissionPanel(permission: CameraPermission) {
+    val colors = LocalShopColors.current
+    Column(
+        Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            stringResource(R.string.scan_permission_needed),
+            style = MaterialTheme.typography.bodyLarge,
+            color = colors.ink,
+            textAlign = TextAlign.Center,
+        )
+        if (permission.state == CameraPermissionState.NotAsked) {
+            PrimaryButton(text = stringResource(R.string.scan_permission_allow), onClick = permission::request, height = 56.dp)
+        }
+        SecondaryButton(
+            text = stringResource(R.string.scan_open_settings),
+            onClick = permission::openSettings,
+            height = 48.dp,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}

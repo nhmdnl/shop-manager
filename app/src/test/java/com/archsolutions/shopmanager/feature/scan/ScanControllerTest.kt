@@ -73,4 +73,20 @@ class ScanControllerTest {
         assertNull(s2.notFound)
         assertEquals(2, s2.count)
     }
+
+    @Test fun `an unknown code repeated inside the window gives Ignored, and NotFound again after the window`() = runBlocking {
+        val c = controller()
+        assertEquals(ScanOutcome.NotFound("9999"), c.handle(ScannedCode("9999")))
+        clock.now += 500
+        assertEquals(ScanOutcome.Ignored, c.handle(ScannedCode("9999")))
+        assertEquals(1, queries)
+        clock.now += 1_500
+        assertEquals(ScanOutcome.NotFound("9999"), c.handle(ScannedCode("9999")))
+        assertEquals(2, queries)
+    }
+
+    @Test fun `reduce of Ignored keeps an existing notFound`() {
+        val before = ScanUiState(count = 2, last = "Soap", notFound = "9999", results = 3)
+        assertEquals(before, before.reduce(ScanOutcome.Ignored) { it.name })
+    }
 }

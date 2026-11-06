@@ -21,10 +21,16 @@ class ScanController(
     }
 }
 
-data class ScanUiState(val count: Int = 0, val last: String? = null, val notFound: String? = null)
+/** [results] counts every Known or NotFound result, so a screen can give feedback per result even when the text repeats. */
+data class ScanUiState(
+    val count: Int = 0,
+    val last: String? = null,
+    val notFound: String? = null,
+    val results: Int = 0,
+)
 
 fun ScanUiState.reduce(outcome: ScanOutcome, line: (ProductEntity) -> String): ScanUiState = when (outcome) {
-    is ScanOutcome.Known -> copy(count = count + 1, last = line(outcome.product), notFound = null)
-    is ScanOutcome.NotFound -> copy(notFound = outcome.code)
+    is ScanOutcome.Known -> copy(count = count + 1, last = line(outcome.product), notFound = null, results = results + 1)
+    is ScanOutcome.NotFound -> copy(notFound = outcome.code, results = results + 1)
     ScanOutcome.Ignored -> this
 }

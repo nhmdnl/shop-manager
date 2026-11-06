@@ -128,6 +128,13 @@ dependencies {
   // WorkManager (close-day reminder)
   implementation(libs.androidx.work.runtime.ktx)
 
+  // Barcode scanning: CameraX + bundled ML Kit model
+  implementation(libs.androidx.camera.core)
+  implementation(libs.androidx.camera.camera2)
+  implementation(libs.androidx.camera.lifecycle)
+  implementation(libs.androidx.camera.view)
+  implementation(libs.mlkit.barcode.scanning)
+
   // Arch-SME Cloud
   implementation(project(":cloud-contract"))
   implementation(libs.okhttp)
