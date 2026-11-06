@@ -207,12 +207,17 @@ private fun NavHostController.currentStackHoldsGated(): Boolean = currentBackSta
     entryGatedRoutes.any { entry.destination.hasRoute(it) }
 }
 
-/** Pops every entry-gated screen off the stack (no-op for those not on it). */
+/**
+ * Pops every entry-gated screen off the stack (no-op for those not on it), and Settings with them: with staff on,
+ * Settings is Owner-only, and popping just Staff/Cloud would leave the next person (or a restored app) on a Settings
+ * screen they could not have opened. The app then lands on whatever sits below, normally Home.
+ */
 internal fun NavHostController.dropEntryGated() {
     popBackStack<CloudRestoreRoute>(true)
     popBackStack<CloudSignInRoute>(true)
     popBackStack<CloudPayRoute>(true)
     popBackStack<StaffRoute>(true)
+    popBackStack<SettingsRoute>(true)
     // A scanner left open under the sign-in cover (e.g. after process restore) must not keep the camera on.
     if (currentBackStack.value.any { it.destination.hasRoute<ScanSellRoute>() }) popBackStack<ScanSellRoute>(true)
     if (currentBackStack.value.any { it.destination.hasRoute<ScanPurchaseRoute>() }) popBackStack<ScanPurchaseRoute>(true)

@@ -131,6 +131,18 @@ class TabNavigationTest {
     }
 
     @Test
+    fun `a restored Settings and Staff stack lands on Home, not on Settings, once the owner-only screens drop`() {
+        val nav = navController()
+        nav.navigate(SettingsRoute)
+        nav.navigate(StaffRoute) // the stack process restore brings back: [Home, Settings, Staff]
+
+        nav.dropEntryGated()
+
+        assertTrue(nav.currentDestination!!.hasRoute(HomeRoute::class))
+        assertFalse(nav.currentBackStack.value.any { it.destination.hasRoute(SettingsRoute::class) })
+    }
+
+    @Test
     fun `Cloud restore is not saved when going Home either`() {
         val nav = navController()
         nav.navigateToTab(NavDestination.SETTINGS)
