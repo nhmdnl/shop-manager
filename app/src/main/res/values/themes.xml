@@ -2,5 +2,7 @@
 <resources>
 
     <!-- AppCompat so in-app language changes apply below Android 13 (AppCompatDelegate.setApplicationLocales). -->
-    <style name="Theme.ShopManager" parent="Theme.AppCompat.Light.NoActionBar" />
+    <style name="Theme.ShopManager" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@color/shop_window_background</item>
+    </style>
 </resources>
