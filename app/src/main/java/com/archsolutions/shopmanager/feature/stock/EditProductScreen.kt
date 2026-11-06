@@ -59,7 +59,9 @@ import com.archsolutions.shopmanager.core.designsystem.components.Badge
 import com.archsolutions.shopmanager.core.designsystem.components.BadgeKind
 import com.archsolutions.shopmanager.core.designsystem.components.ChipRow
 import com.archsolutions.shopmanager.core.designsystem.components.MoneyField
+import com.archsolutions.shopmanager.feature.sell.PillButton
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
+import com.archsolutions.shopmanager.core.scan.rememberHasCamera
 import com.archsolutions.shopmanager.core.designsystem.components.QtyStepper
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.SectionLabel
@@ -73,6 +75,7 @@ import com.archsolutions.shopmanager.data.db.entities.CategoryEntity
 import com.archsolutions.shopmanager.data.db.entities.Unit as ProductUnit
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import com.archsolutions.shopmanager.feature.pin.PinGate
 import com.archsolutions.shopmanager.feature.pin.rememberPinGate
 
 /** Edit product / New product (7.3, addendum NewProduct) with the Correct stock sheet. */
@@ -82,11 +85,13 @@ fun EditProductScreen(
     isExpanded: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onScan: (() -> Unit)? = null,
+    hasCamera: Boolean = rememberHasCamera(),
+    pinGate: PinGate = rememberPinGate(),
     viewModel: EditProductViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val colors = LocalShopColors.current
-    val pinGate = rememberPinGate()
     var showCorrect by rememberSaveable { mutableStateOf(false) }
     var showSupplierPicker by rememberSaveable { mutableStateOf(false) }
     val form = state.form
@@ -167,12 +172,26 @@ fun EditProductScreen(
                 }
                 Column(modifier = Modifier.weight(1.3f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     FieldLabel(stringResource(R.string.barcode_optional))
-                    ShopTextField(
-                        value = form.barcode,
-                        onValueChange = { code -> viewModel.edit { it.copy(barcode = code) } },
-                        placeholder = stringResource(R.string.barcode_placeholder),
-                        capitalization = KeyboardCapitalization.None,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ShopTextField(
+                            value = form.barcode,
+                            onValueChange = { code -> viewModel.edit { it.copy(barcode = code) } },
+                            placeholder = stringResource(R.string.barcode_placeholder),
+                            capitalization = KeyboardCapitalization.None,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // Only when the device has a camera.
+                        if (onScan != null && hasCamera) {
+                            PillButton(text = stringResource(R.string.barcode_scan), onClick = onScan)
+                        }
+                    }
+                    state.duplicateOf?.let { other ->
+                        Text(
+                            text = stringResource(R.string.barcode_in_use, other),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.rust,
+                        )
+                    }
                 }
             }
             SectionLabel(text = stringResource(R.string.label_unit))

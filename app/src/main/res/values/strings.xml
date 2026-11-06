@@ -224,6 +224,8 @@
     <string name="no_category">No category</string>
     <string name="barcode_optional">Barcode (optional)</string>
     <string name="barcode_placeholder">Scan or type</string>
+    <string name="barcode_scan">Scan</string>
+    <string name="barcode_in_use">Already used by %1$s. You can still save.</string>
     <string name="label_unit">Unit</string>
     <string name="unit_pcs">pcs</string>
     <string name="unit_kg">kg</string>

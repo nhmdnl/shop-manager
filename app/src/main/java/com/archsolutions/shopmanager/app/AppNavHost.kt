@@ -58,6 +58,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.archsolutions.shopmanager.feature.scan.ScanHost
+import com.archsolutions.shopmanager.feature.scan.ScanOnceHost
+import com.archsolutions.shopmanager.feature.stock.SCANNED_BARCODE_KEY
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -719,6 +721,17 @@ private fun NavContent(
             EditProductScreen(
                 isExpanded = isExpanded,
                 onBack = { navController.popBackStack() },
+                onScan = { navController.navigate(ScanOnceRoute) { launchSingleTop = true } },
+            )
+        }
+        // Single-shot scanner: hands the first code back to the screen below it (Edit product now, Stock later).
+        composable<ScanOnceRoute> {
+            ScanOnceHost(
+                onCode = { code ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set(SCANNED_BARCODE_KEY, code)
+                    navController.popBackStack()
+                },
+                onDone = { navController.popBackStack() },
             )
         }
         composable<DayRoute> {

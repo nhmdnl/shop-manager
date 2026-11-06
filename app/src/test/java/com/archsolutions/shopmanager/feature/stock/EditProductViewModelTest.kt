@@ -79,4 +79,45 @@ class EditProductViewModelTest {
         val state = vm(id, "9999").state.first { it.loaded }
         assertEquals("6001", state.form.barcode)
     }
+
+    private fun product(name: String, barcode: String?) = ProductEntity(
+        name = name, categoryId = null, sellPrice = 1_000, costPrice = 500, barcode = barcode, createdAt = 0L, updatedAt = 0L,
+    )
+
+    @Test fun `a scanned code fills the barcode field trimmed`() = runTest {
+        val vm = vm(0L, null)
+        vm.setScannedBarcode("  6001234567890 \n")
+        assertEquals("6001234567890", vm.state.first { it.loaded }.form.barcode)
+    }
+
+    @Test fun `a code handed back through saved state fills the field once`() = runTest {
+        val vm = vm(0L, null)
+        vm.handle[SCANNED_BARCODE_KEY] = " 777 "
+        assertEquals("777", vm.state.first { it.loaded }.form.barcode)
+        assertEquals(null, vm.handle.get<String>(SCANNED_BARCODE_KEY))
+    }
+
+    @Test fun `duplicateOf names the other active product using the barcode`() = runTest {
+        db.productDao().insert(product("Soap", "6001"))
+        val vm = vm(0L, null)
+        vm.edit { it.copy(barcode = "6001") }
+        assertEquals("Soap", vm.state.first { it.duplicateOf != null }.duplicateOf)
+    }
+
+    @Test fun `duplicateOf is null for the product's own barcode`() = runTest {
+        val id = db.productDao().insert(product("Soap", "6001"))
+        val state = vm(id, null).state.first { it.loaded }
+        assertEquals("6001", state.form.barcode)
+        assertEquals(null, state.duplicateOf)
+    }
+
+    @Test fun `saving with a duplicate barcode still saves`() = runTest {
+        db.productDao().insert(product("Soap", "6001"))
+        val vm = vm(0L, "6001")
+        vm.edit { it.copy(name = "Other soap", sellPrice = 2_000) }
+        assertEquals("Soap", vm.state.first { it.duplicateOf != null }.duplicateOf)
+        vm.save()
+        assertEquals(true, vm.state.first { it.saved }.saved)
+        assertEquals(2, db.productDao().getAllActive().first().count { it.barcode == "6001" })
+    }
 }

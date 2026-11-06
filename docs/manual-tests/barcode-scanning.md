@@ -29,3 +29,13 @@ Camera frames and decoded barcode text are not sent.
 Decision (controller ruling R4): the components are left in for now, because removing them cannot be verified without
 a real camera and a crash while scanning is worse than the metrics. Follow-up: try removing them with
 `tools:node="remove"` in the manifest and confirm on a physical tablet that scanning still works.
+
+## Edit product: scan the barcode and the duplicate warning
+
+1. Open Stock, then New product (or Edit product). Expected: a Scan button beside the Barcode field (absent on a device with no camera).
+2. Tap Scan, aim at a barcode. Expected: one beep, the scanner closes by itself, the Barcode field holds the code. Hold the barcode in view as it closes: the field still holds just that one code, no second scanner opens.
+3. Tap Scan, then Cancel. Expected: back on Edit product, the field unchanged.
+4. Scan (or type) a barcode that another product already uses. Expected: a line "Already used by NAME. You can still save." under the field; Save still works.
+5. Open an existing product that has a barcode. Expected: no warning for its own barcode.
+6. Rotate the screen after scanning. Expected: the code stays in the field.
+7. With staff sign-in on, sign out while the scanner is open. Expected: the app returns to sign-in; no scanner left over after signing in.

@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import java.util.concurrent.atomic.AtomicBoolean
 import com.archsolutions.shopmanager.core.scan.CameraPermission
 import com.archsolutions.shopmanager.core.scan.ScanFeedback
 import com.archsolutions.shopmanager.core.scan.ScanSource
@@ -39,6 +41,38 @@ fun ScanHost(
             viewModel.clearNotFound()
             onAddProduct(code)
         },
+        onDone = onDone,
+    )
+}
+
+/**
+ * A single-shot scanner that hands back the first accepted code as it is read (no product lookup): Edit product
+ * fills its barcode field, Stock looks the code up itself. [onCode] runs at most once, however many frames arrive
+ * while the screen is leaving. Cancel and sign-out call [onDone].
+ */
+@Composable
+fun ScanOnceHost(
+    onCode: (String) -> Unit,
+    onDone: () -> Unit,
+    source: ScanSource = rememberCameraScanSource(),
+    feedback: ScanFeedback = rememberAndroidScanFeedback(),
+    permission: CameraPermission = rememberCameraPermission(),
+) {
+    val delivered = remember { AtomicBoolean(false) }
+    ScanScreen(
+        source = source,
+        feedback = feedback,
+        permission = permission,
+        continuous = false,
+        state = ScanUiState(),
+        onCode = { scanned ->
+            val text = scanned.text.trim()
+            if (text.isNotEmpty() && delivered.compareAndSet(false, true)) {
+                feedback.success()
+                onCode(text)
+            }
+        },
+        onAddProduct = {},
         onDone = onDone,
     )
 }

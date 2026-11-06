@@ -17,7 +17,11 @@ import com.archsolutions.shopmanager.domain.staff.Permission
 import com.archsolutions.shopmanager.feature.pin.pinNeededFlow
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +33,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+/** Key under which the single-shot scanner hands a scanned code back to the screen that opened it. */
+const val SCANNED_BARCODE_KEY = "scanned_barcode"
 
 data class SupplierLinkDraft(val supplierId: Long, val name: String, val cost: Long?, val preferred: Boolean)
 
@@ -57,6 +64,8 @@ data class EditProductUiState(
     val pinNeeded: Boolean = false,
     val saving: Boolean = false,
     val saved: Boolean = false,
+    /** Name of another active product using the typed or scanned barcode; a warning only, saving is not blocked. */
+    val duplicateOf: String? = null,
 ) {
     val canSave: Boolean get() = form.name.isNotBlank() && (form.sellPrice ?: 0L) > 0L && !saving
 
@@ -66,9 +75,10 @@ data class EditProductUiState(
 }
 
 /** Edit product and New product (7.3, addendum NewProduct), plus Correct stock (addendum CorrectStock). */
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class EditProductViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+    internal val handle: SavedStateHandle,
     private val productRepo: ProductRepo,
     private val supplierRepo: SupplierRepo,
     settingsStore: SettingsStore,
@@ -76,9 +86,9 @@ class EditProductViewModel @Inject constructor(
     staffRepo: StaffRepo,
 ) : ViewModel() {
     // EditProductRoute(id) uses 0 for a new product.
-    private val productId: Long = savedStateHandle.get<Long>("id") ?: 0L
+    private val productId: Long = handle.get<Long>("id") ?: 0L
     // A scanned code from "Add this product" fills a NEW product only; an existing one ignores it.
-    private val routeBarcode: String = savedStateHandle.get<String>("barcode").orEmpty().trim()
+    private val routeBarcode: String = handle.get<String>("barcode").orEmpty().trim()
     private val form = MutableStateFlow<ProductForm?>(
         if (productId == 0L) ProductForm(barcode = routeBarcode) else null
     )
@@ -86,13 +96,24 @@ class EditProductViewModel @Inject constructor(
 
     private val liveProduct = if (productId == 0L) flowOf(null) else productRepo.getById(productId)
 
+    // Checked on every barcode change; a failing lookup shows no warning (the save path does not depend on it).
+    private val duplicateOf: Flow<String?> = form.map { it?.barcode.orEmpty() }.distinctUntilChanged().mapLatest { code ->
+        try {
+            productRepo.productUsingBarcode(code, productId)?.name
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     val state: StateFlow<EditProductUiState> = combine(
-        combine(form, flags, ::Pair),
+        combine(form, flags, duplicateOf, ::Triple),
         liveProduct,
         productRepo.getCategories(),
         supplierRepo.getAllActive(),
         pinNeededFlow(settingsStore.settings, staffSession.current, staffRepo.staffActive, Permission.CORRECT_STOCK),
-    ) { (currentForm, flag), product, categories, suppliers, pinNeeded ->
+    ) { (currentForm, flag, duplicate), product, categories, suppliers, pinNeeded ->
         EditProductUiState(
             loaded = currentForm != null,
             isNew = productId == 0L,
@@ -104,10 +125,21 @@ class EditProductViewModel @Inject constructor(
             pinNeeded = pinNeeded,
             saving = flag.first,
             saved = flag.second,
+            duplicateOf = duplicate,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EditProductUiState())
 
     init {
+        // The scanner pops itself after writing the code here; take it once and clear it so it cannot refill later.
+        viewModelScope.launch {
+            handle.getStateFlow<String?>(SCANNED_BARCODE_KEY, null).collect { code ->
+                if (code != null) {
+                    form.first { it != null } // an existing product's form loads asynchronously
+                    handle[SCANNED_BARCODE_KEY] = null
+                    setScannedBarcode(code)
+                }
+            }
+        }
         if (productId != 0L) {
             viewModelScope.launch {
                 val product = productRepo.getByIdDirect(productId) ?: return@launch
@@ -124,6 +156,13 @@ class EditProductViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    /** A code from the scanner: trimmed into the barcode field. */
+    fun setScannedBarcode(code: String) {
+        val trimmed = code.trim()
+        if (trimmed.isEmpty()) return
+        edit { it.copy(barcode = trimmed) }
     }
 
     fun edit(transform: (ProductForm) -> ProductForm) = form.update { it?.let(transform) }
