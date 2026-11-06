@@ -150,7 +150,7 @@
     <string name="reason_other">Nyingine</string>
     <string name="note_optional">Maelezo (si lazima)</string>
     <string name="note_placeholder">Nini kilitokea</string>
-    <string name="pin_needed">PIN inahitajika (imewashwa kwenye Mipangilio)</string>
+    <string name="pin_needed">PIN inahitajika</string>
     <string name="keep_sale">Acha mauzo</string>
     <string name="void_sale">Batilisha</string>
     <plurals name="plurals_sales">

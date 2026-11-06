@@ -150,7 +150,7 @@
     <string name="reason_other">Outro</string>
     <string name="note_optional">Nota (opcional)</string>
     <string name="note_placeholder">O que aconteceu</string>
-    <string name="pin_needed">PIN necessário (ativado nas Definições)</string>
+    <string name="pin_needed">PIN necessário</string>
     <string name="keep_sale">Manter venda</string>
     <string name="void_sale">Anular venda</string>
     <plurals name="plurals_sales">

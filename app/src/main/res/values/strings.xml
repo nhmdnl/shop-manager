@@ -188,7 +188,7 @@
     <string name="reason_other">Other</string>
     <string name="note_optional">Note (optional)</string>
     <string name="note_placeholder">What happened</string>
-    <string name="pin_needed">PIN needed (turned on in Settings)</string>
+    <string name="pin_needed">PIN needed</string>
     <string name="keep_sale">Keep sale</string>
     <string name="void_sale">Void sale</string>
     <plurals name="plurals_sales">
