@@ -135,14 +135,14 @@
 ### Task 7: Purchases scan
 
 **Files:**
-- Modify: `feature/stock/PurchaseForm.kt` (Scan button), `app/AppNavHost.kt` (`composable<ScanPurchaseRoute>`; the scanner resolves the host's `PurchaseViewModel` from the `AddPurchaseRoute` back stack entry), strings
+- Modify: `feature/stock/PurchaseForm.kt` (Scan button), `app/AppNavHost.kt` (`composable<ScanPurchaseRoute>`; the scanner resolves the host's `PurchaseViewModel` from `navController.previousBackStackEntry`: the purchase form is hosted by the `AddPurchaseRoute` entry on phones AND by the `StockRoute` entry on tablets (`StockScreen` has its own `hiltViewModel()` `PurchaseViewModel` and shows `PurchaseForm` in its second pane), so resolve the ViewModel from whichever entry opened the scanner), strings
 - Test: `app/src/test/.../feature/stock/PurchaseScanTest.kt`, `app/src/androidTest/.../PurchaseScanFlowTest.kt`
 
 **Interfaces:**
 - Consumes: `PurchaseViewModel.addProduct(productId: Long)` and `contains`, `setQty`, the continuous `ScanScreen`.
 - Produces: scanning a known code adds the product with quantity 1; an already added product gets quantity + 1 (`PurchaseViewModel.addOrIncrement(productId: Long)`, new, built on the existing functions); unknown codes behave as in Sell (Add this product returns to the scanner); the Scan button follows the existing day gate.
 
-- [ ] **Step 1: Write the failing tests.** `a known code adds a purchase line with quantity 1`, `the same product again increments the quantity`, `an unknown code adds nothing`, `the day-locked gate disables the Scan button`. androidTest: `purchase scan adds lines and Done returns to the form with them`.
+- [ ] **Step 1: Write the failing tests.** (Also test the scanner from BOTH hosts: phone `AddPurchaseScreen` and tablet `StockScreen`'s purchase pane; the Scan button lives in `PurchaseForm`, so both get it.) `a known code adds a purchase line with quantity 1`, `the same product again increments the quantity`, `an unknown code adds nothing`, `the day-locked gate disables the Scan button`. androidTest: `purchase scan adds lines and Done returns to the form with them`.
 - [ ] **Step 2: Run** `./gradlew testDebugUnitTest --tests "*PurchaseScanTest"`; expect failures.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run** the class, the full unit suite, and on the VM the androidTest; expect PASS.
