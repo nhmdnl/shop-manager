@@ -10,8 +10,14 @@ All notable changes to Arch-SME. The format follows [Keep a Changelog](https://k
   - A cloud backup after each closed day, with a Settings card showing the plan and the last backup, and a banner on Home when the plan is ending or paused.
   - Restore from the cloud, from Settings or from onboarding, onto a new tablet.
   - Plans, paid by Mobile Money.
-  - Builds without a cloud address show none of this and make no network calls.
-- The app now asks for internet access, used only by the cloud features.
+  - Builds without a cloud address show none of this and make no cloud calls.
+- The app now asks for internet access, used only by the cloud features and by Google's barcode library (see Privacy below).
+- **Barcode scanning:**
+  - A Scan button in Sell (items go straight into the cart), Stock (finds the product), Edit product (fills the barcode field) and Add purchase (adds lines).
+  - An unknown code offers Add this product with the code filled in.
+  - Needs the camera permission; shown only on devices with a camera. The barcode model is bundled, so scanning works offline.
+  - **Privacy:** the bundled Google ML Kit barcode library may send anonymous usage and performance metrics to Google when the device is online. Camera frames and the codes read are never sent.
+  - Release builds ship for ARM devices only (arm64-v8a and armeabi-v7a), about 30 MB.
 
 ### Fixed
 - Settings now warns when the automatic backup after closing the day could not be saved (it used to fail silently). The next good backup clears the warning.

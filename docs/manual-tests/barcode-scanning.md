@@ -38,8 +38,9 @@ See "Privacy: ML Kit telemetry" below. The ML Kit model is bundled, so scanning 
 
 APK size (measured 2026-11-06, see .superpowers/sdd/2026-11-06-barcode-scanning/task-8-report.md): the release APK
 grows from about 17 MB on develop to 41.8 MB with all four ABIs (libbarhopper_v3.so is 3.2 to 6.1 MB per ABI plus
-about 0.9 MB of models). Restricting release builds to arm64-v8a and armeabi-v7a gives 29.6 MB. The decision whether
-to ship that filter is the user's; the debug build stays universal because the test VM is x86.
+about 0.9 MB of models). Restricting release builds to arm64-v8a and armeabi-v7a gives 29.6 MB. Decision: release builds ship
+arm64-v8a and armeabi-v7a only (about 30 MB, see `abiFilters` in app/build.gradle.kts); the debug build stays
+universal because the test VM is x86.
 
 ## Known to check by hand
 
@@ -105,3 +106,11 @@ Phone (Stock, tap a product or open Add purchase) and tablet (Stock, Add purchas
 10. With staff sign-in on, sign out while the scanner is open. Expected: sign-in screen, no scanner left after signing in.
 11. Rotate while scanning, then Done. Expected: lines are kept.
 12. Tap Done on the purchase scanner on phone and on tablet. Expected: back on the same form with its lines, no extra screen, no flicker to another purchase form.
+
+## Hand-back to Edit product and Stock (regression for the lost code)
+
+1. Edit product (new or existing): tap Scan, aim at a barcode. Expected: the scanner closes and the Barcode field holds the code. For an existing product the old barcode is replaced.
+2. Stock: tap Scan, scan a known code. Expected: Edit product opens for that product. Scan an unknown code: "Not found: CODE" with Add this product.
+3. Tap Done or Cancel twice quickly on any scanner (Sell, Stock, Edit product, a purchase). Expected: back on the screen below, never two screens back (Sell keeps its cart).
+4. With staff sign-in on, leave a scanner open, kill the app and reopen it. Expected: the sign-in screen, the camera light off, no scanner behind it after signing in.
+5. On a phone, with a scanner open. Expected: no bottom navigation bar.

@@ -42,6 +42,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import com.archsolutions.shopmanager.core.designsystem.LocalUserActivity
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.archsolutions.shopmanager.R
@@ -112,12 +115,18 @@ fun ScanScreen(
             locked = false
         }
     }
-    LaunchedEffect(source, granted) {
+    // Codes are taken only while this screen is resumed: not during the exit animation after Done, not in the background.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val userActivity by rememberUpdatedState(LocalUserActivity.current)
+    LaunchedEffect(source, granted, lifecycle) {
         if (granted) {
-            source.codes.collect {
-                if (continuous || !locked) {
-                    if (!continuous) locked = true
-                    latestOnCode(it)
+            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                source.codes.collect {
+                    if (continuous || !locked) {
+                        if (!continuous) locked = true
+                        userActivity() // a scan is activity: it keeps the staff idle timer from signing out mid-delivery
+                        latestOnCode(it)
+                    }
                 }
             }
         }
