@@ -19,6 +19,10 @@ All notable changes to Arch-SME. The format follows [Keep a Changelog](https://k
   - **Privacy:** the bundled Google ML Kit barcode library may send anonymous usage and performance metrics to Google when the device is online. Camera frames and the codes read are never sent.
   - Release builds ship for ARM devices only (arm64-v8a and armeabi-v7a), about 30 MB.
 
+### Changed
+- The app targets Android 16 (API 36), which Google Play requires for new apps. It still runs on Android 8.0 and newer.
+- The JVM tests need JDK 21; the app still builds with JDK 17.
+
 ### Fixed
 - Settings now warns when the automatic backup after closing the day could not be saved (it used to fail silently). The next good backup clears the warning.
 
