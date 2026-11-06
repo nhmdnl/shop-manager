@@ -24,7 +24,7 @@ No account, no internet needed.
 **The day's money**
 - Open the day with a note counter. Selling, purchases and expenses stay locked until the day is open.
 - Record money: expenses, credit paid back, cash in, cash out.
-- Owed to the shop: each customer's credit balance.
+- Owed to the shop: each customer's credit balance, with a one-tap WhatsApp reminder that states the amount.
 - Close the day in three steps (check, count, close), with a reason when the drawer is short or over, and an optional WhatsApp summary.
 - Reopen a closed day; past days are read-only.
 - A close-day reminder.
@@ -49,7 +49,6 @@ No account, no internet needed.
 
 - **Staff PINs:** each person has their own PIN; sales and voids record who did them; owner and cashier roles.
 - **Barcode scanning** with the camera.
-- **WhatsApp reminders** to customers who owe the shop.
 - **Bluetooth receipt printing** on 58 mm printers.
 
 ## Arch-SME Cloud: paid, optional
