@@ -1,11 +1,50 @@
 # Barcode scanning: manual tests
 
-(Task 8 fills in the test steps.)
+No real camera has run any of this feature yet. The automated tests (JVM and the VM instrument run) drive the scanner
+with a fake frame source; only the steps below, on the physical tablet, prove the camera path. Use real retail
+products with EAN-13 barcodes (a tin, a bottle, a packet).
 
-## Manual steps
+## Core camera checks (physical tablet)
 
-- (placeholder, Task 8) TalkBack on the Torch button: it must read "Torch" together with its state (On/Off); the `stateDescription` may be merged away or read twice on some devices.
-- (placeholder, Task 8) Camera in use by another app: the Scan screen waits for CameraX to retry, then after about 8 s shows the message and Try again; Try again must reopen the preview once the other app lets go.
+1. Fresh install (or Settings > Apps > Arch-SME > Permissions > Camera: Don't allow). Open the day, Sell, tap Scan.
+   Expected: the camera permission prompt appears straight away, without a second tap. Tap Allow: the preview starts.
+2. Repeat with Deny. Expected: a message that the camera is needed, and an Allow camera button; Sell is still usable.
+   Tap Allow camera: the prompt appears again.
+3. Deny twice (or choose "Don't ask again"). Expected: the screen offers Open settings; it opens the app's settings
+   page; grant Camera there and come back: the preview starts without restarting the app.
+4. Aim at a real EAN-13 of a product in stock. Expected: one beep, the item appears in the cart once, the count on
+   the scanner goes to 1.
+5. Scan 5 different products one after another without leaving the scanner. Expected: the count reaches 5 and each
+   beeps once. Tap Done: Sell shows all 5 in the cart with the right prices.
+6. Hold one barcode steady in view for 5 seconds. Expected: it adds once. Move it away and back: it adds again.
+7. Scan a barcode not in stock. Expected: "Not found: CODE" and Add this product. Tap it, save a product: back on the
+   scanner, the banner is gone, scanning the code now adds the product.
+8. Scan from Edit product, Stock and Add purchase (the sections below). Expected: each behaves as written there.
+9. Torch: in a dim room tap Torch. Expected: the torch lights and the button reads On; tap again: Off. Torch is
+   hidden on a device without a flash. With TalkBack on, Torch is read together with its state.
+10. Rotate the tablet while scanning (portrait to landscape and back). Expected: the preview restarts cleanly, the
+    scanned count is kept, no crash, no duplicate scanner.
+11. Kill the app while scanning (recent apps, swipe away) and reopen. Expected: Arch-SME opens on a sensible screen
+    (not a blank or black scanner); the cart holds the items scanned before the kill.
+12. With staff sign-in on, sign out while the scanner is open. Expected: sign-in screen; after signing in no scanner
+    is left over Sell.
+13. Open the camera in another app (or use a camera held by another app), then open the scanner. Expected: after
+    about 8 s the message and Try again; Try again reopens the preview once the other app lets go.
+14. Cover the camera or use bad light. Expected: nothing is added, nothing crashes, no black screen without text.
+
+## Privacy and size notes
+
+See "Privacy: ML Kit telemetry" below. The ML Kit model is bundled, so scanning works offline.
+
+APK size (measured 2026-11-06, see .superpowers/sdd/2026-11-06-barcode-scanning/task-8-report.md): the release APK
+grows from about 17 MB on develop to 41.8 MB with all four ABIs (libbarhopper_v3.so is 3.2 to 6.1 MB per ABI plus
+about 0.9 MB of models). Restricting release builds to arm64-v8a and armeabi-v7a gives 29.6 MB. The decision whether
+to ship that filter is the user's; the debug build stays universal because the test VM is x86.
+
+## Known to check by hand
+
+- TalkBack on the Torch button: it must read "Torch" together with its state (On/Off); the `stateDescription` may be
+  merged away or read twice on some devices.
 
 ## Sell -> Scan -> Edit product -> back (physical tablet)
 
