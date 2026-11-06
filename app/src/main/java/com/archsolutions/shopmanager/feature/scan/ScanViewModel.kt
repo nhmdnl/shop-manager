@@ -23,6 +23,9 @@ import kotlinx.coroutines.launch
  * so they survive the process being killed (the debounce window does not need to).
  * The host decides what a known product does through [onCode]'s callback.
  *
+ * [onKnown] must be idempotent: a lookup or callback that throws keeps the code's debounce stamp, so
+ * the same code is ignored for 1.5 s and the host may see a retry after that.
+ *
  * Single-shot hosts: camera frames keep arriving while the screen leaves, so [onCode] can be called again
  * for the same code after the first known result. [ScanScreen] guards that for single-shot mode; the host's
  * own result callback must still be idempotent.

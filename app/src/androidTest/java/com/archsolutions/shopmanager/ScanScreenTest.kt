@@ -56,7 +56,10 @@ class ScanScreenTest {
     val rule = createComposeRule()
 
     private class FakeSource(torch: Boolean = true, failed: Boolean = false) : ScanSource {
-        override val unavailable: StateFlow<Boolean> = MutableStateFlow(failed)
+        val failedFlow = MutableStateFlow(failed)
+        override val unavailable: StateFlow<Boolean> = failedFlow
+        var retries = 0
+        override fun retry() { retries++; failedFlow.value = false }
         override val codes = MutableSharedFlow<ScannedCode>(extraBufferCapacity = 4)
         override val hasTorch: StateFlow<Boolean> = MutableStateFlow(torch)
         var torchCalls = mutableListOf<Boolean>()
@@ -160,6 +163,46 @@ class ScanScreenTest {
     }
 
     @Test
+    fun tryAgainCallsRetryAndTheMessageGoesWhenTheSourceIsAvailableAgain() {
+        val source = FakeSource(failed = true)
+        show(source = source)
+        rule.onNodeWithText(text(R.string.scan_camera_unavailable)).assertIsDisplayed()
+        rule.onNodeWithText("Try again").assertIsDisplayed().performClick()
+        assertEquals(1, source.retries)
+        rule.onNodeWithText(text(R.string.scan_camera_unavailable)).assertDoesNotExist()
+        rule.onNodeWithTag("preview").assertIsDisplayed()
+        rule.runOnIdle { source.failedFlow.value = true }
+        rule.onNodeWithText("Try again").assertIsDisplayed()
+        rule.runOnIdle { source.failedFlow.value = false }
+        rule.onNodeWithText("Try again").assertDoesNotExist()
+    }
+
+    @Test
+    fun singleShotUnlocksAfterTheDelayWhenACodeProducedNoResult() {
+        val got = mutableListOf<String>()
+        val source = FakeSource()
+        rule.mainClock.autoAdvance = false
+        rule.setContent {
+            ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
+                ScanScreen(
+                    source, FakeFeedback(), FakePermission(CameraPermissionState.Granted), false, ScanUiState(),
+                    { got += it.text }, {}, {},
+                )
+            }
+        }
+        rule.mainClock.advanceTimeByFrame()
+        source.codes.tryEmit(ScannedCode("A"))
+        rule.mainClock.advanceTimeBy(100)
+        source.codes.tryEmit(ScannedCode("A"))
+        rule.mainClock.advanceTimeBy(100)
+        assertEquals(listOf("A"), got)
+        rule.mainClock.advanceTimeBy(1_600)
+        source.codes.tryEmit(ScannedCode("A"))
+        rule.mainClock.advanceTimeBy(100)
+        assertEquals(listOf("A", "A"), got)
+    }
+
+    @Test
     fun singleShotForwardsOnlyTheFirstCodeUntilNotFound() {
         val got = mutableListOf<String>()
         val source = FakeSource()
@@ -190,7 +233,7 @@ class ScanScreenTest {
             val base = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale = 2f)) {
                 ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
-                    Box(Modifier.requiredWidth(390.dp).requiredHeight(320.dp)) {
+                    Box(Modifier.requiredWidth(390.dp).requiredHeight(320.dp).testTag("short")) {
                         ScanScreen(
                             FakeSource(), FakeFeedback(), FakePermission(CameraPermissionState.Granted), true,
                             ScanUiState(count = 3, last = "Soap", lastPrice = 4000, notFound = "9999", results = 4), {}, {}, {},
@@ -199,7 +242,11 @@ class ScanScreenTest {
                 }
             }
         }
+        // Scroll to the end of the panel, then the Done button must lie fully inside the box.
         rule.onNodeWithText("Done").performScrollTo().assertIsDisplayed()
+        val box = rule.onNodeWithTag("short").fetchSemanticsNode().boundsInRoot
+        val done = rule.onNodeWithText("Done").fetchSemanticsNode().boundsInRoot
+        assertTrue("Done $done sticks out of $box", done.top >= box.top - 0.5f && done.bottom <= box.bottom + 0.5f)
         rule.onNodeWithText("Add this product").performScrollTo().assertIsDisplayed()
     }
 

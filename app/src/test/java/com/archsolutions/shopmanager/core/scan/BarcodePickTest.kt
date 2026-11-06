@@ -25,7 +25,11 @@ class BarcodePickTest {
     }
 
     @Test fun `the upright size decides, not the sensor size`() {
-        // Upright 720x1280: (360, 1000) is 360 from the centre; (700, 640) is 340 from it.
-        assertEquals(1, pickCentralBarcode(listOf(Centre(360f, 1000f), Centre(700f, 640f)), 720, 1280))
+        // The two sizes give different winners for these points, so a wrong rotation swap fails this test.
+        val centres = listOf(Centre(360f, 1000f), Centre(700f, 400f))
+        // Upright centre (360, 640): d0 = 360, d1 = hypot(340, 240) = 416 -> index 0.
+        assertEquals(0, pickCentralBarcode(centres, 720, 1280))
+        // Swapped centre (640, 360): d0 = hypot(280, 640) = 698, d1 = hypot(60, 40) = 72 -> index 1.
+        assertEquals(1, pickCentralBarcode(centres, 1280, 720))
     }
 }

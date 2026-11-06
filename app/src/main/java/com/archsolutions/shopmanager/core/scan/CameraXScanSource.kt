@@ -2,6 +2,8 @@ package com.archsolutions.shopmanager.core.scan
 
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Handler
+import android.os.Looper
 import android.util.Size
 import androidx.annotation.OptIn
 import androidx.camera.core.Camera
@@ -132,8 +134,17 @@ class CameraXScanSource(
             // bindToLifecycle does not throw for a camera that is in use or disabled; it reports it here.
             val observer = Observer<CameraState> { st ->
                 val error = st.error
-                if (error != null && (st.type == CameraState.Type.CLOSED || isFatal(error))) _unavailable.value = true
-                else if (st.type == CameraState.Type.OPEN) _unavailable.value = false
+                when {
+                    error == null -> {
+                        cancelGiveUp()
+                        if (st.type == CameraState.Type.OPEN) _unavailable.value = false
+                    }
+                    isFatal(error) -> {
+                        cancelGiveUp()
+                        _unavailable.value = true
+                    }
+                    else -> scheduleGiveUp() // in use, too many cameras, other recoverable: CameraX retries, so wait
+                }
             }
             stateObserver = observer
             cam.cameraInfo.cameraState.observeForever(observer)
@@ -144,13 +155,36 @@ class CameraXScanSource(
         }
     }
 
+    /** Only genuinely fatal errors; in-use, max-cameras and other recoverable codes are retried by CameraX. */
     private fun isFatal(error: CameraState.StateError) = error.type == CameraState.ErrorType.CRITICAL ||
-        error.code == CameraState.ERROR_CAMERA_DISABLED || error.code == CameraState.ERROR_CAMERA_IN_USE ||
-        error.code == CameraState.ERROR_MAX_CAMERAS_IN_USE
+        error.code == CameraState.ERROR_CAMERA_DISABLED || error.code == CameraState.ERROR_CAMERA_FATAL_ERROR ||
+        error.code == CameraState.ERROR_DO_NOT_DISTURB_MODE_ENABLED
+
+    private val main = Handler(Looper.getMainLooper())
+    private val giveUp = Runnable { _unavailable.value = true }
+    private var giveUpScheduled = false
+
+    /** A recoverable error that is still there after [GIVE_UP_MILLIS] counts as unavailable; the first one starts the clock. */
+    private fun scheduleGiveUp() {
+        if (giveUpScheduled) return
+        giveUpScheduled = true
+        main.postDelayed(giveUp, GIVE_UP_MILLIS)
+    }
+
+    private fun cancelGiveUp() {
+        giveUpScheduled = false
+        main.removeCallbacks(giveUp)
+    }
+
+    override fun retry() {
+        cancelGiveUp()
+        _unavailable.value = false
+    }
 
     private fun unbind() {
         stateObserver?.let { camera?.cameraInfo?.cameraState?.removeObserver(it) }
         stateObserver = null
+        cancelGiveUp()
         analysis?.clearAnalyzer()
         listOfNotNull(preview, analysis).toTypedArray().takeIf { it.isNotEmpty() }?.let { provider?.unbind(*it) }
         preview = null
@@ -213,3 +247,5 @@ fun rememberCameraScanSource(): ScanSource {
     DisposableEffect(source) { onDispose { source.close() } }
     return source
 }
+
+private const val GIVE_UP_MILLIS = 8_000L
