@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.archsolutions.shopmanager.feature.scan.ScanHost
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -130,7 +131,7 @@ import com.archsolutions.shopmanager.feature.day.PastDayScreen
 @Serializable data class SalesRoute(val dayId: Long = 0L) // 0 = the day the gate is on
 @Serializable data class SaleDetailRoute(val id: Long)
 @Serializable data class AddPurchaseRoute(val productId: Long = 0L, val supplierId: Long = 0L) // 0 = none
-@Serializable data class EditProductRoute(val id: Long = 0L) // 0 = new product
+@Serializable data class EditProductRoute(val id: Long = 0L, val barcode: String = "") // 0 = new product; barcode only prefills a new one
 @Serializable data class RecordMoneyRoute(val type: String = "EXPENSE", val customerId: Long = 0L) // MoneyEntryType name
 @Serializable object DebtorsRoute
 @Serializable data class CloseDayRoute(val date: String)
@@ -637,7 +638,22 @@ private fun NavContent(
                     onCloseDay = closeDay,
                     onCheckout = { navController.navigate(CheckoutRoute) },
                     onAddProduct = { navController.navigate(EditProductRoute()) },
+                    onScan = { navController.navigate(ScanSellRoute) { launchSingleTop = true } },
                 )
+            }
+            composable<ScanSellRoute> { entry ->
+                val sellViewModel = sellGraphViewModel(navController, entry)
+                // Fails closed: the scanner only runs while the day is open (a closing day pops it).
+                if (gateState is DayGateState.Ready) {
+                    ScanHost(
+                        continuous = true,
+                        onKnown = { product -> sellViewModel.addOne(product.id) },
+                        onAddProduct = { code -> navController.navigate(EditProductRoute(barcode = code)) },
+                        onDone = { navController.popBackStack() },
+                    )
+                } else {
+                    LaunchedEffect(Unit) { navController.popBackStack() }
+                }
             }
             composable<CheckoutRoute> { entry ->
                 CheckoutScreen(

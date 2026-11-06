@@ -77,7 +77,11 @@ class EditProductViewModel @Inject constructor(
 ) : ViewModel() {
     // EditProductRoute(id) uses 0 for a new product.
     private val productId: Long = savedStateHandle.get<Long>("id") ?: 0L
-    private val form = MutableStateFlow<ProductForm?>(if (productId == 0L) ProductForm() else null)
+    // A scanned code from "Add this product" fills a NEW product only; an existing one ignores it.
+    private val routeBarcode: String = savedStateHandle.get<String>("barcode").orEmpty().trim()
+    private val form = MutableStateFlow<ProductForm?>(
+        if (productId == 0L) ProductForm(barcode = routeBarcode) else null
+    )
     private val flags = MutableStateFlow(Pair(false, false)) // saving, saved
 
     private val liveProduct = if (productId == 0L) flowOf(null) else productRepo.getById(productId)

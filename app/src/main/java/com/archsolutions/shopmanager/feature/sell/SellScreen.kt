@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import com.archsolutions.shopmanager.core.scan.rememberHasCamera
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
@@ -82,7 +83,10 @@ fun SellScreen(
     onCheckout: () -> Unit,
     modifier: Modifier = Modifier,
     onAddProduct: () -> Unit = {},
+    onScan: (() -> Unit)? = null,
+    hasCamera: Boolean = rememberHasCamera(),
 ) {
+    val onScanOrNull = onScan.takeIf { hasCamera }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val colors = LocalShopColors.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -138,6 +142,7 @@ fun SellScreen(
                         onTap = viewModel::addOne,
                         onLongPress = { quantityFor = it },
                         onAddProduct = onAddProduct,
+                        onScan = onScanOrNull,
                     )
                 }
             }
@@ -159,6 +164,7 @@ fun SellScreen(
             onCheckout = onCheckout,
             onLongPress = { quantityFor = it },
             onAddProduct = onAddProduct,
+            onScan = onScanOrNull,
             modifier = modifier,
         )
     }
@@ -192,6 +198,7 @@ private fun SellCompact(
     onCheckout: () -> Unit,
     onLongPress: (ProductEntity) -> Unit,
     onAddProduct: () -> Unit,
+    onScan: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalShopColors.current
@@ -239,6 +246,7 @@ private fun SellCompact(
                 onTap = viewModel::addOne,
                 onLongPress = onLongPress,
                 onAddProduct = onAddProduct,
+                onScan = onScan,
             )
         }
     }
@@ -255,13 +263,22 @@ private fun ProductBrowser(
     onTap: (Long) -> Unit,
     onLongPress: (ProductEntity) -> Unit,
     onAddProduct: () -> Unit,
+    onScan: (() -> Unit)?,
 ) {
     val colors = LocalShopColors.current
-    SearchField(
-        value = state.query,
-        onValueChange = onQuery,
-        placeholder = stringResource(R.string.search_placeholder),
-    )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        SearchField(
+            value = state.query,
+            onValueChange = onQuery,
+            placeholder = stringResource(R.string.search_placeholder),
+            modifier = Modifier.weight(1f),
+        )
+        // Only when the device has a camera; this screen only exists while the day is open.
+        if (onScan != null) {
+            Spacer(modifier = Modifier.width(12.dp))
+            PillButton(text = stringResource(R.string.scan_action), onClick = onScan)
+        }
+    }
     Spacer(modifier = Modifier.height(12.dp))
     CategoryChips(categories = state.categories, selected = state.categoryId, onSelect = onCategory)
     Spacer(modifier = Modifier.height(16.dp))
