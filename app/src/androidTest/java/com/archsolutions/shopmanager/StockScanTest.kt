@@ -6,7 +6,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -17,7 +16,6 @@ import com.archsolutions.shopmanager.core.util.AppClock
 import com.archsolutions.shopmanager.data.db.AppDatabase
 import com.archsolutions.shopmanager.data.db.entities.ProductEntity
 import com.archsolutions.shopmanager.data.repo.ProductRepo
-import com.archsolutions.shopmanager.feature.stock.SCANNED_BARCODE_KEY
 import com.archsolutions.shopmanager.feature.stock.StockScreen
 import com.archsolutions.shopmanager.feature.stock.StockViewModel
 import kotlinx.coroutines.runBlocking
@@ -31,8 +29,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
- * Stock's scan icon against the screen's own handoff (the scanner itself is covered by ScanScreenTest): a code written
- * to the entry's SavedStateHandle, as the scanner route does, opens the product or shows Not found + Add this product.
+ * Stock's scan icon against the screen's own handoff (the scanner itself is covered by ScanScreenTest): a code handed to the ViewModel
+ * by the route (as the scanner handoff does) opens the product or shows Not found + Add this product.
  */
 @RunWith(AndroidJUnit4::class)
 class StockScanTest {
@@ -60,13 +58,13 @@ class StockScanTest {
         var added: String? = null
     }
 
-    private fun show(handle: SavedStateHandle, taps: Taps, hasCamera: Boolean = true): Long {
+    private fun show(taps: Taps, hasCamera: Boolean = true): Pair<Long, StockViewModel> {
         val id = runBlocking {
             db.productDao().insert(
                 ProductEntity(name = "Sugar 1kg", categoryId = null, sellPrice = 5_000, costPrice = 4_200, barcode = "6001", createdAt = 0L, updatedAt = 0L),
             )
         }
-        val vm = StockViewModel(ProductRepo(db, clock), handle)
+        val vm = StockViewModel(ProductRepo(db, clock))
         rule.setContent {
             ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
                 StockScreen(
@@ -85,39 +83,37 @@ class StockScanTest {
                 )
             }
         }
-        return id
+        return id to vm
     }
 
     @Test
     fun scanIconOpensTheScanner() {
         val taps = Taps()
-        show(SavedStateHandle(), taps)
+        show(taps)
         rule.onNodeWithText(context.getString(R.string.scan_action)).performClick()
         assertEquals(1, taps.scans)
     }
 
     @Test
     fun noScanIconWithoutACamera() {
-        show(SavedStateHandle(), Taps(), hasCamera = false)
+        show(Taps(), hasCamera = false)
         assertEquals(0, rule.onAllNodesWithText(context.getString(R.string.scan_action)).fetchSemanticsNodes().size)
     }
 
     @Test
     fun knownCodeOpensThatProduct() {
-        val handle = SavedStateHandle()
         val taps = Taps()
-        val id = show(handle, taps)
-        rule.runOnIdle { handle[SCANNED_BARCODE_KEY] = "6001" }
+        val (id, vm) = show(taps)
+        rule.runOnIdle { vm.handleScanned("6001") }
         rule.waitUntil(5_000) { taps.edited != null }
         assertEquals(id, taps.edited)
     }
 
     @Test
     fun unknownCodeShowsNotFoundAndTheAddButton() {
-        val handle = SavedStateHandle()
         val taps = Taps()
-        show(handle, taps)
-        rule.runOnIdle { handle[SCANNED_BARCODE_KEY] = "7770001" }
+        val (_, vm) = show(taps)
+        rule.runOnIdle { vm.handleScanned("7770001") }
         val message = context.getString(R.string.scan_not_found, "7770001")
         rule.waitUntil(5_000) { rule.onAllNodesWithText(message).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithText(message).assertIsDisplayed()

@@ -58,8 +58,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.archsolutions.shopmanager.feature.scan.ScanHost
-import com.archsolutions.shopmanager.feature.scan.ScanOnceHost
-import com.archsolutions.shopmanager.feature.stock.SCANNED_BARCODE_KEY
+import com.archsolutions.shopmanager.feature.stock.EditProductViewModel
+import com.archsolutions.shopmanager.feature.stock.StockViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -213,6 +213,10 @@ internal fun NavHostController.dropEntryGated() {
     popBackStack<CloudSignInRoute>(true)
     popBackStack<CloudPayRoute>(true)
     popBackStack<StaffRoute>(true)
+    // A scanner left open under the sign-in cover (e.g. after process restore) must not keep the camera on.
+    if (currentBackStack.value.any { it.destination.hasRoute<ScanSellRoute>() }) popBackStack<ScanSellRoute>(true)
+    if (currentBackStack.value.any { it.destination.hasRoute<ScanPurchaseRoute>() }) popBackStack<ScanPurchaseRoute>(true)
+    if (currentBackStack.value.any { it.destination.hasRoute<ScanOnceRoute>() }) popBackStack<ScanOnceRoute>(true)
 }
 
 @Composable
@@ -455,6 +459,9 @@ private fun AppShell(
             currentRoute == CheckoutRoute::class.qualifiedName ||
             destination?.hasRoute(AddPurchaseRoute::class) == true ||
             destination?.hasRoute(EditProductRoute::class) == true ||
+            destination?.hasRoute(ScanSellRoute::class) == true ||
+            destination?.hasRoute(ScanPurchaseRoute::class) == true ||
+            destination?.hasRoute(ScanOnceRoute::class) == true ||
             destination?.hasRoute(RecordMoneyRoute::class) == true ||
             destination?.hasRoute(CloseDayRoute::class) == true ||
             destination?.hasRoute(DayClosedRoute::class) == true ||
@@ -652,7 +659,7 @@ private fun NavContent(
                         continuous = true,
                         onKnown = { product -> sellViewModel.addOne(product.id) },
                         onAddProduct = { code -> navController.navigate(EditProductRoute(barcode = code)) },
-                        onDone = { navController.popBackStack() },
+                        onDone = { navController.popIfResumed(entry) },
                     )
                 } else {
                     LaunchedEffect(Unit) { navController.popBackStack() }
@@ -696,8 +703,11 @@ private fun NavContent(
                 },
             )
         }
-        composable<StockRoute> {
+        composable<StockRoute> { entry ->
+            val stockViewModel: StockViewModel = hiltViewModel()
+            ScannedCodeHandoff(entry, onCode = stockViewModel::handleScanned)
             StockScreen(
+                viewModel = stockViewModel,
                 isExpanded = isExpanded,
                 gateState = gateState,
                 zoneId = gateViewModel.zoneId,
@@ -734,28 +744,25 @@ private fun NavContent(
                     continuous = true,
                     onKnown = { product -> purchaseViewModel.addOrIncrement(product.id) },
                     onAddProduct = { code -> navController.navigate(EditProductRoute(barcode = code)) },
-                    onDone = { navController.popBackStack() },
+                    onDone = { navController.popIfResumed(entry) },
                 )
             } else {
                 LaunchedEffect(Unit) { navController.popBackStack() }
             }
         }
-        composable<EditProductRoute> {
+        composable<EditProductRoute> { entry ->
+            val editViewModel: EditProductViewModel = hiltViewModel()
+            ScannedCodeHandoff(entry, onCode = editViewModel::onScannedBarcode)
             EditProductScreen(
+                viewModel = editViewModel,
                 isExpanded = isExpanded,
                 onBack = { navController.popBackStack() },
                 onScan = { navController.navigate(ScanOnceRoute) { launchSingleTop = true } },
             )
         }
         // Single-shot scanner: hands the first code back to the screen below it (Edit product, Stock).
-        composable<ScanOnceRoute> {
-            ScanOnceHost(
-                onCode = { code ->
-                    navController.previousBackStackEntry?.savedStateHandle?.set(SCANNED_BARCODE_KEY, code)
-                    navController.popBackStack()
-                },
-                onDone = { navController.popBackStack() },
-            )
+        composable<ScanOnceRoute> { entry ->
+            ScanOnceDestination(navController, entry)
         }
         composable<DayRoute> {
             DayScreen(

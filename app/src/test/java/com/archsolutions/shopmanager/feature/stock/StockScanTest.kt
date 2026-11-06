@@ -1,7 +1,6 @@
 package com.archsolutions.shopmanager.feature.stock
 
 import android.content.Context
-import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import com.archsolutions.shopmanager.data.db.AppDatabase
 import com.archsolutions.shopmanager.data.db.entities.ProductEntity
@@ -38,7 +37,7 @@ class StockScanTest {
         Dispatchers.resetMain()
     }
 
-    private fun vm(handle: SavedStateHandle = SavedStateHandle()) = StockViewModel(ProductRepo(db, FakeClock("2026-09-30")), handle)
+    private fun vm() = StockViewModel(ProductRepo(db, FakeClock("2026-09-30")))
 
     private suspend fun add(name: String, barcode: String?, active: Boolean = true): Long = db.productDao().insert(
         ProductEntity(name = name, categoryId = null, sellPrice = 1_000, costPrice = 500, barcode = barcode, active = active, createdAt = 0L, updatedAt = 0L),
@@ -68,13 +67,11 @@ class StockScanTest {
         assertEquals("sug", vm.state.first { it.loaded }.query)
     }
 
-    @Test fun `a handed-back code is looked up once and the key is cleared`() = runTest {
+    @Test fun `a handed-over code is looked up and shown as the scan result`() = runTest {
         val id = add("Soap", "6001")
-        val handle = SavedStateHandle()
-        val vm = vm(handle)
-        handle[SCANNED_BARCODE_KEY] = "6001"
+        val vm = vm()
+        vm.handleScanned("6001")
         assertEquals(ScanLookup.Found(id), vm.scan.first { it != null })
-        assertNull(handle.get<String>(SCANNED_BARCODE_KEY))
         vm.clearScan()
         assertNull(vm.scan.value)
     }

@@ -1,6 +1,5 @@
 package com.archsolutions.shopmanager.feature.stock
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.archsolutions.shopmanager.data.db.entities.CategoryEntity
@@ -50,7 +49,6 @@ private data class StockInputs(val query: String = "", val filter: StockFilter =
 @HiltViewModel
 class StockViewModel @Inject constructor(
     private val productRepo: ProductRepo,
-    private val handle: SavedStateHandle,
 ) : ViewModel() {
     private val inputs = MutableStateFlow(StockInputs())
 
@@ -58,18 +56,6 @@ class StockViewModel @Inject constructor(
 
     /** The latest scan result: Found is acted on once by the screen, NotFound stays as a banner until dismissed. */
     val scan: StateFlow<ScanLookup?> = _scan
-
-    init {
-        // The scanner pops itself after writing the code here; take it once and clear it so it cannot refire.
-        viewModelScope.launch {
-            handle.getStateFlow<String?>(SCANNED_BARCODE_KEY, null).collect { code ->
-                if (code != null) {
-                    handle[SCANNED_BARCODE_KEY] = null
-                    _scan.value = onScanned(code)
-                }
-            }
-        }
-    }
 
     val state: StateFlow<StockUiState> = combine(
         inputs,
@@ -110,6 +96,11 @@ class StockViewModel @Inject constructor(
         val text = code.trim()
         val product = productRepo.findByBarcode(text)
         return if (product != null) ScanLookup.Found(product.id) else ScanLookup.NotFound(text)
+    }
+
+    /** A code handed back by the scanner (see [ScannedCodeHandoff]): looked up, the result shown by the screen. */
+    fun handleScanned(code: String) {
+        viewModelScope.launch { _scan.value = onScanned(code) }
     }
 
     /** Called once the screen has acted on (or dismissed) the scan result. */

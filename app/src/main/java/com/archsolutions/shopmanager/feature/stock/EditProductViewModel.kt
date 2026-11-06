@@ -34,7 +34,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** Key under which the single-shot scanner hands a scanned code back to the screen that opened it. */
+/** Key on the opening NavBackStackEntry's savedStateHandle under which the single-shot scanner hands a code back (read by ScannedCodeHandoff in app/ScanRoutes.kt, never by a ViewModel: a Hilt ViewModel has its own SavedStateHandle). */
 const val SCANNED_BARCODE_KEY = "scanned_barcode"
 
 data class SupplierLinkDraft(val supplierId: Long, val name: String, val cost: Long?, val preferred: Boolean)
@@ -130,16 +130,6 @@ class EditProductViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EditProductUiState())
 
     init {
-        // The scanner pops itself after writing the code here; take it once and clear it so it cannot refill later.
-        viewModelScope.launch {
-            handle.getStateFlow<String?>(SCANNED_BARCODE_KEY, null).collect { code ->
-                if (code != null) {
-                    form.first { it != null } // an existing product's form loads asynchronously
-                    handle[SCANNED_BARCODE_KEY] = null
-                    setScannedBarcode(code)
-                }
-            }
-        }
         if (productId != 0L) {
             viewModelScope.launch {
                 val product = productRepo.getByIdDirect(productId) ?: return@launch
@@ -155,6 +145,14 @@ class EditProductViewModel @Inject constructor(
                     links = links.map { SupplierLinkDraft(it.supplierId, it.name, it.supplierCost, it.isPreferred) },
                 )
             }
+        }
+    }
+
+    /** A code handed back by the scanner (see [ScannedCodeHandoff]): waits for an existing product's form, then fills the field. */
+    fun onScannedBarcode(code: String) {
+        viewModelScope.launch {
+            form.first { it != null }
+            setScannedBarcode(code)
         }
     }
 

@@ -90,11 +90,18 @@ class EditProductViewModelTest {
         assertEquals("6001234567890", vm.state.first { it.loaded }.form.barcode)
     }
 
-    @Test fun `a code handed back through saved state fills the field once`() = runTest {
+    @Test fun `a code handed over by the scanner route fills the field`() = runTest {
         val vm = vm(0L, null)
-        vm.handle[SCANNED_BARCODE_KEY] = " 777 "
+        vm.onScannedBarcode(" 777 ")
         assertEquals("777", vm.state.first { it.loaded }.form.barcode)
-        assertEquals(null, vm.handle.get<String>(SCANNED_BARCODE_KEY))
+    }
+
+    @Test fun `a code handed over before an existing product has loaded still lands after the form loads`() = runTest {
+        val id = db.productDao().insert(product("Soap", "6001"))
+        val vm = vm(id, null)
+        vm.onScannedBarcode("777")
+        val loaded = vm.state.first { it.loaded && it.form.name == "Soap" && it.form.barcode == "777" }
+        assertEquals("Soap", loaded.form.name)
     }
 
     @Test fun `duplicateOf names the other active product using the barcode`() = runTest {
