@@ -715,7 +715,7 @@
         <item quantity="one">%1$d item scanned</item>
         <item quantity="other">%1$d items scanned</item>
     </plurals>
-    <string name="scan_last_item">Last: %1$s</string>
+    <string name="scan_last_item">Last: %1$s %2$s</string>
     <string name="scan_not_found">Not found: %1$s</string>
     <string name="scan_add_product">Add this product</string>
     <string name="scan_done">Done</string>
@@ -724,5 +724,8 @@
     <string name="scan_permission_allow">Allow camera</string>
     <string name="scan_open_settings">Open settings</string>
     <string name="scan_torch">Torch</string>
+    <string name="scan_torch_on">On</string>
+    <string name="scan_torch_off">Off</string>
+    <string name="scan_camera_unavailable">The camera cannot be used right now. Close other apps that use it, then try again.</string>
     <string name="scan_aim_hint">Point the camera at a barcode</string>
 </resources>

@@ -3,6 +3,7 @@ package com.archsolutions.shopmanager
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -23,6 +24,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -53,7 +55,8 @@ class ScanScreenTest {
     @get:Rule
     val rule = createComposeRule()
 
-    private class FakeSource(torch: Boolean = true) : ScanSource {
+    private class FakeSource(torch: Boolean = true, failed: Boolean = false) : ScanSource {
+        override val unavailable: StateFlow<Boolean> = MutableStateFlow(failed)
         override val codes = MutableSharedFlow<ScannedCode>(extraBufferCapacity = 4)
         override val hasTorch: StateFlow<Boolean> = MutableStateFlow(torch)
         var torchCalls = mutableListOf<Boolean>()
@@ -72,7 +75,8 @@ class ScanScreenTest {
         override fun failure() { bad++ }
     }
 
-    private class FakePermission(override val state: CameraPermissionState) : CameraPermission {
+    private class FakePermission(initial: CameraPermissionState) : CameraPermission {
+        override var state by mutableStateOf(initial)
         var requests = 0
         var settings = 0
         override fun request() { requests++ }
@@ -98,9 +102,9 @@ class ScanScreenTest {
 
     @Test
     fun showsTheRunningCountAndTheLastItem() {
-        show(state = ScanUiState(count = 3, last = "Soap", results = 3))
+        show(state = ScanUiState(count = 3, last = "Soap", lastPrice = 4000, results = 3))
         rule.onNodeWithText("3 items scanned").assertIsDisplayed()
-        rule.onNodeWithText("Last: Soap").assertIsDisplayed()
+        rule.onNodeWithText("Last: Soap 4,000").assertIsDisplayed()
         rule.onNodeWithTag("preview").assertIsDisplayed()
     }
 
@@ -125,12 +129,78 @@ class ScanScreenTest {
     }
 
     @Test
-    fun notAskedShowsAllowCameraWhichRequestsThePermission() {
+    fun notAskedRequestsOnceOnOpeningAndKeepsAllowCameraAsFallback() {
         val permission = FakePermission(CameraPermissionState.NotAsked)
         show(permission = permission)
+        rule.waitForIdle()
+        assertEquals(1, permission.requests) // the automatic request, once
         rule.onNodeWithTag("preview").assertDoesNotExist()
         rule.onNodeWithText("Allow camera").assertIsDisplayed().performClick()
-        assertEquals(1, permission.requests)
+        assertEquals(2, permission.requests)
+    }
+
+    @Test
+    fun grantingThePermissionShowsThePreviewAndDoesNotAskAgain() {
+        val permission = FakePermission(CameraPermissionState.NotAsked)
+        show(permission = permission)
+        rule.waitForIdle()
+        rule.runOnIdle { permission.state = CameraPermissionState.Granted }
+        rule.onNodeWithTag("preview").assertIsDisplayed()
+        rule.runOnIdle { permission.state = CameraPermissionState.NotAsked }
+        rule.waitForIdle()
+        assertEquals(1, permission.requests) // a recomposition does not ask again
+    }
+
+    @Test
+    fun anUnavailableCameraShowsTheMessageInsteadOfAPreview() {
+        show(source = FakeSource(failed = true))
+        rule.onNodeWithText(text(R.string.scan_camera_unavailable)).assertIsDisplayed()
+        rule.onNodeWithTag("preview").assertDoesNotExist()
+        rule.onNodeWithText("Done").assertIsDisplayed()
+    }
+
+    @Test
+    fun singleShotForwardsOnlyTheFirstCodeUntilNotFound() {
+        val got = mutableListOf<String>()
+        val source = FakeSource()
+        var state by mutableStateOf(ScanUiState())
+        rule.setContent {
+            ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
+                ScanScreen(
+                    source, FakeFeedback(), FakePermission(CameraPermissionState.Granted), false, state,
+                    { got += it.text }, {}, {},
+                )
+            }
+        }
+        rule.waitForIdle()
+        source.codes.tryEmit(ScannedCode("A")); source.codes.tryEmit(ScannedCode("A"))
+        rule.waitUntil(2_000) { got.isNotEmpty() }
+        rule.waitForIdle()
+        assertEquals(listOf("A"), got)
+        rule.runOnIdle { state = ScanUiState(notFound = "A", results = 1) }
+        rule.waitForIdle()
+        source.codes.tryEmit(ScannedCode("B"))
+        rule.waitUntil(2_000) { got.size == 2 }
+        assertEquals(listOf("A", "B"), got)
+    }
+
+    @Test
+    fun buttonsStayReachableOnAShortBoxAt200Percent() {
+        rule.setContent {
+            val base = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale = 2f)) {
+                ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
+                    Box(Modifier.requiredWidth(390.dp).requiredHeight(320.dp)) {
+                        ScanScreen(
+                            FakeSource(), FakeFeedback(), FakePermission(CameraPermissionState.Granted), true,
+                            ScanUiState(count = 3, last = "Soap", lastPrice = 4000, notFound = "9999", results = 4), {}, {}, {},
+                        )
+                    }
+                }
+            }
+        }
+        rule.onNodeWithText("Done").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Add this product").performScrollTo().assertIsDisplayed()
     }
 
     @Test

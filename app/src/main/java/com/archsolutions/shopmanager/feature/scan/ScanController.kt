@@ -27,10 +27,11 @@ data class ScanUiState(
     val last: String? = null,
     val notFound: String? = null,
     val results: Int = 0,
+    val lastPrice: Long? = null,
 )
 
 fun ScanUiState.reduce(outcome: ScanOutcome, line: (ProductEntity) -> String): ScanUiState = when (outcome) {
-    is ScanOutcome.Known -> copy(count = count + 1, last = line(outcome.product), notFound = null, results = results + 1)
+    is ScanOutcome.Known -> copy(count = count + 1, last = line(outcome.product), lastPrice = outcome.product.sellPrice, notFound = null, results = results + 1)
     is ScanOutcome.NotFound -> copy(notFound = outcome.code, results = results + 1)
     ScanOutcome.Ignored -> this
 }

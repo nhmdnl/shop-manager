@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.scan
 
+import androidx.lifecycle.SavedStateHandle
 import com.archsolutions.shopmanager.core.scan.ScannedCode
 import com.archsolutions.shopmanager.core.util.AppClock
 import com.archsolutions.shopmanager.data.db.entities.ProductEntity
@@ -15,8 +16,11 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class) // Log.w in the failure paths
 class ScanViewModelTest {
     private class FakeClock(var now: Long = 10_000L) : AppClock {
         override fun nowMillis() = now
@@ -33,7 +37,8 @@ class ScanViewModelTest {
     private val catalog = listOf(product(1, "Soap", "6001"), product(2, "Salt", "6002"))
     private val known = mutableListOf<ProductEntity>()
 
-    private fun vm() = ScanViewModel({ code -> catalog.firstOrNull { it.barcode == code } }, clock)
+    private fun vm(saved: SavedStateHandle = SavedStateHandle(), failLookup: Boolean = false) =
+        ScanViewModel({ code -> if (failLookup) error("db") else catalog.firstOrNull { it.barcode == code } }, clock, saved)
 
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
@@ -75,5 +80,36 @@ class ScanViewModelTest {
         assertEquals(2, vm.state.value.count)
         assertEquals("Salt", vm.state.value.last)
         assertEquals(2, known.size)
+    }
+
+    @Test fun `the last item keeps its price`() {
+        val vm = vm()
+        vm.onCode(ScannedCode("6001")) { }
+        assertEquals(1000L, vm.state.value.lastPrice)
+    }
+
+    @Test fun `a new view model from the same SavedStateHandle restores the state`() {
+        val saved = SavedStateHandle()
+        val first = vm(saved)
+        first.onCode(ScannedCode("6001")) { }
+        clock.now += 2_000
+        first.onCode(ScannedCode("9999")) { }
+        val second = vm(saved)
+        assertEquals(first.state.value, second.state.value)
+        assertEquals(1, second.state.value.count)
+        assertEquals("9999", second.state.value.notFound)
+    }
+
+    @Test fun `a failing onKnown is not counted and does not crash`() {
+        val vm = vm()
+        vm.onCode(ScannedCode("6001")) { error("cart full") }
+        assertEquals(0, vm.state.value.count)
+    }
+
+    @Test fun `a failing lookup does not crash or change the state`() {
+        val vm = vm(failLookup = true)
+        vm.onCode(ScannedCode("6001")) { known += it }
+        assertEquals(ScanUiState(), vm.state.value)
+        assertTrue(known.isEmpty())
     }
 }

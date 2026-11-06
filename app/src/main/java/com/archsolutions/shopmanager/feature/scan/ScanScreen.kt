@@ -4,13 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FlashOff
 import androidx.compose.material.icons.outlined.FlashOn
@@ -22,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,12 +36,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.core.money.Money
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
 import com.archsolutions.shopmanager.core.scan.CameraPermission
@@ -53,6 +61,10 @@ const val SCAN_PREVIEW_AREA_TAG = "scan_preview_area"
  * Full-screen scanner. [continuous] keeps scanning with a running count (Sell, Purchases) and ends with Done;
  * single-shot has Cancel (the host closes the screen on the first known code). Leaving the composition, or a
  * sign-out, releases the camera because the preview leaves the tree.
+ *
+ * The permission is requested once on opening (the first Scan tap); "Allow camera" stays as the fallback.
+ * In single-shot mode only the first code is forwarded to [onCode] until a not-found result arrives, because
+ * camera frames keep coming during the exit transition; the host's result callback must still be idempotent.
  */
 @Composable
 fun ScanScreen(
@@ -69,14 +81,37 @@ fun ScanScreen(
     val granted = permission.state == CameraPermissionState.Granted
     val latestOnCode by rememberUpdatedState(onCode)
     val hasTorch by source.hasTorch.collectAsStateWithLifecycle()
+    val unavailable by source.unavailable.collectAsStateWithLifecycle()
+    val showPreview = granted && !unavailable
     var torchOn by remember { mutableStateOf(false) }
+    val torchState = stringResource(if (torchOn) R.string.scan_torch_on else R.string.scan_torch_off)
 
     OnSignOut { onDone() }
     LaunchedEffect(hasTorch) { if (!hasTorch) torchOn = false } // an unbound camera has its torch off
 
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { torchOn = false } // CameraX turns the torch off when it unbinds
+
+    var autoAsked by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (permission.state == CameraPermissionState.NotAsked && !autoAsked) {
+            autoAsked = true
+            permission.request()
+        }
+    }
+
     // Only while the permission is there is anything decoded; the flow is hot, so no old code is replayed.
+    // Single-shot: after a code goes out, nothing more until a not-found result unlocks it (a known one ends the screen).
+    var locked by remember { mutableStateOf(false) }
+    LaunchedEffect(state.results) { if (state.notFound != null) locked = false }
     LaunchedEffect(source, granted) {
-        if (granted) source.codes.collect { latestOnCode(it) }
+        if (granted) {
+            source.codes.collect {
+                if (continuous || !locked) {
+                    if (!continuous) locked = true
+                    latestOnCode(it)
+                }
+            }
+        }
     }
     // One beep or tone per new result (not on the first composition, e.g. after rotation).
     var seenResults by remember { mutableStateOf(state.results) }
@@ -87,9 +122,11 @@ fun ScanScreen(
         }
     }
 
-    Column(Modifier.fillMaxSize().background(colors.paper)) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(colors.paper)) {
+    val panelMax = maxHeight * 0.65f
+    Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f).heightIn(min = 120.dp).fillMaxWidth().testTag(SCAN_PREVIEW_AREA_TAG)) {
-            if (granted) {
+            if (showPreview) {
                 source.Preview(Modifier.fillMaxSize())
                 Box(
                     Modifier
@@ -107,28 +144,45 @@ fun ScanScreen(
                         },
                         leadingIcon = if (torchOn) Icons.Outlined.FlashOn else Icons.Outlined.FlashOff,
                         height = 48.dp,
-                        modifier = Modifier.align(Alignment.TopEnd).padding(12.dp).background(colors.surface, RoundedCornerShape(14.dp)),
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp)
+                            .background(colors.surface, RoundedCornerShape(14.dp))
+                            .semantics { stateDescription = torchState },
                     )
                 }
-            } else {
+            } else if (!granted) {
                 PermissionPanel(permission)
+            } else {
+                Text(
+                    stringResource(R.string.scan_camera_unavailable),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = colors.ink,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                )
             }
         }
 
         Column(
-            Modifier.fillMaxWidth().padding(16.dp),
+            Modifier.fillMaxWidth().heightIn(max = panelMax).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (granted && continuous) {
-                Column(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }) {
+                Column(Modifier.fillMaxWidth()) {
                     Text(
                         pluralStringResource(R.plurals.scan_items_count, state.count, state.count),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = colors.ink,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                     )
                     state.last?.let {
-                        Text(stringResource(R.string.scan_last_item, it), style = MaterialTheme.typography.bodyLarge, color = colors.muted)
+                        Text(
+                            stringResource(R.string.scan_last_item, it, state.lastPrice?.let { p -> Money.format(p, withCode = false) }.orEmpty()).trim(),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = colors.muted,
+                        )
                     }
                 }
             }
@@ -168,15 +222,17 @@ fun ScanScreen(
             }
         }
     }
+    }
 }
 
 /** Shown instead of the preview when the camera permission is missing: one line and what to do about it. */
 @Composable
 private fun PermissionPanel(permission: CameraPermission) {
     val colors = LocalShopColors.current
+    Box(Modifier.fillMaxSize()) {
     Column(
-        Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        Modifier.align(Alignment.Center).verticalScroll(rememberScrollState()).padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
@@ -194,5 +250,6 @@ private fun PermissionPanel(permission: CameraPermission) {
             height = 48.dp,
             modifier = Modifier.fillMaxWidth(),
         )
+    }
     }
 }

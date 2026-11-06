@@ -9,6 +9,12 @@ import kotlinx.coroutines.flow.StateFlow
 interface ScanSource {
     val codes: Flow<ScannedCode>
     val hasTorch: StateFlow<Boolean>
+
+    /**
+     * True when the camera cannot be used (no usable camera, start failure, disabled by policy, in use).
+     * Sticky until the next bind attempt; the screen then shows a message instead of a blank preview.
+     */
+    val unavailable: StateFlow<Boolean>
     fun setTorch(on: Boolean)
 
     @Composable

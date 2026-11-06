@@ -48,7 +48,9 @@ android {
             buildConfigField("String", "CLOUD_BASE_URL", "\"http://127.0.0.1:8080\"")
         }
         release {
-            // Set `arch.cloud.url` in ~/.gradle/gradle.properties; blank hides every cloud screen and makes no network call.
+            // Set `arch.cloud.url` in ~/.gradle/gradle.properties; blank hides every cloud screen and the app's own code then makes no network call.
+            // ML Kit's bundled library may still send anonymous usage metrics to Google when online (camera frames are not sent);
+            // see docs/manual-tests/barcode-scanning.md.
             val cloudUrl = providers.gradleProperty("arch.cloud.url").getOrElse("")
             require(cloudUrl.isBlank() || cloudUrl.startsWith("https://")) {
                 "arch.cloud.url must start with https:// in a release build (got \"$cloudUrl\"); leave it blank to ship without cloud."

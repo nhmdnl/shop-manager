@@ -1,10 +1,12 @@
 package com.archsolutions.shopmanager.core.scan
 
 import android.content.Context
+import android.content.res.Configuration
 import android.util.Size
 import androidx.annotation.OptIn
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.CameraState
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
@@ -21,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Observer
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -52,6 +55,9 @@ class CameraXScanSource(
     private val _hasTorch = MutableStateFlow(false)
     override val hasTorch: StateFlow<Boolean> = _hasTorch.asStateFlow()
 
+    private val _unavailable = MutableStateFlow(false)
+    override val unavailable: StateFlow<Boolean> = _unavailable.asStateFlow()
+
     private val executor = Executors.newSingleThreadExecutor()
     private val scanner = BarcodeScanning.getClient(
         BarcodeScannerOptions.Builder()
@@ -67,6 +73,7 @@ class CameraXScanSource(
     private var provider: ProcessCameraProvider? = null
     private var preview: Preview? = null
     private var analysis: ImageAnalysis? = null
+    private var stateObserver: Observer<CameraState>? = null
 
     override fun setTorch(on: Boolean) {
         camera?.takeIf { it.cameraInfo.hasFlashUnit() }?.cameraControl?.enableTorch(on)
@@ -74,44 +81,76 @@ class CameraXScanSource(
 
     @Composable
     override fun Preview(modifier: Modifier) {
-        val view = remember { PreviewView(context).apply { implementationMode = PreviewView.ImplementationMode.COMPATIBLE } }
+        val activityContext = LocalContext.current
+        val view = remember { PreviewView(activityContext).apply { implementationMode = PreviewView.ImplementationMode.COMPATIBLE } }
         DisposableEffect(view) {
+            var active = true // a listener that runs after this effect left must not bind a detached view
+            _unavailable.value = false
             val future = ProcessCameraProvider.getInstance(context)
             future.addListener({
-                if (!closed) bind(future.get(), view)
+                if (active && !closed) {
+                    runCatching { bind(future.get(), view) }.onFailure { _unavailable.value = true }
+                }
             }, ContextCompat.getMainExecutor(context))
-            onDispose { unbind() }
+            onDispose {
+                active = false
+                unbind()
+            }
         }
         AndroidView(factory = { view }, modifier = modifier)
     }
 
     private fun bind(cameraProvider: ProcessCameraProvider, view: PreviewView) {
         unbind()
+        val selector = when {
+            cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA) -> CameraSelector.DEFAULT_BACK_CAMERA
+            cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA) -> CameraSelector.DEFAULT_FRONT_CAMERA
+            else -> {
+                _unavailable.value = true
+                return
+            }
+        }
+        val portrait = context.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+        val bound = if (portrait) Size(720, 1280) else Size(1280, 720) // the bound is read in the display's rotation
         val newPreview = Preview.Builder().build().also { it.surfaceProvider = view.surfaceProvider }
         val newAnalysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setResolutionSelector(
                 ResolutionSelector.Builder()
-                    .setResolutionStrategy(ResolutionStrategy(Size(1280, 720), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
+                    .setResolutionStrategy(ResolutionStrategy(bound, ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
                     .build(),
             )
             .build()
             .also { it.setAnalyzer(executor, ::analyze) }
         try {
-            val bound = cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, newPreview, newAnalysis)
+            val cam = cameraProvider.bindToLifecycle(lifecycleOwner, selector, newPreview, newAnalysis)
             provider = cameraProvider
             preview = newPreview
             analysis = newAnalysis
-            camera = bound
-            _hasTorch.value = bound.cameraInfo.hasFlashUnit()
+            camera = cam
+            _hasTorch.value = cam.cameraInfo.hasFlashUnit()
+            // bindToLifecycle does not throw for a camera that is in use or disabled; it reports it here.
+            val observer = Observer<CameraState> { st ->
+                val error = st.error
+                if (error != null && (st.type == CameraState.Type.CLOSED || isFatal(error))) _unavailable.value = true
+                else if (st.type == CameraState.Type.OPEN) _unavailable.value = false
+            }
+            stateObserver = observer
+            cam.cameraInfo.cameraState.observeForever(observer)
         } catch (_: Exception) {
-            // No back camera, or the camera is in use: stay without a preview; the screen still offers Done.
             newAnalysis.clearAnalyzer()
             _hasTorch.value = false
+            _unavailable.value = true
         }
     }
 
+    private fun isFatal(error: CameraState.StateError) = error.type == CameraState.ErrorType.CRITICAL ||
+        error.code == CameraState.ERROR_CAMERA_DISABLED || error.code == CameraState.ERROR_CAMERA_IN_USE ||
+        error.code == CameraState.ERROR_MAX_CAMERAS_IN_USE
+
     private fun unbind() {
+        stateObserver?.let { camera?.cameraInfo?.cameraState?.removeObserver(it) }
+        stateObserver = null
         analysis?.clearAnalyzer()
         listOfNotNull(preview, analysis).toTypedArray().takeIf { it.isNotEmpty() }?.let { provider?.unbind(*it) }
         preview = null
@@ -127,12 +166,22 @@ class CameraXScanSource(
             image.close()
             return
         }
-        scanner.process(InputImage.fromMediaImage(media, image.imageInfo.rotationDegrees))
-            .addOnSuccessListener { barcodes ->
-                barcodes.firstNotNullOfOrNull { b -> b.rawValue?.takeIf { it.isNotBlank() }?.let { ScannedCode(it, formatName(b.format)) } }
-                    ?.let { _codes.tryEmit(it) }
-            }
-            .addOnCompleteListener { image.close() }
+        val rotation = image.imageInfo.rotationDegrees
+        val sideways = rotation == 90 || rotation == 270
+        val uprightW = if (sideways) image.height else image.width
+        val uprightH = if (sideways) image.width else image.height
+        try {
+            scanner.process(InputImage.fromMediaImage(media, rotation))
+                .addOnSuccessListener { barcodes ->
+                    val usable = barcodes.filter { !it.rawValue.isNullOrBlank() }
+                    val centres = usable.map { b -> b.boundingBox?.let { Centre(it.exactCenterX(), it.exactCenterY()) } }
+                    val chosen = usable.getOrNull(pickCentralBarcode(centres, uprightW, uprightH)) ?: return@addOnSuccessListener
+                    _codes.tryEmit(ScannedCode(chosen.rawValue.orEmpty(), formatName(chosen.format)))
+                }
+                .addOnCompleteListener { image.close() }
+        } catch (_: Exception) {
+            image.close() // process() threw before it could take ownership of the frame
+        }
     }
 
     /** Releases the analyzer, the ML Kit client and the camera. Safe to call twice. */
