@@ -724,10 +724,11 @@ private fun NavContent(
         }
         // Continuous scanner for Record purchase. The purchase form lives on the entry that opened the scanner
         // (AddPurchaseRoute on phones, StockRoute on tablets), so its PurchaseViewModel is that entry's.
-        composable<ScanPurchaseRoute> {
-            val host = navController.previousBackStackEntry
-            // Fails closed: no host entry, or the day is not open (a closing day pops it), means no scanner.
-            if (host != null && gateState is DayGateState.Ready) {
+        composable<ScanPurchaseRoute> { entry ->
+            // Pinned once: while Done pops this entry, previousBackStackEntry can already point elsewhere.
+            val host = remember(entry) { navController.previousBackStackEntry }
+            // Fails closed: no purchase host, or the day is not open (a closing day pops it), means no scanner.
+            if (host != null && host.isPurchaseHost() && gateState is DayGateState.Ready) {
                 val purchaseViewModel: PurchaseViewModel = hiltViewModel(host)
                 ScanHost(
                     continuous = true,
@@ -934,3 +935,7 @@ private fun sellGraphViewModel(navController: NavHostController, entry: NavBackS
     val graphEntry = remember(entry) { navController.getBackStackEntry<SellGraph>() }
     return hiltViewModel(graphEntry)
 }
+
+/** The two screens that show the purchase form (phone Add purchase, tablet Stock); only they may open the purchase scanner. */
+internal fun NavBackStackEntry.isPurchaseHost(): Boolean =
+    destination.hasRoute<AddPurchaseRoute>() || destination.hasRoute<StockRoute>()

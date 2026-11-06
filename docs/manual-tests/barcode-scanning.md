@@ -65,3 +65,4 @@ Phone (Stock, tap a product or open Add purchase) and tablet (Stock, Add purchas
 9. Close the day (or let the date roll over) while the scanner is open. Expected: the scanner closes by itself and the form shows the lock card.
 10. With staff sign-in on, sign out while the scanner is open. Expected: sign-in screen, no scanner left after signing in.
 11. Rotate while scanning, then Done. Expected: lines are kept.
+12. Tap Done on the purchase scanner on phone and on tablet. Expected: back on the same form with its lines, no extra screen, no flicker to another purchase form.
