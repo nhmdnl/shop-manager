@@ -57,6 +57,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.archsolutions.shopmanager.feature.scan.ScanHost
+import com.archsolutions.shopmanager.feature.stock.EditProductViewModel
+import com.archsolutions.shopmanager.feature.stock.StockViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -98,6 +101,7 @@ import com.archsolutions.shopmanager.feature.settings.SettingsScreen
 import com.archsolutions.shopmanager.feature.settings.SettingsViewModel
 import com.archsolutions.shopmanager.feature.stock.AddPurchaseScreen
 import com.archsolutions.shopmanager.feature.stock.EditProductScreen
+import com.archsolutions.shopmanager.feature.stock.PurchaseViewModel
 import com.archsolutions.shopmanager.feature.stock.StockScreen
 import com.archsolutions.shopmanager.feature.suppliers.SupplierDetailScreen
 import com.archsolutions.shopmanager.feature.suppliers.SupplierEditScreen
@@ -130,7 +134,7 @@ import com.archsolutions.shopmanager.feature.day.PastDayScreen
 @Serializable data class SalesRoute(val dayId: Long = 0L) // 0 = the day the gate is on
 @Serializable data class SaleDetailRoute(val id: Long)
 @Serializable data class AddPurchaseRoute(val productId: Long = 0L, val supplierId: Long = 0L) // 0 = none
-@Serializable data class EditProductRoute(val id: Long = 0L) // 0 = new product
+@Serializable data class EditProductRoute(val id: Long = 0L, val barcode: String = "") // 0 = new product; barcode only prefills a new one
 @Serializable data class RecordMoneyRoute(val type: String = "EXPENSE", val customerId: Long = 0L) // MoneyEntryType name
 @Serializable object DebtorsRoute
 @Serializable data class CloseDayRoute(val date: String)
@@ -140,6 +144,9 @@ import com.archsolutions.shopmanager.feature.day.PastDayScreen
 @Serializable data class DaySummaryRoute(val dayId: Long) // a closed day's record, read-only (Reports > Days)
 @Serializable data class SupplierDetailRoute(val id: Long)
 @Serializable data class SupplierEditRoute(val id: Long = 0L) // 0 = new supplier
+@Serializable object ScanSellRoute // continuous scanner inside SellGraph (wired in the Sell host)
+@Serializable object ScanPurchaseRoute // continuous scanner for Record purchase
+@Serializable object ScanOnceRoute // single-shot scanner (Edit product barcode, Stock lookup)
 @Serializable object CloudPayRoute
 @Serializable object CloudRestoreRoute
 @Serializable object StaffRoute
@@ -206,6 +213,10 @@ internal fun NavHostController.dropEntryGated() {
     popBackStack<CloudSignInRoute>(true)
     popBackStack<CloudPayRoute>(true)
     popBackStack<StaffRoute>(true)
+    // A scanner left open under the sign-in cover (e.g. after process restore) must not keep the camera on.
+    if (currentBackStack.value.any { it.destination.hasRoute<ScanSellRoute>() }) popBackStack<ScanSellRoute>(true)
+    if (currentBackStack.value.any { it.destination.hasRoute<ScanPurchaseRoute>() }) popBackStack<ScanPurchaseRoute>(true)
+    if (currentBackStack.value.any { it.destination.hasRoute<ScanOnceRoute>() }) popBackStack<ScanOnceRoute>(true)
 }
 
 @Composable
@@ -448,6 +459,9 @@ private fun AppShell(
             currentRoute == CheckoutRoute::class.qualifiedName ||
             destination?.hasRoute(AddPurchaseRoute::class) == true ||
             destination?.hasRoute(EditProductRoute::class) == true ||
+            destination?.hasRoute(ScanSellRoute::class) == true ||
+            destination?.hasRoute(ScanPurchaseRoute::class) == true ||
+            destination?.hasRoute(ScanOnceRoute::class) == true ||
             destination?.hasRoute(RecordMoneyRoute::class) == true ||
             destination?.hasRoute(CloseDayRoute::class) == true ||
             destination?.hasRoute(DayClosedRoute::class) == true ||
@@ -634,7 +648,22 @@ private fun NavContent(
                     onCloseDay = closeDay,
                     onCheckout = { navController.navigate(CheckoutRoute) },
                     onAddProduct = { navController.navigate(EditProductRoute()) },
+                    onScan = { navController.navigate(ScanSellRoute) { launchSingleTop = true } },
                 )
+            }
+            composable<ScanSellRoute> { entry ->
+                val sellViewModel = sellGraphViewModel(navController, entry)
+                // Fails closed: the scanner only runs while the day is open (a closing day pops it).
+                if (gateState is DayGateState.Ready) {
+                    ScanHost(
+                        continuous = true,
+                        onKnown = { product -> sellViewModel.addOne(product.id) },
+                        onAddProduct = { code -> navController.navigate(EditProductRoute(barcode = code)) },
+                        onDone = { navController.popIfResumed(entry) },
+                    )
+                } else {
+                    LaunchedEffect(Unit) { if (navController.currentBackStackEntry?.id == entry.id) navController.popBackStack() }
+                }
             }
             composable<CheckoutRoute> { entry ->
                 CheckoutScreen(
@@ -674,8 +703,11 @@ private fun NavContent(
                 },
             )
         }
-        composable<StockRoute> {
+        composable<StockRoute> { entry ->
+            val stockViewModel: StockViewModel = hiltViewModel()
+            ScannedCodeHandoff(entry, onCode = stockViewModel::handleScanned)
             StockScreen(
+                viewModel = stockViewModel,
                 isExpanded = isExpanded,
                 gateState = gateState,
                 zoneId = gateViewModel.zoneId,
@@ -684,6 +716,9 @@ private fun NavContent(
                 onNewProduct = { navController.navigate(EditProductRoute()) },
                 onEditProduct = { navController.navigate(EditProductRoute(it)) },
                 onAddPurchase = { navController.navigate(AddPurchaseRoute(productId = it)) },
+                onScan = { navController.navigate(ScanOnceRoute) { launchSingleTop = true } },
+                onAddScanned = { navController.navigate(EditProductRoute(barcode = it)) },
+                onScanPurchase = { navController.navigate(ScanPurchaseRoute) { launchSingleTop = true } },
             )
         }
         composable<AddPurchaseRoute> {
@@ -694,13 +729,40 @@ private fun NavContent(
                 onCloseDay = closeDay,
                 onBack = { navController.popBackStack() },
                 onDone = { navController.popBackStack() },
+                onScan = { navController.navigate(ScanPurchaseRoute) { launchSingleTop = true } },
             )
         }
-        composable<EditProductRoute> {
+        // Continuous scanner for Record purchase. The purchase form lives on the entry that opened the scanner
+        // (AddPurchaseRoute on phones, StockRoute on tablets), so its PurchaseViewModel is that entry's.
+        composable<ScanPurchaseRoute> { entry ->
+            // Pinned once: while Done pops this entry, previousBackStackEntry can already point elsewhere.
+            val host = remember(entry) { navController.previousBackStackEntry }
+            // Fails closed: no purchase host, or the day is not open (a closing day pops it), means no scanner.
+            if (host != null && host.isPurchaseHost() && gateState is DayGateState.Ready) {
+                val purchaseViewModel: PurchaseViewModel = hiltViewModel(host)
+                ScanHost(
+                    continuous = true,
+                    onKnown = { product -> purchaseViewModel.addOrIncrement(product.id) },
+                    onAddProduct = { code -> navController.navigate(EditProductRoute(barcode = code)) },
+                    onDone = { navController.popIfResumed(entry) },
+                )
+            } else {
+                LaunchedEffect(Unit) { if (navController.currentBackStackEntry?.id == entry.id) navController.popBackStack() }
+            }
+        }
+        composable<EditProductRoute> { entry ->
+            val editViewModel: EditProductViewModel = hiltViewModel()
+            ScannedCodeHandoff(entry, onCode = editViewModel::onScannedBarcode)
             EditProductScreen(
+                viewModel = editViewModel,
                 isExpanded = isExpanded,
                 onBack = { navController.popBackStack() },
+                onScan = { navController.navigate(ScanOnceRoute) { launchSingleTop = true } },
             )
+        }
+        // Single-shot scanner: hands the first code back to the screen below it (Edit product, Stock).
+        composable<ScanOnceRoute> { entry ->
+            ScanOnceDestination(navController, entry)
         }
         composable<DayRoute> {
             DayScreen(
@@ -880,3 +942,7 @@ private fun sellGraphViewModel(navController: NavHostController, entry: NavBackS
     val graphEntry = remember(entry) { navController.getBackStackEntry<SellGraph>() }
     return hiltViewModel(graphEntry)
 }
+
+/** The two screens that show the purchase form (phone Add purchase, tablet Stock); only they may open the purchase scanner. */
+internal fun NavBackStackEntry.isPurchaseHost(): Boolean =
+    destination.hasRoute<AddPurchaseRoute>() || destination.hasRoute<StockRoute>()
