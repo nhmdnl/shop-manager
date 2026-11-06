@@ -106,13 +106,20 @@ class PurchaseViewModel @Inject constructor(
 
     /** "+ Purchase" on a row or a pick from "Add product": one more, at the product's current cost. */
     fun addProduct(productId: Long) {
-        viewModelScope.launch {
-            val product = productRepo.getByIdDirect(productId) ?: return@launch
-            inputs.update { input ->
-                val existing = input.lines[productId]
-                val line = existing?.copy(qty = existing.qty + 1.0) ?: PurchaseLineInput(1.0, product.costPrice)
-                input.copy(lines = input.lines + (productId to line))
-            }
+        viewModelScope.launch { addOrIncrement(productId) }
+    }
+
+    /**
+     * A scanned (or picked) product: a new line with quantity 1 at its current cost, or the existing line + 1.
+     * Suspends until the line is in, so the scanner counts an item only once it is really in the purchase.
+     * An unknown or archived product adds nothing.
+     */
+    suspend fun addOrIncrement(productId: Long) {
+        val product = productRepo.getByIdDirect(productId)?.takeIf { it.active } ?: return
+        inputs.update { input ->
+            val existing = input.lines[productId]
+            val line = existing?.copy(qty = existing.qty + 1.0) ?: PurchaseLineInput(1.0, product.costPrice)
+            input.copy(lines = input.lines + (productId to line))
         }
     }
 

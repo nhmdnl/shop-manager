@@ -93,6 +93,7 @@ fun StockScreen(
     modifier: Modifier = Modifier,
     onScan: (() -> Unit)? = null,
     onAddScanned: (String) -> Unit = {},
+    onScanPurchase: (() -> Unit)? = null,
     hasCamera: Boolean = rememberHasCamera(),
     viewModel: StockViewModel = hiltViewModel(),
 ) {
@@ -126,6 +127,7 @@ fun StockScreen(
             onScan = scanAction,
             notFound = notFound,
             onAddScanned = addScanned,
+            onScanPurchase = onScanPurchase.takeIf { hasCamera },
             modifier = modifier,
         )
     } else {
@@ -197,6 +199,7 @@ private fun StockExpanded(
     onScan: (() -> Unit)?,
     notFound: String?,
     onAddScanned: (String) -> Unit,
+    onScanPurchase: (() -> Unit)?,
     modifier: Modifier = Modifier,
     purchaseViewModel: PurchaseViewModel = hiltViewModel(),
 ) {
@@ -301,7 +304,7 @@ private fun StockExpanded(
             }
             // 6.3: purchases are locked until the day is open; the stock list stays usable.
             if (gateState is DayGateState.Ready) {
-                PurchaseForm(state = purchase, viewModel = purchaseViewModel, header = title)
+                PurchaseForm(state = purchase, viewModel = purchaseViewModel, header = title, onScan = onScanPurchase)
             } else {
                 title()
                 DayGateLockCard(gateState = gateState, zoneId = zoneId, onOpenDay = onOpenDay, onCloseDay = onCloseDay)

@@ -49,3 +49,19 @@ a real camera and a crash while scanning is worse than the metrics. Follow-up: t
 5. Scan the barcode of an archived (inactive) product. Expected: Not found.
 6. With the Not found banner showing, sign out (staff). Expected: no banner after signing in again.
 7. Rotate or open Edit product then go back after a found scan. Expected: no second Edit product, no repeated banner.
+
+## Purchases: scan items into a purchase
+
+Phone (Stock, tap a product or open Add purchase) and tablet (Stock, Add purchase panel on the right):
+
+1. With the day open, open Add purchase. Expected: a Scan button under "Add product" (absent on a device with no camera; absent when the day is not open, the lock card shows instead).
+2. Tap Scan (twice quickly). Expected: one scanner screen. Scan a known product. Expected: one beep, count 1, the product is not yet visible (the scanner is on top).
+3. Hold the same barcode in view. Expected: it counts once. Move away and scan it again. Expected: count 2.
+4. Scan two different products, tap Done. Expected: back on the same Add purchase form (same supplier, same Paid from) with one line per product; the repeated product has quantity 2, others 1; cost is each product's current cost; the total updates.
+5. Scan, Done, then Save purchase. Expected: stock rises by the scanned quantities. Repeat on the tablet panel (not the phone screen): the lines appear in the panel.
+6. Scan an unknown code, tap Add this product. Expected: New product with the barcode filled in. Save it, go back. Expected: the scanner again, with the purchase lines kept; scan the new code: it adds a line.
+7. Scan a code of an archived product. Expected: Not found.
+8. Tablet: with lines already typed in the panel (quantity edited by hand), scan one of them. Expected: its quantity rises by 1, nothing else changes.
+9. Close the day (or let the date roll over) while the scanner is open. Expected: the scanner closes by itself and the form shows the lock card.
+10. With staff sign-in on, sign out while the scanner is open. Expected: sign-in screen, no scanner left after signing in.
+11. Rotate while scanning, then Done. Expected: lines are kept.

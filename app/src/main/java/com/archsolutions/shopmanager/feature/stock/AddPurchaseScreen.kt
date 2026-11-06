@@ -29,6 +29,7 @@ import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.app.DayGateState
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.core.scan.rememberHasCamera
 import com.archsolutions.shopmanager.feature.day.DayGateLockCard
 import java.time.ZoneId
 
@@ -43,6 +44,8 @@ fun AddPurchaseScreen(
     onBack: () -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    onScan: (() -> Unit)? = null,
+    hasCamera: Boolean = rememberHasCamera(),
     viewModel: PurchaseViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -98,7 +101,7 @@ fun AddPurchaseScreen(
             .navigationBarsPadding()
             .padding(horizontal = 16.dp, vertical = 8.dp)
         if (gateState is DayGateState.Ready) {
-            PurchaseForm(state = state, viewModel = viewModel, modifier = content)
+            PurchaseForm(state = state, viewModel = viewModel, modifier = content, onScan = onScan.takeIf { hasCamera })
         } else {
             DayGateLockCard(
                 gateState = gateState,

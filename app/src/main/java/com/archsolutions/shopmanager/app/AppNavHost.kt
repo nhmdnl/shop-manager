@@ -101,6 +101,7 @@ import com.archsolutions.shopmanager.feature.settings.SettingsScreen
 import com.archsolutions.shopmanager.feature.settings.SettingsViewModel
 import com.archsolutions.shopmanager.feature.stock.AddPurchaseScreen
 import com.archsolutions.shopmanager.feature.stock.EditProductScreen
+import com.archsolutions.shopmanager.feature.stock.PurchaseViewModel
 import com.archsolutions.shopmanager.feature.stock.StockScreen
 import com.archsolutions.shopmanager.feature.suppliers.SupplierDetailScreen
 import com.archsolutions.shopmanager.feature.suppliers.SupplierEditScreen
@@ -707,6 +708,7 @@ private fun NavContent(
                 onAddPurchase = { navController.navigate(AddPurchaseRoute(productId = it)) },
                 onScan = { navController.navigate(ScanOnceRoute) { launchSingleTop = true } },
                 onAddScanned = { navController.navigate(EditProductRoute(barcode = it)) },
+                onScanPurchase = { navController.navigate(ScanPurchaseRoute) { launchSingleTop = true } },
             )
         }
         composable<AddPurchaseRoute> {
@@ -717,7 +719,25 @@ private fun NavContent(
                 onCloseDay = closeDay,
                 onBack = { navController.popBackStack() },
                 onDone = { navController.popBackStack() },
+                onScan = { navController.navigate(ScanPurchaseRoute) { launchSingleTop = true } },
             )
+        }
+        // Continuous scanner for Record purchase. The purchase form lives on the entry that opened the scanner
+        // (AddPurchaseRoute on phones, StockRoute on tablets), so its PurchaseViewModel is that entry's.
+        composable<ScanPurchaseRoute> {
+            val host = navController.previousBackStackEntry
+            // Fails closed: no host entry, or the day is not open (a closing day pops it), means no scanner.
+            if (host != null && gateState is DayGateState.Ready) {
+                val purchaseViewModel: PurchaseViewModel = hiltViewModel(host)
+                ScanHost(
+                    continuous = true,
+                    onKnown = { product -> purchaseViewModel.addOrIncrement(product.id) },
+                    onAddProduct = { code -> navController.navigate(EditProductRoute(barcode = code)) },
+                    onDone = { navController.popBackStack() },
+                )
+            } else {
+                LaunchedEffect(Unit) { navController.popBackStack() }
+            }
         }
         composable<EditProductRoute> {
             EditProductScreen(
