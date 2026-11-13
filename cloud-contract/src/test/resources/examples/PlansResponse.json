@@ -1,0 +1,1 @@
+{"plans":[{"code":"backup_week","name":"Backup weekly","priceUgx":1500,"period":"WEEK"},{"code":"backup_month","name":"Backup monthly","priceUgx":5000,"period":"MONTH"}],"onlinePayment":false,"payInstructions":"Send UGX 5000 to 0772123456 and reply with the code."}

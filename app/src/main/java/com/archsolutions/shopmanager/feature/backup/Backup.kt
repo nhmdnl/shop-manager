@@ -19,6 +19,7 @@ import com.archsolutions.shopmanager.core.util.AppClock
 import com.archsolutions.shopmanager.core.util.AppRestart
 import com.archsolutions.shopmanager.data.backup.BackupManager
 import com.archsolutions.shopmanager.data.backup.RestoreResult
+import com.archsolutions.shopmanager.data.cloud.CloudStore
 import com.archsolutions.shopmanager.data.repo.DayRepo
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -106,18 +107,26 @@ fun rememberBackupActions(snackbarHostState: SnackbarHostState, viewModel: Backu
 @HiltViewModel
 class BackupReminderViewModel @Inject constructor(
     settingsStore: SettingsStore,
+    cloudStore: CloudStore,
     dayRepo: DayRepo,
     clock: AppClock,
 ) : ViewModel() {
-    val reminder: StateFlow<BackupReminder?> = combine(settingsStore.settings, dayRepo.getFirstOpenedAt()) { settings, firstOpened ->
-        val since = settings.lastBackupAt ?: firstOpened ?: return@combine null
-        val days = ((clock.nowMillis() - since) / DAY_MILLIS).toInt()
-        BackupReminder(days = days, never = settings.lastBackupAt == null).takeIf { days >= REMIND_AFTER_DAYS }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val reminder: StateFlow<BackupReminder?> =
+        combine(settingsStore.settings, cloudStore.snapshot, dayRepo.getFirstOpenedAt()) { settings, cloud, firstOpened ->
+            backupReminder(settings.lastBackupAt, cloud.lastCloudBackupAt, firstOpened, clock.nowMillis())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    private companion object {
-        const val DAY_MILLIS = 24 * 60 * 60 * 1000L
-        const val REMIND_AFTER_DAYS = 7
+    internal companion object {
+        private const val DAY_MILLIS = 24 * 60 * 60 * 1000L
+        private const val REMIND_AFTER_DAYS = 7
+
+        /** A cloud backup is off this device too, so it counts as a backup here. */
+        fun backupReminder(lastBackupAt: Long?, lastCloudBackupAt: Long?, firstOpenedAt: Long?, now: Long): BackupReminder? {
+            val last = listOfNotNull(lastBackupAt, lastCloudBackupAt).maxOrNull()
+            val since = last ?: firstOpenedAt ?: return null
+            val days = ((now - since) / DAY_MILLIS).toInt()
+            return BackupReminder(days = days, never = last == null).takeIf { days >= REMIND_AFTER_DAYS }
+        }
     }
 }
 

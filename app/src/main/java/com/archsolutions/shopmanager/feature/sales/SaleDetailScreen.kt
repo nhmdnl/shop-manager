@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.sales
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -180,7 +181,13 @@ fun SaleDetailScreen(
                     }
                 }
             }
+            state.soldBy?.let {
+                Text(stringResource(R.string.sale_sold_by, it), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
+            }
             if (state.voided) {
+                state.voidedBy?.let {
+                    Text(stringResource(R.string.sale_voided_by, it), style = MaterialTheme.typography.bodyMedium, color = colors.muted)
+                }
                 Badge(
                     text = stringResource(R.string.voided_reason, state.voidReason.orEmpty()),
                     kind = BadgeKind.Muted,
@@ -199,7 +206,7 @@ fun SaleDetailScreen(
 
     if (showVoidSheet) {
         VoidSaleSheet(
-            pinEnabled = state.pinEnabled,
+            pinNeeded = state.pinNeeded,
             voiding = state.voiding,
             onDismiss = { showVoidSheet = false },
             onVoid = { reason, note -> pinGate.run(R.string.pin_for_void) { viewModel.void(reason, note) } },
@@ -232,7 +239,7 @@ private fun DetailRow(label: String, value: String, muted: Boolean = false) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VoidSaleSheet(
-    pinEnabled: Boolean,
+    pinNeeded: Boolean,
     voiding: Boolean,
     onDismiss: () -> Unit,
     onVoid: (reason: String, note: String) -> Unit,
@@ -250,6 +257,7 @@ private fun VoidSaleSheet(
     var note by rememberSaveable { mutableStateOf("") }
     val close: () -> Unit = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } }
 
+    OnSignOut(onDismiss)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = colors.surface) {
         Column(
             modifier = Modifier
@@ -286,7 +294,7 @@ private fun VoidSaleSheet(
                 onValueChange = { note = it },
                 placeholder = stringResource(R.string.note_placeholder),
             )
-            if (pinEnabled) {
+            if (pinNeeded) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

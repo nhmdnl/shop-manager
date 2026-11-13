@@ -1,0 +1,1 @@
+{"batchId":"b-1","schemaVersion":2,"fillId":"f-1","fillStart":true,"fillEnd":false,"fromSeq":1,"toSeq":2,"shopSettings":{"allowedDifference":500},"rows":[{"table":"category","op":"UPSERT","uid":"c-1","data":{"name":"Drinks","sortOrder":2}},{"table":"sale","op":"DELETE","uid":"s-9"}]}

@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.reports
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -249,6 +250,7 @@ private fun ShareMenu(compact: Boolean, onExport: (ReportExport.Kind) -> Unit, m
                 }
             }
         }
+        OnSignOut { open = false }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = colors.surface) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.share_as_pdf), color = colors.ink) },
@@ -577,6 +579,7 @@ private fun CustomRangeDialog(state: ReportsUiState, onDismiss: () -> Unit, onPi
             override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= today.utcMillis()
         },
     )
+    OnSignOut(onDismiss)
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {

@@ -6,6 +6,11 @@ plugins {
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.ksp)
   alias(libs.plugins.hilt)
+  alias(libs.plugins.androidx.room)
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 android {
@@ -16,8 +21,8 @@ android {
         applicationId = "com.archsolutions.shopmanager"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -39,8 +44,22 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "CLOUD_BASE_URL", "\"http://127.0.0.1:8080\"")
+        }
         release {
+            // Set `arch.cloud.url` in ~/.gradle/gradle.properties; blank hides every cloud screen and the app's own code then makes no network call.
+            // ML Kit's bundled library may still send anonymous usage metrics to Google when online (camera frames are not sent);
+            // see docs/manual-tests/barcode-scanning.md.
+            val cloudUrl = providers.gradleProperty("arch.cloud.url").getOrElse("")
+            require(cloudUrl.isBlank() || cloudUrl.startsWith("https://")) {
+                "arch.cloud.url must start with https:// in a release build (got \"$cloudUrl\"); leave it blank to ship without cloud."
+            }
+            buildConfigField("String", "CLOUD_BASE_URL", "\"$cloudUrl\"")
             signingConfig = signingConfigs.findByName("release")
+            // Real tablets and phones are ARM; x86 (the test VM) runs the debug build. Bundled ML Kit's native libs
+            // are ~20 MB across four ABIs, so this keeps the release APK at ~30 MB instead of ~42 MB.
+            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -52,9 +71,15 @@ android {
     buildFeatures {
       compose = true
       aidl = false
-      buildConfig = false
+      buildConfig = true
       shaders = false
     }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+    // Robolectric unit tests read the merged assets of the debug variant, not the test source set.
+    sourceSets["debug"].assets.srcDir("$projectDir/schemas")
 
     packaging {
       resources {
@@ -108,6 +133,18 @@ dependencies {
   // WorkManager (close-day reminder)
   implementation(libs.androidx.work.runtime.ktx)
 
+  // Barcode scanning: CameraX + bundled ML Kit model
+  implementation(libs.androidx.camera.core)
+  implementation(libs.androidx.camera.camera2)
+  implementation(libs.androidx.camera.lifecycle)
+  implementation(libs.androidx.camera.view)
+  implementation(libs.mlkit.barcode.scanning)
+
+  // Arch-SME Cloud
+  implementation(project(":cloud-contract"))
+  implementation(libs.okhttp)
+  implementation(libs.kotlinx.serialization.json)
+
   // Tooling
   debugImplementation(libs.androidx.compose.ui.tooling)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
@@ -118,6 +155,8 @@ dependencies {
   testImplementation(libs.turbine)
   testImplementation(libs.androidx.room.testing)
   testImplementation(libs.robolectric)
+  testImplementation(libs.okhttp.mockwebserver)
+  testImplementation(libs.androidx.work.testing)
   testImplementation(libs.androidx.test.core)
   testImplementation(libs.androidx.test.ext.junit)
 

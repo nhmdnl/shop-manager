@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The window's own background, shown before Compose draws: the design system's paper colour (Color.kt), so a cold start does not flash white in dark mode. -->
+    <color name="shop_window_background">#FFF5F3EE</color>
+</resources>

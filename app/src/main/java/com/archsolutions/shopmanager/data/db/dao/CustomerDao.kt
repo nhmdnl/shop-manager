@@ -3,7 +3,6 @@ package com.archsolutions.shopmanager.data.db.dao
 import androidx.room.Dao
 import androidx.room.Embedded
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.archsolutions.shopmanager.data.db.entities.CustomerEntity
@@ -28,11 +27,8 @@ interface CustomerDao {
     @Query("SELECT * FROM customer WHERE name = :name LIMIT 1")
     suspend fun getByName(name: String): CustomerEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert
     suspend fun insert(customer: CustomerEntity): Long
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(customers: List<CustomerEntity>)
 
     @Update
     suspend fun update(customer: CustomerEntity)

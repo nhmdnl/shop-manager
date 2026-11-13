@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -54,6 +55,10 @@ class SeedDataLoaderTest {
         assertEquals(4, db.supplierDao().getAllActive().first().size)
         assertEquals(2, db.customerDao().getAll().first().size)
         assertEquals("Mary Shop", settingsStore.settings.first().shopName)
+
+        // Sync stays off and the outbox empty: the seed ran before anyone enabled cloud sync.
+        assertFalse(db.syncDao().state().enabled)
+        assertFalse(db.syncDao().hasOutbox().first())
 
         // Cooking oil, Bread, Milk, Yoghurt and Eggs start below their alert level.
         assertEquals(

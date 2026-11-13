@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.MotionEvent
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,6 +21,7 @@ import androidx.lifecycle.lifecycleScope
 import com.archsolutions.shopmanager.core.designsystem.ShopManagerTheme
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import com.archsolutions.shopmanager.data.settings.ShopSettings
+import com.archsolutions.shopmanager.data.staff.StaffSession
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -37,6 +39,9 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var closeReminder: CloseReminder
+
+    @Inject
+    lateinit var staffSession: StaffSession
 
     /** Set when the close-day reminder was tapped; AppNavHost clears it once handled. */
     private var openCloseDay by mutableStateOf(false)
@@ -84,6 +89,18 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         }
+    }
+
+    // Any touch on any screen counts as activity for the idle sign-out.
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        staffSession.touch()
+        return super.dispatchTouchEvent(ev)
+    }
+
+    // Hardware keys and other non-touch input count too.
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        staffSession.touch()
     }
 
     override fun onNewIntent(intent: Intent) {

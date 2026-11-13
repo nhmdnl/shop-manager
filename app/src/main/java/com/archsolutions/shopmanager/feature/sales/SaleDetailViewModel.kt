@@ -15,6 +15,7 @@ import com.archsolutions.shopmanager.data.repo.CustomerRepo
 import com.archsolutions.shopmanager.data.repo.DayRepo
 import com.archsolutions.shopmanager.data.repo.SaleRepo
 import com.archsolutions.shopmanager.data.settings.SettingsStore
+import com.archsolutions.shopmanager.data.staff.StaffSession
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,6 +28,9 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.archsolutions.shopmanager.data.repo.StaffRepo
+import com.archsolutions.shopmanager.domain.staff.Permission
+import com.archsolutions.shopmanager.feature.pin.pinNeededFlow
 import javax.inject.Inject
 
 data class SaleDetailUiState(
@@ -44,8 +48,11 @@ data class SaleDetailUiState(
     val voidReason: String? = null,
     // 5.2 / 6.7: only a DONE sale of the OPEN day can be voided.
     val canVoid: Boolean = false,
-    val pinEnabled: Boolean = false,
+    /** The Void sheet will ask for a PIN: the real gate decision (shared PIN, or an Owner PIN for a Cashier). */
+    val pinNeeded: Boolean = false,
     val voiding: Boolean = false,
+    val soldBy: String? = null,
+    val voidedBy: String? = null,
 )
 
 @HiltViewModel
@@ -56,9 +63,12 @@ class SaleDetailViewModel @Inject constructor(
     customerRepo: CustomerRepo,
     settingsStore: SettingsStore,
     clock: AppClock,
+    private val staffSession: StaffSession,
+    staffRepo: StaffRepo,
 ) : ViewModel() {
     private val saleId = savedStateHandle.toRoute<SaleDetailRoute>().id
     private val voiding = MutableStateFlow(false)
+    private val pinNeeded = pinNeededFlow(settingsStore.settings, staffSession.current, staffRepo.staffActive, Permission.VOID_SALE)
 
     private val _voidFailed = MutableStateFlow(false)
     val voidFailed: StateFlow<Boolean> = _voidFailed.asStateFlow()
@@ -71,7 +81,9 @@ class SaleDetailViewModel @Inject constructor(
             } else {
                 val sale = saleWithItems.sale
                 val customer = sale.customerId?.let { customerRepo.getById(it) } ?: flowOf(null)
-                combine(dayRepo.getDayById(sale.dayId), customer, settingsStore.settings, voiding) { day, buyer, settings, isVoiding ->
+                val soldBy = saleRepo.staffName(sale.staffId)
+                val voidedBy = saleRepo.staffName(sale.voidedByStaffId)
+                combine(dayRepo.getDayById(sale.dayId), customer, pinNeeded, voiding) { day, buyer, needsPin, isVoiding ->
                     SaleDetailUiState(
                         loaded = true,
                         time = DayFormat.time(sale.createdAt, clock.zoneId),
@@ -85,8 +97,10 @@ class SaleDetailViewModel @Inject constructor(
                         voided = sale.status == SaleStatus.VOIDED,
                         voidReason = sale.voidReason,
                         canVoid = sale.status == SaleStatus.DONE && day?.status == DayStatus.OPEN,
-                        pinEnabled = settings.pinEnabled,
+                        pinNeeded = needsPin,
                         voiding = isVoiding,
+                        soldBy = soldBy,
+                        voidedBy = voidedBy,
                     )
                 }
             }
@@ -95,10 +109,12 @@ class SaleDetailViewModel @Inject constructor(
 
     fun void(reason: String, note: String) {
         if (voiding.value) return
+        // R1: read the actor now, before any coroutine; the PIN gate clears the approver right after this returns.
+        val staffId = staffSession.actingId
         voiding.value = true
         viewModelScope.launch {
             try {
-                saleRepo.voidSale(saleId, if (note.isBlank()) reason else "$reason — ${note.trim()}")
+                saleRepo.voidSale(saleId, if (note.isBlank()) reason else "$reason — ${note.trim()}", staffId)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

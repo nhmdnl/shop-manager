@@ -3,7 +3,6 @@ package com.archsolutions.shopmanager.data.db.dao
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.archsolutions.shopmanager.data.db.entities.CategoryEntity
 import kotlinx.coroutines.flow.Flow
@@ -19,11 +18,8 @@ interface CategoryDao {
     @Query("SELECT * FROM category WHERE name = :name LIMIT 1")
     suspend fun getByName(name: String): CategoryEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert
     suspend fun insert(category: CategoryEntity): Long
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(categories: List<CategoryEntity>)
 
     @Delete
     suspend fun delete(category: CategoryEntity)

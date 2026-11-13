@@ -226,4 +226,57 @@ class SaleTransactionTest {
             cursor.moveToFirst()
             cursor.getInt(0)
         }
+
+    private suspend fun openDayWithProduct(): Pair<Long, Long> {
+        val dayId = db.dayDao().insertDay(
+            BusinessDayEntity(date = "2026-09-30", status = DayStatus.OPEN, openedAt = 1000L, openingCash = 0L, openingMobile = 0L)
+        )
+        val prodId = db.productDao().insert(
+            ProductEntity(
+                name = "Sugar", categoryId = null, unit = Unit.PCS, sellPrice = 5000L, costPrice = 4200L,
+                stockQty = 10.0, lowStockLevel = 2.0, createdAt = 1000L, updatedAt = 1000L,
+            )
+        )
+        return dayId to prodId
+    }
+
+    private fun item(prodId: Long) = listOf(SaleCartItem(prodId, "Sugar", 1.0, 5000L, 4200L))
+
+    @Test
+    fun `createSale records the staff id`() = runTest {
+        val (dayId, prodId) = openDayWithProduct()
+        val id = saleRepo.createSale(dayId, PayMethod.CASH, item(prodId), cashReceived = 5000L, staffId = 42L)
+        val sale = db.saleDao().getSaleByIdDirect(id)!!
+        assertEquals(42L, sale.staffId)
+        assertEquals(null, sale.voidedByStaffId)
+    }
+
+    @Test
+    fun `createSale without staff leaves null`() = runTest {
+        val (dayId, prodId) = openDayWithProduct()
+        val id = saleRepo.createSale(dayId, PayMethod.CASH, item(prodId), cashReceived = 5000L)
+        assertEquals(null, db.saleDao().getSaleByIdDirect(id)!!.staffId)
+    }
+
+    @Test
+    fun `voidSale records voidedByStaffId and leaves staffId`() = runTest {
+        val (dayId, prodId) = openDayWithProduct()
+        val id = saleRepo.createSale(dayId, PayMethod.CASH, item(prodId), cashReceived = 5000L, staffId = 42L)
+        saleRepo.voidSale(id, "Mistake", staffId = 9L)
+        val sale = db.saleDao().getSaleByIdDirect(id)!!
+        assertEquals(SaleStatus.VOIDED, sale.status)
+        assertEquals(42L, sale.staffId)
+        assertEquals(9L, sale.voidedByStaffId)
+    }
+
+    @Test
+    fun `old sale rows read back with null staff`() = runTest {
+        val (dayId, _) = openDayWithProduct()
+        db.openHelper.writableDatabase.execSQL(
+            "INSERT INTO sale (id, dayId, createdAt, total, costTotal, method, status, uid) VALUES (77, $dayId, 1, 100, 80, 'CASH', 'DONE', 'old-sale')"
+        )
+        val sale = db.saleDao().getSaleByIdDirect(77L)!!
+        assertEquals(null, sale.staffId)
+        assertEquals(null, sale.voidedByStaffId)
+    }
 }

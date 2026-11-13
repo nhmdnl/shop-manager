@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.day
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -264,6 +265,7 @@ private fun OpenDayCompact(
         )
     }
 
+    OnSignOut { showCounter = false }
     if (showCounter) {
         ModalBottomSheet(
             onDismissRequest = { showCounter = false },

@@ -14,8 +14,10 @@ import com.archsolutions.shopmanager.data.db.dao.ProductDao
 import com.archsolutions.shopmanager.data.db.dao.PurchaseDao
 import com.archsolutions.shopmanager.data.db.dao.ReportDao
 import com.archsolutions.shopmanager.data.db.dao.SaleDao
+import com.archsolutions.shopmanager.data.db.dao.StaffDao
 import com.archsolutions.shopmanager.data.db.dao.StockMovementDao
 import com.archsolutions.shopmanager.data.db.dao.SupplierDao
+import com.archsolutions.shopmanager.data.db.dao.SyncDao
 import com.archsolutions.shopmanager.data.db.entities.BusinessDayEntity
 import com.archsolutions.shopmanager.data.db.entities.CashCountEntity
 import com.archsolutions.shopmanager.data.db.entities.CategoryEntity
@@ -27,8 +29,11 @@ import com.archsolutions.shopmanager.data.db.entities.PurchaseEntity
 import com.archsolutions.shopmanager.data.db.entities.PurchaseItemEntity
 import com.archsolutions.shopmanager.data.db.entities.SaleEntity
 import com.archsolutions.shopmanager.data.db.entities.SaleItemEntity
+import com.archsolutions.shopmanager.data.db.entities.StaffEntity
 import com.archsolutions.shopmanager.data.db.entities.StockMovementEntity
 import com.archsolutions.shopmanager.data.db.entities.SupplierEntity
+import com.archsolutions.shopmanager.data.db.entities.SyncOutboxEntity
+import com.archsolutions.shopmanager.data.db.entities.SyncStateEntity
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -51,9 +56,12 @@ import javax.inject.Singleton
         PurchaseItemEntity::class,
         StockMovementEntity::class,
         MoneyEntryEntity::class,
+        SyncStateEntity::class,
+        SyncOutboxEntity::class,
+        StaffEntity::class,
     ],
     version = AppDatabase.VERSION,
-    exportSchema = false,
+    exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -67,15 +75,21 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun stockMovementDao(): StockMovementDao
     abstract fun moneyEntryDao(): MoneyEntryDao
     abstract fun reportDao(): ReportDao
+    abstract fun syncDao(): SyncDao
+    abstract fun staffDao(): StaffDao
 
     companion object {
         const val DATABASE_NAME = "shop_manager.db"
 
         /** Backups record it; a restore refuses a backup made by a newer schema. */
-        const val VERSION = 1
+        const val VERSION = 3
+
+        /** Every builder goes through here, so no database lacks the migration, the triggers or the sync_state row. */
+        fun configure(builder: RoomDatabase.Builder<AppDatabase>): RoomDatabase.Builder<AppDatabase> =
+            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3).addCallback(SyncTriggers.callback)
 
         fun createInMemory(context: Context): AppDatabase =
-            Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+            configure(Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java))
                 .allowMainThreadQueries()
                 .build()
     }
@@ -87,10 +101,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
-        return Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            AppDatabase.DATABASE_NAME,
+        return AppDatabase.configure(
+            Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.DATABASE_NAME),
         ).build()
     }
 
@@ -120,4 +132,10 @@ object DatabaseModule {
 
     @Provides
     fun provideMoneyEntryDao(db: AppDatabase): MoneyEntryDao = db.moneyEntryDao()
+
+    @Provides
+    fun provideSyncDao(db: AppDatabase): SyncDao = db.syncDao()
+
+    @Provides
+    fun provideStaffDao(db: AppDatabase): StaffDao = db.staffDao()
 }

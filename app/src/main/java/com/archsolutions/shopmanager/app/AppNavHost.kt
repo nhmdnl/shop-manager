@@ -57,6 +57,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.archsolutions.shopmanager.feature.scan.ScanHost
+import com.archsolutions.shopmanager.feature.stock.EditProductViewModel
+import com.archsolutions.shopmanager.feature.stock.StockViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -90,16 +93,25 @@ import com.archsolutions.shopmanager.feature.sell.CheckoutScreen
 import com.archsolutions.shopmanager.feature.sell.SellViewModel
 import com.archsolutions.shopmanager.feature.reports.ReportsScreen
 import com.archsolutions.shopmanager.feature.sell.SellScreen
+import com.archsolutions.shopmanager.feature.cloud.CloudPayScreen
+import com.archsolutions.shopmanager.feature.cloud.CloudRestoreScreen
+import com.archsolutions.shopmanager.feature.cloud.CloudSignInScreen
+import com.archsolutions.shopmanager.feature.cloud.CloudViewModel
 import com.archsolutions.shopmanager.feature.settings.SettingsScreen
 import com.archsolutions.shopmanager.feature.settings.SettingsViewModel
 import com.archsolutions.shopmanager.feature.stock.AddPurchaseScreen
 import com.archsolutions.shopmanager.feature.stock.EditProductScreen
+import com.archsolutions.shopmanager.feature.stock.PurchaseViewModel
 import com.archsolutions.shopmanager.feature.stock.StockScreen
 import com.archsolutions.shopmanager.feature.suppliers.SupplierDetailScreen
 import com.archsolutions.shopmanager.feature.suppliers.SupplierEditScreen
 import com.archsolutions.shopmanager.feature.suppliers.SuppliersScreen
 import kotlinx.serialization.Serializable
 import com.archsolutions.shopmanager.feature.pin.rememberPinGate
+import com.archsolutions.shopmanager.feature.staff.LocalSignOutTick
+import com.archsolutions.shopmanager.feature.staff.StaffGate
+import com.archsolutions.shopmanager.feature.staff.StaffGateViewModel
+import com.archsolutions.shopmanager.feature.staff.StaffScreen
 import com.archsolutions.shopmanager.feature.backup.BackupReminderViewModel
 import com.archsolutions.shopmanager.feature.backup.rememberBackupActions
 import com.archsolutions.shopmanager.data.backup.AutoBackupWorker
@@ -122,7 +134,7 @@ import com.archsolutions.shopmanager.feature.day.PastDayScreen
 @Serializable data class SalesRoute(val dayId: Long = 0L) // 0 = the day the gate is on
 @Serializable data class SaleDetailRoute(val id: Long)
 @Serializable data class AddPurchaseRoute(val productId: Long = 0L, val supplierId: Long = 0L) // 0 = none
-@Serializable data class EditProductRoute(val id: Long = 0L) // 0 = new product
+@Serializable data class EditProductRoute(val id: Long = 0L, val barcode: String = "") // 0 = new product; barcode only prefills a new one
 @Serializable data class RecordMoneyRoute(val type: String = "EXPENSE", val customerId: Long = 0L) // MoneyEntryType name
 @Serializable object DebtorsRoute
 @Serializable data class CloseDayRoute(val date: String)
@@ -132,6 +144,13 @@ import com.archsolutions.shopmanager.feature.day.PastDayScreen
 @Serializable data class DaySummaryRoute(val dayId: Long) // a closed day's record, read-only (Reports > Days)
 @Serializable data class SupplierDetailRoute(val id: Long)
 @Serializable data class SupplierEditRoute(val id: Long = 0L) // 0 = new supplier
+@Serializable object ScanSellRoute // continuous scanner inside SellGraph (wired in the Sell host)
+@Serializable object ScanPurchaseRoute // continuous scanner for Record purchase
+@Serializable object ScanOnceRoute // single-shot scanner (Edit product barcode, Stock lookup)
+@Serializable object CloudPayRoute
+@Serializable object CloudRestoreRoute
+@Serializable object StaffRoute
+@Serializable data class CloudSignInRoute(val purpose: String = "LINK") // LINK goes back when linked; RESTORE goes on to CloudRestoreRoute
 
 enum class NavDestination(
     val route: Any,
@@ -149,8 +168,64 @@ enum class NavDestination(
     SETTINGS(SettingsRoute, R.string.nav_settings, Icons.Outlined.Settings, showInCompactBottomBar = false),
 }
 
+/** The app shell, with the staff sign-in gate laid over it while staff is on and nobody is signed in. */
 @Composable
 fun AppNavHost(
+    isExpanded: Boolean,
+    // 3.5: medium widths (portrait tablets) keep the rail; screens go two-pane only when expanded.
+    useRail: Boolean = isExpanded,
+    openCloseDay: Boolean = false,
+    onCloseDayOpened: () -> Unit = {},
+    navController: NavHostController = rememberNavController(),
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
+    gateViewModel: DayGateViewModel = hiltViewModel(),
+    modifier: Modifier = Modifier,
+) {
+    val needsOnboarding by gateViewModel.needsOnboarding.collectAsStateWithLifecycle()
+    Box(modifier = modifier.fillMaxSize()) {
+        // Unknown onboarding stays null: the gate fails closed until it and the staff setting are read.
+        StaffGate(onboarding = needsOnboarding) {
+            AppShell(isExpanded, useRail, openCloseDay, onCloseDayOpened, navController, settingsViewModel, gateViewModel)
+        }
+    }
+}
+
+/** Screens reached only through an Owner-gated tap (restore, cloud sign-in/pay, staff). Nothing else may keep them open. */
+internal val entryGatedRoutes = listOf(CloudRestoreRoute::class, CloudSignInRoute::class, CloudPayRoute::class, StaffRoute::class)
+
+/** True when any route on [routes] is an entry-gated one: such a stack is never saved by tab switching (N1). */
+internal fun stackHoldsGatedRoute(routes: List<kotlin.reflect.KClass<*>>): Boolean = routes.any { it in entryGatedRoutes }
+
+/**
+ * N2: the owner-only screens are popped only when staff is on and nobody is signed in. The session is in memory, so
+ * after process death nobody is signed in and the pop still happens; a rotation with an Owner signed in keeps them.
+ * Unknown (null) never pops here: the gate itself covers unknown.
+ */
+internal fun shouldDropGatedRoutes(staffActive: Boolean?, signedInId: Long?): Boolean = staffActive == true && signedInId == null
+
+private fun NavHostController.currentStackHoldsGated(): Boolean = currentBackStack.value.any { entry ->
+    entryGatedRoutes.any { entry.destination.hasRoute(it) }
+}
+
+/**
+ * Pops every entry-gated screen off the stack (no-op for those not on it), and Settings with them: with staff on,
+ * Settings is Owner-only, and popping just Staff/Cloud would leave the next person (or a restored app) on a Settings
+ * screen they could not have opened. The app then lands on whatever sits below, normally Home.
+ */
+internal fun NavHostController.dropEntryGated() {
+    popBackStack<CloudRestoreRoute>(true)
+    popBackStack<CloudSignInRoute>(true)
+    popBackStack<CloudPayRoute>(true)
+    popBackStack<StaffRoute>(true)
+    popBackStack<SettingsRoute>(true)
+    // A scanner left open under the sign-in cover (e.g. after process restore) must not keep the camera on.
+    if (currentBackStack.value.any { it.destination.hasRoute<ScanSellRoute>() }) popBackStack<ScanSellRoute>(true)
+    if (currentBackStack.value.any { it.destination.hasRoute<ScanPurchaseRoute>() }) popBackStack<ScanPurchaseRoute>(true)
+    if (currentBackStack.value.any { it.destination.hasRoute<ScanOnceRoute>() }) popBackStack<ScanOnceRoute>(true)
+}
+
+@Composable
+private fun AppShell(
     isExpanded: Boolean,
     // 3.5: medium widths (portrait tablets) keep the rail; screens go two-pane only when expanded.
     useRail: Boolean = isExpanded,
@@ -187,9 +262,30 @@ fun AppNavHost(
     val canPrompt = currentDestination != null && !isOpenDay && needsOnboarding == false &&
         !currentDestination.hasRoute(CloseDayRoute::class) && !currentDestination.hasRoute(DayClosedRoute::class)
 
+    // C1: these screens were opened by an Owner-gated tap. After a sign-out, or a restored back stack once staff is
+    // on, the next person must not land on them (a Cashier on the restore list could confirm a restore with no PIN).
+    val staffGateViewModel: StaffGateViewModel = hiltViewModel()
+    val staffActive by staffGateViewModel.staffActive.collectAsStateWithLifecycle()
+    val signedIn by staffGateViewModel.current.collectAsStateWithLifecycle()
+    val signOutTick = LocalSignOutTick.current
+    val firstTick = remember { signOutTick }
+    // Also keyed on the current entry: a tab restore with nobody signed in drops any owner-only screen that came back (N1).
+    LaunchedEffect(staffActive, signedIn?.id, currentDestination != null, navBackStackEntry?.id) {
+        if (shouldDropGatedRoutes(staffActive, signedIn?.id) && currentDestination != null) navController.dropEntryGated()
+    }
+    LaunchedEffect(signOutTick) {
+        if (signOutTick != firstTick) navController.dropEntryGated()
+    }
+
     // 7.8: a fresh install starts with onboarding, whose last step opens the first day.
     LaunchedEffect(needsOnboarding, currentDestination != null) {
-        if (needsOnboarding == true && currentDestination != null && !currentDestination.hasRoute(OnboardingRoute::class)) {
+        // Sign-in and restore are reached from onboarding: after a rotation or process restore the stack is
+        // [Onboarding, CloudSignIn], so a second Onboarding must not be pushed over them.
+        if (needsOnboarding == true && currentDestination != null &&
+            !currentDestination.hasRoute(OnboardingRoute::class) &&
+            !currentDestination.hasRoute(CloudSignInRoute::class) &&
+            !currentDestination.hasRoute(CloudRestoreRoute::class)
+        ) {
             navController.navigate(OnboardingRoute) { popUpTo<HomeRoute> { inclusive = true } }
         }
     }
@@ -222,8 +318,9 @@ fun AppNavHost(
     if (useRail) {
         // Expanded layout (Tablet): Navigation Rail (104 dp wide) + content
         Row(modifier = modifier.fillMaxSize().background(colors.paper)) {
-            // Open the day is a full-screen task on tablet too (no rail on the design board)
-            if (!isOpenDay) {
+            // Open the day is a full-screen task on tablet too (no rail on the design board), and so is
+            // onboarding, including the cloud sign-in and restore it leads to.
+            if (!isOpenDay && needsOnboarding != true) {
                 // NavigationRail
                 NavigationRail(
                     modifier = Modifier
@@ -367,11 +464,18 @@ fun AppNavHost(
             currentRoute == CheckoutRoute::class.qualifiedName ||
             destination?.hasRoute(AddPurchaseRoute::class) == true ||
             destination?.hasRoute(EditProductRoute::class) == true ||
+            destination?.hasRoute(ScanSellRoute::class) == true ||
+            destination?.hasRoute(ScanPurchaseRoute::class) == true ||
+            destination?.hasRoute(ScanOnceRoute::class) == true ||
             destination?.hasRoute(RecordMoneyRoute::class) == true ||
             destination?.hasRoute(CloseDayRoute::class) == true ||
             destination?.hasRoute(DayClosedRoute::class) == true ||
             destination?.hasRoute(DaySummaryRoute::class) == true ||
-            destination?.hasRoute(SupplierEditRoute::class) == true
+            destination?.hasRoute(SupplierEditRoute::class) == true ||
+            destination?.hasRoute(CloudSignInRoute::class) == true ||
+            destination?.hasRoute(CloudPayRoute::class) == true ||
+            destination?.hasRoute(CloudRestoreRoute::class) == true ||
+            destination?.hasRoute(StaffRoute::class) == true
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
@@ -497,6 +601,12 @@ private fun NavContent(
             val backupReminderViewModel: BackupReminderViewModel = hiltViewModel()
             val backupReminder by backupReminderViewModel.reminder.collectAsStateWithLifecycle()
             val homeSnackbar = remember { SnackbarHostState() }
+            val staffGate: StaffGateViewModel = hiltViewModel()
+            val signedIn by staffGate.current.collectAsStateWithLifecycle()
+            val staffActive by staffGate.staffActive.collectAsStateWithLifecycle()
+            val cloudViewModel: CloudViewModel = hiltViewModel()
+            val cloudNotice by cloudViewModel.notice.collectAsStateWithLifecycle()
+            LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { cloudViewModel.refresh() }
             val backup = rememberBackupActions(homeSnackbar)
             HomeScreen(
                 isExpanded = isExpanded,
@@ -518,10 +628,17 @@ private fun NavContent(
                 onSeeAllSales = { navController.navigate(SalesRoute()) },
                 onOpenSale = { navController.navigate(SaleDetailRoute(it)) },
                 todaySummary = todaySummary,
+                signedInName = signedIn?.name,
+                onSwitchUser = staffGate::switchUser,
                 onDaySummary = { navController.navigate(DayClosedRoute(it)) },
                 onReopenDay = { dayId -> pinGate.run(R.string.pin_for_reopen) { homeViewModel.reopenDay(dayId) } },
                 backupReminder = backupReminder,
-                onBackUp = backup.backUp,
+                // A backup zip carries every PIN hash: with staff on (or not yet known) it needs an Owner, like Settings does.
+                onBackUp = {
+                    if (staffActive == false) backup.backUp() else pinGate.run(R.string.pin_for_backup, backup.backUp)
+                },
+                cloudNotice = cloudNotice,
+                onCloudNotice = { pinGate.run(R.string.pin_for_cloud) { navController.navigate(CloudPayRoute) } },
                 snackbarHostState = homeSnackbar,
             )
         }
@@ -536,7 +653,22 @@ private fun NavContent(
                     onCloseDay = closeDay,
                     onCheckout = { navController.navigate(CheckoutRoute) },
                     onAddProduct = { navController.navigate(EditProductRoute()) },
+                    onScan = { navController.navigate(ScanSellRoute) { launchSingleTop = true } },
                 )
+            }
+            composable<ScanSellRoute> { entry ->
+                val sellViewModel = sellGraphViewModel(navController, entry)
+                // Fails closed: the scanner only runs while the day is open (a closing day pops it).
+                if (gateState is DayGateState.Ready) {
+                    ScanHost(
+                        continuous = true,
+                        onKnown = { product -> sellViewModel.addOne(product.id) },
+                        onAddProduct = { code -> navController.navigate(EditProductRoute(barcode = code)) },
+                        onDone = { navController.popIfResumed(entry) },
+                    )
+                } else {
+                    LaunchedEffect(Unit) { if (navController.currentBackStackEntry?.id == entry.id) navController.popBackStack() }
+                }
             }
             composable<CheckoutRoute> { entry ->
                 CheckoutScreen(
@@ -560,7 +692,10 @@ private fun NavContent(
             )
         }
         composable<OnboardingRoute> {
-            OnboardingScreen(onDone = { navController.navigate(HomeRoute) { popUpTo<OnboardingRoute> { inclusive = true } } })
+            OnboardingScreen(
+                onDone = { navController.navigate(HomeRoute) { popUpTo<OnboardingRoute> { inclusive = true } } },
+                onRestoreFromCloud = { navController.navigate(CloudSignInRoute("RESTORE")) },
+            )
         }
         composable<OpenDayRoute> {
             OpenDayScreen(
@@ -573,8 +708,11 @@ private fun NavContent(
                 },
             )
         }
-        composable<StockRoute> {
+        composable<StockRoute> { entry ->
+            val stockViewModel: StockViewModel = hiltViewModel()
+            ScannedCodeHandoff(entry, onCode = stockViewModel::handleScanned)
             StockScreen(
+                viewModel = stockViewModel,
                 isExpanded = isExpanded,
                 gateState = gateState,
                 zoneId = gateViewModel.zoneId,
@@ -583,6 +721,9 @@ private fun NavContent(
                 onNewProduct = { navController.navigate(EditProductRoute()) },
                 onEditProduct = { navController.navigate(EditProductRoute(it)) },
                 onAddPurchase = { navController.navigate(AddPurchaseRoute(productId = it)) },
+                onScan = { navController.navigate(ScanOnceRoute) { launchSingleTop = true } },
+                onAddScanned = { navController.navigate(EditProductRoute(barcode = it)) },
+                onScanPurchase = { navController.navigate(ScanPurchaseRoute) { launchSingleTop = true } },
             )
         }
         composable<AddPurchaseRoute> {
@@ -593,13 +734,40 @@ private fun NavContent(
                 onCloseDay = closeDay,
                 onBack = { navController.popBackStack() },
                 onDone = { navController.popBackStack() },
+                onScan = { navController.navigate(ScanPurchaseRoute) { launchSingleTop = true } },
             )
         }
-        composable<EditProductRoute> {
+        // Continuous scanner for Record purchase. The purchase form lives on the entry that opened the scanner
+        // (AddPurchaseRoute on phones, StockRoute on tablets), so its PurchaseViewModel is that entry's.
+        composable<ScanPurchaseRoute> { entry ->
+            // Pinned once: while Done pops this entry, previousBackStackEntry can already point elsewhere.
+            val host = remember(entry) { navController.previousBackStackEntry }
+            // Fails closed: no purchase host, or the day is not open (a closing day pops it), means no scanner.
+            if (host != null && host.isPurchaseHost() && gateState is DayGateState.Ready) {
+                val purchaseViewModel: PurchaseViewModel = hiltViewModel(host)
+                ScanHost(
+                    continuous = true,
+                    onKnown = { product -> purchaseViewModel.addOrIncrement(product.id) },
+                    onAddProduct = { code -> navController.navigate(EditProductRoute(barcode = code)) },
+                    onDone = { navController.popIfResumed(entry) },
+                )
+            } else {
+                LaunchedEffect(Unit) { if (navController.currentBackStackEntry?.id == entry.id) navController.popBackStack() }
+            }
+        }
+        composable<EditProductRoute> { entry ->
+            val editViewModel: EditProductViewModel = hiltViewModel()
+            ScannedCodeHandoff(entry, onCode = editViewModel::onScannedBarcode)
             EditProductScreen(
+                viewModel = editViewModel,
                 isExpanded = isExpanded,
                 onBack = { navController.popBackStack() },
+                onScan = { navController.navigate(ScanOnceRoute) { launchSingleTop = true } },
             )
+        }
+        // Single-shot scanner: hands the first code back to the screen below it (Edit product, Stock).
+        composable<ScanOnceRoute> { entry ->
+            ScanOnceDestination(navController, entry)
         }
         composable<DayRoute> {
             DayScreen(
@@ -697,12 +865,38 @@ private fun NavContent(
                 onSales = { navController.navigate(SalesRoute(it)) },
             )
         }
+        composable<CloudPayRoute> {
+            CloudPayScreen(onDone = { navController.popBackStack() })
+        }
+        composable<CloudRestoreRoute> {
+            CloudRestoreScreen(onBack = { navController.popBackStack() })
+        }
+        composable<CloudSignInRoute> { entry ->
+            val restoring = entry.toRoute<CloudSignInRoute>().purpose == "RESTORE"
+            CloudSignInScreen(
+                onDone = { navController.popBackStack() },
+                onLinked = {
+                    if (restoring) {
+                        navController.navigate(CloudRestoreRoute) { popUpTo<CloudSignInRoute> { inclusive = true } }
+                    } else {
+                        navController.popBackStack()
+                    }
+                },
+            )
+        }
         composable<SettingsRoute> {
             SettingsScreen(
                 viewModel = settingsViewModel,
                 isExpanded = isExpanded,
                 onNavigateBack = if (!isExpanded) { { navController.popBackStack() } } else null,
+                onCloudSignIn = { navController.navigate(CloudSignInRoute()) },
+                onCloudPay = { navController.navigate(CloudPayRoute) },
+                onCloudRestore = { navController.navigate(CloudRestoreRoute) },
+                onManageStaff = { navController.navigate(StaffRoute) { launchSingleTop = true } },
             )
+        }
+        composable<StaffRoute> {
+            StaffScreen(onBack = { navController.popBackStack<StaffRoute>(true) })
         }
     }
 }
@@ -714,9 +908,11 @@ internal fun NavHostController.navigateToTab(dest: NavDestination) {
     val inDayFlow = currentBackStack.value.any {
         it.destination.hasRoute(CloseDayRoute::class) || it.destination.hasRoute(DayClosedRoute::class)
     }
+    // N1: owner-only screens (restore, cloud, staff) are never saved, so a tab tap by the next person can't bring them back.
+    val saveStack = !inDayFlow && !currentStackHoldsGated()
     // Home is the start destination: go back to it rather than restore a stack saved for it.
     if (dest == NavDestination.HOME) {
-        if (!popBackStack<HomeRoute>(inclusive = false, saveState = !inDayFlow) &&
+        if (!popBackStack<HomeRoute>(inclusive = false, saveState = saveStack) &&
             currentDestination?.hasRoute(HomeRoute::class) != true
         ) {
             navigate(HomeRoute) { launchSingleTop = true }
@@ -725,7 +921,7 @@ internal fun NavHostController.navigateToTab(dest: NavDestination) {
     }
     navigate(dest.route) {
         popUpTo(graph.findStartDestination().id) {
-            saveState = !inDayFlow
+            saveState = saveStack
         }
         launchSingleTop = true
         restoreState = true
@@ -751,3 +947,7 @@ private fun sellGraphViewModel(navController: NavHostController, entry: NavBackS
     val graphEntry = remember(entry) { navController.getBackStackEntry<SellGraph>() }
     return hiltViewModel(graphEntry)
 }
+
+/** The two screens that show the purchase form (phone Add purchase, tablet Stock); only they may open the purchase scanner. */
+internal fun NavBackStackEntry.isPurchaseHost(): Boolean =
+    destination.hasRoute<AddPurchaseRoute>() || destination.hasRoute<StockRoute>()

@@ -3,7 +3,6 @@ package com.archsolutions.shopmanager.data.db.dao
 import androidx.room.Dao
 import androidx.room.Embedded
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Relation
 import androidx.room.Transaction
@@ -56,15 +55,15 @@ interface SaleDao {
     @Query("SELECT * FROM sale WHERE id = :id LIMIT 1")
     suspend fun getSaleByIdDirect(id: Long): SaleEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert
     suspend fun insertSale(sale: SaleEntity): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert
     suspend fun insertSaleItems(items: List<SaleItemEntity>)
 
     @Update
     suspend fun updateSale(sale: SaleEntity)
 
-    @Query("UPDATE sale SET status = 'VOIDED', voidReason = :reason, voidedAt = :voidedAt WHERE id = :saleId")
-    suspend fun voidSale(saleId: Long, reason: String, voidedAt: Long)
+    @Query("UPDATE sale SET status = 'VOIDED', voidReason = :reason, voidedAt = :voidedAt, voidedByStaffId = :staffId WHERE id = :saleId")
+    suspend fun voidSale(saleId: Long, reason: String, voidedAt: Long, staffId: Long?)
 }

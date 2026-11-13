@@ -1,6 +1,7 @@
 package com.archsolutions.shopmanager.domain
 
 import com.archsolutions.shopmanager.data.db.entities.ProductEntity
+import com.archsolutions.cloud.contract.shop.LowStock
 import kotlin.math.roundToLong
 
 /** One product in the current sale. Prices come from the product when the sale is saved. */
@@ -38,4 +39,4 @@ object CashQuickAmounts {
 }
 
 /** Same rule as ProductDao.getLowStock: low at or below the alert level. */
-val ProductEntity.isLowStock: Boolean get() = stockQty <= lowStockLevel
+val ProductEntity.isLowStock: Boolean get() = LowStock.isLow(stockQty, lowStockLevel)

@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.stock
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -58,7 +59,9 @@ import com.archsolutions.shopmanager.core.designsystem.components.Badge
 import com.archsolutions.shopmanager.core.designsystem.components.BadgeKind
 import com.archsolutions.shopmanager.core.designsystem.components.ChipRow
 import com.archsolutions.shopmanager.core.designsystem.components.MoneyField
+import com.archsolutions.shopmanager.feature.sell.PillButton
 import com.archsolutions.shopmanager.core.designsystem.components.PrimaryButton
+import com.archsolutions.shopmanager.core.scan.rememberHasCamera
 import com.archsolutions.shopmanager.core.designsystem.components.QtyStepper
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.SectionLabel
@@ -72,6 +75,7 @@ import com.archsolutions.shopmanager.data.db.entities.CategoryEntity
 import com.archsolutions.shopmanager.data.db.entities.Unit as ProductUnit
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import com.archsolutions.shopmanager.feature.pin.PinGate
 import com.archsolutions.shopmanager.feature.pin.rememberPinGate
 
 /** Edit product / New product (7.3, addendum NewProduct) with the Correct stock sheet. */
@@ -81,11 +85,13 @@ fun EditProductScreen(
     isExpanded: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onScan: (() -> Unit)? = null,
+    hasCamera: Boolean = rememberHasCamera(),
+    pinGate: PinGate = rememberPinGate(),
     viewModel: EditProductViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val colors = LocalShopColors.current
-    val pinGate = rememberPinGate()
     var showCorrect by rememberSaveable { mutableStateOf(false) }
     var showSupplierPicker by rememberSaveable { mutableStateOf(false) }
     val form = state.form
@@ -166,12 +172,26 @@ fun EditProductScreen(
                 }
                 Column(modifier = Modifier.weight(1.3f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     FieldLabel(stringResource(R.string.barcode_optional))
-                    ShopTextField(
-                        value = form.barcode,
-                        onValueChange = { code -> viewModel.edit { it.copy(barcode = code) } },
-                        placeholder = stringResource(R.string.barcode_placeholder),
-                        capitalization = KeyboardCapitalization.None,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ShopTextField(
+                            value = form.barcode,
+                            onValueChange = { code -> viewModel.edit { it.copy(barcode = code) } },
+                            placeholder = stringResource(R.string.barcode_placeholder),
+                            capitalization = KeyboardCapitalization.None,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // Only when the device has a camera.
+                        if (onScan != null && hasCamera) {
+                            PillButton(text = stringResource(R.string.barcode_scan), onClick = onScan)
+                        }
+                    }
+                    state.duplicateOf?.let { other ->
+                        Text(
+                            text = stringResource(R.string.barcode_in_use, other),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.rust,
+                        )
+                    }
                 }
             }
             SectionLabel(text = stringResource(R.string.label_unit))
@@ -250,7 +270,7 @@ fun EditProductScreen(
             productName = form.name,
             stockQty = state.stockQty,
             unitText = unitText,
-            pinEnabled = state.pinEnabled,
+            pinNeeded = state.pinNeeded,
             onDismiss = { showCorrect = false },
             onSave = { counted, reason, note ->
                 pinGate.run(R.string.pin_for_stock) { viewModel.correctStock(counted, reason, note) }
@@ -325,7 +345,7 @@ private fun CorrectStockSheet(
     productName: String,
     stockQty: Double,
     unitText: String,
-    pinEnabled: Boolean,
+    pinNeeded: Boolean,
     onDismiss: () -> Unit,
     onSave: (counted: Double, reason: String, note: String) -> Unit,
 ) {
@@ -344,6 +364,7 @@ private fun CorrectStockSheet(
     val change = counted - stockQty
     val close: () -> Unit = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } }
 
+    OnSignOut(onDismiss)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = colors.surface) {
         Column(
             modifier = Modifier
@@ -398,7 +419,7 @@ private fun CorrectStockSheet(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(16.dp))
                 Text(
-                    text = (if (pinEnabled) stringResource(R.string.pin_needed) + " · " else "") + stringResource(R.string.adjustment_note),
+                    text = (if (pinNeeded) stringResource(R.string.pin_needed) + " · " else "") + stringResource(R.string.adjustment_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.muted,
                 )

@@ -23,6 +23,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
@@ -67,6 +72,8 @@ import com.archsolutions.shopmanager.core.designsystem.components.SearchField
 import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
 import com.archsolutions.shopmanager.core.designsystem.components.ShopCard
 import com.archsolutions.shopmanager.core.money.Money
+import com.archsolutions.shopmanager.core.scan.rememberHasCamera
+import com.archsolutions.shopmanager.feature.sell.PillButton
 import com.archsolutions.shopmanager.core.util.Qty
 import com.archsolutions.shopmanager.feature.day.DayGateLockCard
 import java.time.ZoneId
@@ -84,9 +91,29 @@ fun StockScreen(
     onEditProduct: (Long) -> Unit,
     onAddPurchase: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    onScan: (() -> Unit)? = null,
+    onAddScanned: (String) -> Unit = {},
+    onScanPurchase: (() -> Unit)? = null,
+    hasCamera: Boolean = rememberHasCamera(),
     viewModel: StockViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val scan by viewModel.scan.collectAsStateWithLifecycle()
+    val scanAction = onScan.takeIf { hasCamera }
+    // Exactly one match opens that product; the result is cleared first so coming back does not reopen it.
+    LaunchedEffect(scan) {
+        (scan as? ScanLookup.Found)?.let {
+            viewModel.clearScan()
+            onEditProduct(it.productId)
+        }
+    }
+    // A signed-out shop must not come back to the last scan's banner.
+    OnSignOut { viewModel.clearScan() }
+    val notFound = (scan as? ScanLookup.NotFound)?.code
+    val addScanned: (String) -> Unit = { code ->
+        viewModel.clearScan()
+        onAddScanned(code)
+    }
     if (isExpanded) {
         StockExpanded(
             state = state,
@@ -97,6 +124,10 @@ fun StockScreen(
             onCloseDay = onCloseDay,
             onNewProduct = onNewProduct,
             onEditProduct = onEditProduct,
+            onScan = scanAction,
+            notFound = notFound,
+            onAddScanned = addScanned,
+            onScanPurchase = onScanPurchase.takeIf { hasCamera },
             modifier = modifier,
         )
     } else {
@@ -106,7 +137,51 @@ fun StockScreen(
             onNewProduct = onNewProduct,
             onEditProduct = onEditProduct,
             onAddPurchase = onAddPurchase,
+            onScan = scanAction,
+            notFound = notFound,
+            onAddScanned = addScanned,
             modifier = modifier,
+        )
+    }
+}
+
+/** Search field with the Scan pill beside it (only when the device has a camera). */
+@Composable
+private fun StockSearchRow(query: String, onQuery: (String) -> Unit, onScan: (() -> Unit)?) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        SearchField(
+            value = query,
+            onValueChange = onQuery,
+            placeholder = stringResource(R.string.search_placeholder),
+            modifier = Modifier.weight(1f),
+        )
+        if (onScan != null) {
+            Spacer(modifier = Modifier.width(12.dp))
+            PillButton(text = stringResource(R.string.scan_action), onClick = onScan)
+        }
+    }
+}
+
+/** "Not found: CODE" with Add this product; the search field is untouched. */
+@Composable
+private fun ScanNotFoundBanner(code: String, onAdd: (String) -> Unit) {
+    val colors = LocalShopColors.current
+    Column(
+        Modifier.fillMaxWidth().background(colors.rustTint, RoundedCornerShape(12.dp)).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            stringResource(R.string.scan_not_found, code),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.rust,
+            modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Assertive },
+        )
+        SecondaryButton(
+            text = stringResource(R.string.scan_add_product),
+            onClick = { onAdd(code) },
+            height = 48.dp,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
@@ -121,6 +196,10 @@ private fun StockExpanded(
     onCloseDay: () -> Unit,
     onNewProduct: () -> Unit,
     onEditProduct: (Long) -> Unit,
+    onScan: (() -> Unit)?,
+    notFound: String?,
+    onAddScanned: (String) -> Unit,
+    onScanPurchase: (() -> Unit)?,
     modifier: Modifier = Modifier,
     purchaseViewModel: PurchaseViewModel = hiltViewModel(),
 ) {
@@ -172,11 +251,11 @@ private fun StockExpanded(
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                SearchField(
-                    value = state.query,
-                    onValueChange = viewModel::setQuery,
-                    placeholder = stringResource(R.string.search_placeholder),
-                )
+                StockSearchRow(query = state.query, onQuery = viewModel::setQuery, onScan = onScan)
+                if (notFound != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ScanNotFoundBanner(code = notFound, onAdd = onAddScanned)
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 StockFilterChips(state = state, onSelect = viewModel::setFilter)
                 Spacer(modifier = Modifier.height(16.dp))
@@ -225,7 +304,7 @@ private fun StockExpanded(
             }
             // 6.3: purchases are locked until the day is open; the stock list stays usable.
             if (gateState is DayGateState.Ready) {
-                PurchaseForm(state = purchase, viewModel = purchaseViewModel, header = title)
+                PurchaseForm(state = purchase, viewModel = purchaseViewModel, header = title, onScan = onScanPurchase)
             } else {
                 title()
                 DayGateLockCard(gateState = gateState, zoneId = zoneId, onOpenDay = onOpenDay, onCloseDay = onCloseDay)
@@ -378,6 +457,9 @@ private fun StockCompact(
     onNewProduct: () -> Unit,
     onEditProduct: (Long) -> Unit,
     onAddPurchase: (Long) -> Unit,
+    onScan: (() -> Unit)?,
+    notFound: String?,
+    onAddScanned: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalShopColors.current
@@ -420,11 +502,8 @@ private fun StockCompact(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SearchField(
-                value = state.query,
-                onValueChange = viewModel::setQuery,
-                placeholder = stringResource(R.string.search_placeholder),
-            )
+            StockSearchRow(query = state.query, onQuery = viewModel::setQuery, onScan = onScan)
+            if (notFound != null) ScanNotFoundBanner(code = notFound, onAdd = onAddScanned)
             StockFilterChips(state = state, onSelect = viewModel::setFilter)
             Row(
                 modifier = Modifier.fillMaxWidth(),

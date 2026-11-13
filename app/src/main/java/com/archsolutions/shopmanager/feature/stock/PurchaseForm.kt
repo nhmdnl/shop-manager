@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.stock
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -68,6 +69,7 @@ internal fun PurchaseForm(
     viewModel: PurchaseViewModel,
     modifier: Modifier = Modifier,
     header: (@Composable () -> Unit)? = null,
+    onScan: (() -> Unit)? = null,
 ) {
     val colors = LocalShopColors.current
     var showPicker by rememberSaveable { mutableStateOf(false) }
@@ -109,6 +111,10 @@ internal fun PurchaseForm(
                 }
             }
             DashedAddButton(text = stringResource(R.string.add_product), onClick = { showPicker = true })
+            // Only when the device has a camera; the form itself only shows while the day is open.
+            if (onScan != null) {
+                DashedAddButton(text = stringResource(R.string.scan_action), onClick = onScan)
+            }
             HorizontalDivider(color = colors.line)
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -269,6 +275,7 @@ internal fun <T> PickerSheet(
     var query by rememberSaveable { mutableStateOf("") }
     val visible = if (query.isBlank()) options else options.filter { labelFor(it).contains(query.trim(), ignoreCase = true) }
 
+    OnSignOut(onDismiss)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),

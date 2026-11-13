@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.core.designsystem.components
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import com.archsolutions.shopmanager.core.designsystem.CappedFontScale
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
+import com.archsolutions.shopmanager.core.designsystem.LocalUserActivity
 import com.archsolutions.shopmanager.core.designsystem.amountTextStyle
 import com.archsolutions.shopmanager.core.money.Money
 
@@ -121,6 +123,7 @@ fun ShopTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     capitalization: KeyboardCapitalization = KeyboardCapitalization.Sentences,
 ) {
+    val activity = LocalUserActivity.current
     val colors = LocalShopColors.current
     var isFocused by remember { mutableStateOf(false) }
 
@@ -150,7 +153,7 @@ fun ShopTextField(
         }
         BasicTextField(
             value = value,
-            onValueChange = onValueChange,
+            onValueChange = { activity(); onValueChange(it) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType, capitalization = capitalization),
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.ink),
@@ -374,6 +377,7 @@ fun <T> ShopDropdown(
                 )
             }
         }
+        OnSignOut { expanded = false }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },

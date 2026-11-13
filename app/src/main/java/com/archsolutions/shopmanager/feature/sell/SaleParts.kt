@@ -1,5 +1,6 @@
 package com.archsolutions.shopmanager.feature.sell
 
+import com.archsolutions.shopmanager.feature.staff.OnSignOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -438,6 +439,7 @@ internal fun QuantityDialog(
     val qty = Qty.parse(text) ?: 0.0
     val step = 1.0
 
+    OnSignOut(onDismiss)
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(24.dp), color = colors.surface) {
             Column(
@@ -556,6 +558,7 @@ internal fun NewCustomerSheet(
     var phone by rememberSaveable { mutableStateOf("") }
     val close: () -> Unit = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } }
 
+    OnSignOut(onDismiss)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = colors.surface) {
         Column(
             modifier = Modifier
