@@ -44,8 +44,10 @@ class StaffSignInViewModelTest {
     private lateinit var session: StaffSession
     private lateinit var guard: StaffGuard
 
+    /** The test's clock; the idle test moves it on past the timeout. */
+    private var now = 1_000L
     private val clock = object : AppClock {
-        override fun nowMillis() = 1_000L
+        override fun nowMillis() = now
         override fun todayDateString() = "2026-01-01"
         override val zoneId: ZoneId = ZoneId.of("Africa/Kampala")
     }
@@ -162,5 +164,39 @@ class StaffSignInViewModelTest {
         session.signOut()
 
         assertEquals(amina, vm.picked.first { it == amina })
+    }
+
+    @Test
+    fun `Switch user forgets the remembered person`() = runTest {
+        build()
+        val amina = seedShop()
+        val vm = newVm()
+        vm.pickAndWait(amina)
+        assertEquals(PinResult.Ok, vm.enter("2222"))
+        settings.settings.first { it.lastStaffId == amina }
+
+        StaffGateViewModel(session, repo, settings).switchUser()
+
+        assertNull(vm.picked.first { it == null })
+        assertNull(settings.settings.first().lastStaffId)
+        session.current.first { it == null }
+    }
+
+    @Test
+    fun `an idle sign-out keeps the remembered person`() = runTest {
+        build()
+        val amina = seedShop()
+        val vm = newVm()
+        vm.pickAndWait(amina)
+        assertEquals(PinResult.Ok, vm.enter("2222"))
+        settings.settings.first { it.lastStaffId == amina }
+
+        // A day without touches, past the 10-minute default: only the session signs out, the gate is not involved.
+        now += 24 * 60 * 60_000L
+        session.checkIdle(10)
+        session.current.first { it == null }
+
+        assertEquals(amina, settings.settings.first().lastStaffId)
+        assertEquals(amina, newVm().picked.first { it != null })
     }
 }

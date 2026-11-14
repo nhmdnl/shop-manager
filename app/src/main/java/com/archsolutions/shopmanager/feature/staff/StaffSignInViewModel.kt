@@ -60,7 +60,8 @@ class StaffSignInViewModel @Inject constructor(
         if (result == PinResult.Ok) {
             // Launched on the view model's scope, not awaited here: the screen's own scope is cancelled as soon as the
             // session changes, which would cancel this write and the next sign-in would not remember this person.
-            viewModelScope.launch { settings.setLastStaffId(id) }
+            // Best-effort: a failed DataStore write only loses the remembered person, it must not crash the app.
+            viewModelScope.launch { runCatching { settings.setLastStaffId(id) } }
             tapped.value = null
         }
         return result
