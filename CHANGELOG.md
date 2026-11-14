@@ -4,27 +4,33 @@ All notable changes to Arch-SME. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Changed
+- The app targets Android 16 (API 36), which Google Play requires for new apps. It still runs on Android 8.0 and newer.
+- The JVM tests need JDK 21; the app still builds with JDK 17.
+
+## [1.1.0] - 2026-11-13
+
+Updates 1.0.0 in place and keeps the shop's data. Nothing changes for a shop until it turns the new features on.
+
 ### Added
-- **Arch-SME Cloud (optional, paid):**
-  - Sign in with an SMS code and link the tablet.
-  - A cloud backup after each closed day, with a Settings card showing the plan and the last backup, and a banner on Home when the plan is ending or paused.
-  - Restore from the cloud, from Settings or from onboarding, onto a new tablet.
-  - Plans, paid by Mobile Money.
-  - Builds without a cloud address show none of this and make no cloud calls.
-- The app now asks for internet access, used only by the cloud features and by Google's barcode library (see Privacy below).
+- **Staff PINs and roles:**
+  - Settings, Set up staff: the owner confirms the shop PIN, enters a name, then chooses a new Owner PIN. A one-time recovery code is shown once, for a forgotten Owner PIN.
+  - Each person signs in with their own 4-digit PIN. Sales and voids record who made them.
+  - Two roles. A Cashier sells, takes customer payments and sees today's sales. Voids, closing or reopening the day, stock corrections, Settings, restore and managing staff need an Owner. A Cashier can call an Owner to enter their PIN for one action.
+  - Sign-out by Switch user, or after 10 idle minutes (a Setting).
+  - Staff stays off until the owner sets it up. Backups carry the staff list, so treat a backup file as private.
+- The app now asks for internet access, used only by Google's barcode library (see Privacy below) and by Arch-SME Cloud once it opens.
 - **Barcode scanning:**
   - A Scan button in Sell (items go straight into the cart), Stock (finds the product), Edit product (fills the barcode field) and Add purchase (adds lines).
   - An unknown code offers Add this product with the code filled in.
   - Needs the camera permission; shown only on devices with a camera. The barcode model is bundled, so scanning works offline.
   - **Privacy:** the bundled Google ML Kit barcode library may send anonymous usage and performance metrics to Google when the device is online. Camera frames and the codes read are never sent.
   - Release builds ship for ARM devices only (arm64-v8a and armeabi-v7a), about 30 MB.
-
-### Changed
-- The app targets Android 16 (API 36), which Google Play requires for new apps. It still runs on Android 8.0 and newer.
-- The JVM tests need JDK 21; the app still builds with JDK 17.
+- **Arch-SME Cloud (optional, paid) is built in but switched off in this release**, because its server is not online yet. Nothing about it shows in the app and the app makes no cloud calls. When it opens, it will offer: sign-in with an SMS code, a cloud backup after each closed day, restore onto a new tablet, plans paid by Mobile Money, and Owner view on a phone browser.
 
 ### Fixed
 - Settings now warns when the automatic backup after closing the day could not be saved (it used to fail silently). The next good backup clears the warning.
+- Starting the app in dark mode no longer flashes white.
 
 ## [1.0.0] - 2026-10-23
 
@@ -91,5 +97,6 @@ The first release, for one shop on an Android tablet or phone, fully offline.
   - Card links wrap under their titles.
 - Backups record their own time.
 
-[Unreleased]: https://github.com/nhmdnl/shop-manager/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/nhmdnl/shop-manager/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/nhmdnl/shop-manager/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/nhmdnl/shop-manager/releases/tag/v1.0.0

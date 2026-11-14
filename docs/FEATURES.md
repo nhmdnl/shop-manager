@@ -19,6 +19,7 @@ No account, no internet needed.
 - Stock list with low-stock warnings.
 - Purchases, paid now or not paid yet, from cash or Mobile Money.
 - New and edited products, starting stock, and stock corrections.
+- Barcode scanning with the camera in Sell, Stock, Edit product and purchases. Works offline.
 - Suppliers, product links, a suggested reorder quantity, and a WhatsApp order message.
 
 **The day's money**
@@ -37,6 +38,7 @@ No account, no internet needed.
 
 **Safety**
 - An optional PIN for voids, stock corrections, closing, reopening and restoring.
+- Staff PINs: each person signs in with their own PIN, sales and voids record who made them, and Owner and Cashier roles.
 - Backup to a single zip, and a checked restore.
 - An automatic backup on the tablet after each closed day, keeping the last 7.
 
@@ -47,8 +49,6 @@ No account, no internet needed.
 
 ## Coming to the free app
 
-- **Staff PINs:** each person has their own PIN; sales and voids record who did them; owner and cashier roles.
-- **Barcode scanning** with the camera.
 - **Bluetooth receipt printing** on 58 mm printers.
 
 ## Arch-SME Cloud: paid, optional
