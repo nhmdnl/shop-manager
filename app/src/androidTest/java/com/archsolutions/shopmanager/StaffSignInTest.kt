@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -60,6 +61,7 @@ import com.archsolutions.shopmanager.core.designsystem.ThemeMode
 import com.archsolutions.shopmanager.core.util.AppClock
 import com.archsolutions.shopmanager.data.db.AppDatabase
 import com.archsolutions.shopmanager.data.repo.StaffRepo
+import com.archsolutions.shopmanager.data.settings.PinResult
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import com.archsolutions.shopmanager.data.staff.StaffGuard
 import com.archsolutions.shopmanager.data.staff.StaffSession
@@ -71,6 +73,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -98,6 +101,8 @@ class StaffSignInTest {
         .setQueryExecutor(queryExecutor)
         .build()
     private val viewModelStore = ViewModelStore()
+    /** Where a second, fresh sign-in screen lives: as if the first one had been left. */
+    private val secondScreenStore = ViewModelStore()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val clock = object : AppClock {
         override fun nowMillis(): Long = System.currentTimeMillis()
@@ -111,25 +116,34 @@ class StaffSignInTest {
     @After
     fun tearDown() {
         viewModelStore.clear()
+        secondScreenStore.clear()
         scope.cancel()
         queryExecutor.shutdown()
         queryExecutor.awaitTermination(5, TimeUnit.SECONDS)
         db.close()
     }
 
+    private lateinit var settings: SettingsStore
+    private lateinit var repo: StaffRepo
+    private lateinit var guard: StaffGuard
+
     /** Owner Grace (1111), cashier Amina (2222), cashier Peter (3333) who is switched off, and [extraCashiers] (4444). */
     private fun staffShop(extraCashiers: List<String> = emptyList()): StaffSignInViewModel = runBlocking {
-        val settings = SettingsStore(PreferenceDataStoreFactory.create(scope = scope, produceFile = { File(context.cacheDir, "signin_${System.nanoTime()}.preferences_pb") }))
-        val repo = StaffRepo(db, db.staffDao(), settings, clock, pinIterations = 1_000)
+        settings = SettingsStore(PreferenceDataStoreFactory.create(scope = scope, produceFile = { File(context.cacheDir, "signin_${System.nanoTime()}.preferences_pb") }))
+        repo = StaffRepo(db, db.staffDao(), settings, clock, pinIterations = 1_000)
         recoveryCode = repo.enableStaff("Grace", "1111")
         cashierId = repo.addStaff("Amina", Role.CASHIER, "2222")
         val peter = repo.addStaff("Peter", Role.CASHIER, "3333")
         repo.setActive(peter, false)
         extraCashiers.forEach { repo.addStaff(it, Role.CASHIER, "4444") }
-        val guard = StaffGuard(repo, session, clock)
-        val factory = viewModelFactory { initializer { StaffSignInViewModel(repo, guard, session, settings) } }
-        ViewModelProvider(viewModelStore, factory)[StaffSignInViewModel::class.java]
+        guard = StaffGuard(repo, session, clock)
+        ViewModelProvider(viewModelStore, screenFactory())[StaffSignInViewModel::class.java]
     }
+
+    private fun screenFactory() = viewModelFactory { initializer { StaffSignInViewModel(repo, guard, session, settings) } }
+
+    /** A new sign-in screen view model on the same shop, as a screen opened after the first one was left. */
+    private fun freshScreenModel(): StaffSignInViewModel = ViewModelProvider(secondScreenStore, screenFactory())[StaffSignInViewModel::class.java]
 
     private fun tapPin(pin: String) = pin.forEach { composeRule.onNodeWithText(it.toString()).performClick() }
 
@@ -167,24 +181,32 @@ class StaffSignInTest {
         val viewModel = staffShop()
         composeRule.setContent { ShopManagerTheme(themeMode = ThemeMode.LIGHT) { StaffSignInScreen(viewModel) } }
 
+        // Nobody is picked, so the keys are greyed out: a press does nothing and no PIN is checked.
+        composeRule.onNodeWithText("2").assertIsNotEnabled()
         repeat(4) { composeRule.onNodeWithText("2").performClick() }
         composeRule.waitForIdle()
 
         assertEquals(null, session.currentId)
         composeRule.onNodeWithText(context.getString(R.string.staff_signin_pick_first)).assertIsDisplayed()
+        assertTrue(composeRule.onAllNodesWithText(context.resources.getQuantityString(R.plurals.plurals_pin_tries_left, 4, 4)).fetchSemanticsNodes().isEmpty())
     }
 
     @Test
     fun lastPersonIsPickedWhenTheScreenOpens() {
-        val viewModel = staffShop()
-        // Amina signs in once, so the device remembers her; then the session ends (idle or switch-user).
-        viewModel.pick(cashierId)
-        runBlocking { viewModel.enter("2222") }
+        val firstScreen = staffShop()
+        // Amina signs in on the first screen, so the device remembers her; then the session ends (idle or switch-user).
+        firstScreen.pick(cashierId)
+        runBlocking { firstScreen.picked.first { it == cashierId } }
+        assertEquals(PinResult.Ok, runBlocking { firstScreen.enter("2222") })
+        runBlocking { settings.settings.first { it.lastStaffId == cashierId } }
         session.signOut()
+
+        // A fresh screen asks for Amina's PIN straight away: nobody taps a name.
         composeRule.setContent {
             val current by session.current.collectAsState()
+            val freshScreen = remember { freshScreenModel() }
             ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
-                if (shouldShowSignIn(staffEnabled = true, signedIn = current != null, onboarding = false)) StaffSignInScreen(viewModel)
+                if (shouldShowSignIn(staffEnabled = true, signedIn = current != null, onboarding = false)) StaffSignInScreen(freshScreen)
             }
         }
 
