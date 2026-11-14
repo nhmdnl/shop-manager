@@ -40,7 +40,7 @@ English, Kiswahili and Portuguese are complete. Luganda and Tigrinya are drafts 
 ## Building
 
 Requirements:
-- JDK 17.
+- JDK 17 for the app, and JDK 21 for the JVM tests (Robolectric runs Android 16 only on Java 21). Gradle finds both through its toolchain lookup.
 - The Android SDK with platform 36.
 - A device or emulator on Android 8.0 (API 26) or newer.
 
@@ -57,6 +57,8 @@ Debug builds fill an empty install with a demo shop ("Mary shop") so every scree
 ./gradlew testDebugUnitTest            # JVM tests: domain logic and Room DAOs on an in-memory database
 ./gradlew connectedDebugAndroidTest    # Compose UI tests on a device; uninstalls the app afterwards
 ```
+
+The first JVM test run downloads Robolectric's Android 16 jar (about 210 MB) into `~/.m2`. The download has no timeout, so a stalled connection hangs the run silently. If that happens, fetch `org.robolectric:android-all-instrumented` (the version named in the stuck download) into `~/.m2/repository` yourself and run the tests again.
 
 The JVM suite covers:
 - The balance arithmetic for closing a day.

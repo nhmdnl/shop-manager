@@ -4,6 +4,10 @@ All notable changes to Arch-SME. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+### Changed
+- The app targets Android 16 (API 36), which Google Play requires for new apps. It still runs on Android 8.0 and newer.
+- The JVM tests need JDK 21; the app still builds with JDK 17.
+
 ## [1.1.0] - 2026-11-13
 
 Updates 1.0.0 in place and keeps the shop's data. Nothing changes for a shop until it turns the new features on.
