@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -91,12 +93,17 @@ fun StaffSignInScreen(viewModel: StaffSignInViewModel = hiltViewModel(), modifie
         }
     }
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize().background(colors.paper)) {
+    // Edge-to-edge app: keep clear of the status and navigation bars, as the other full-screen screens do.
+    BoxWithConstraints(modifier = modifier.fillMaxSize().background(colors.paper).statusBarsPadding().navigationBarsPadding()) {
+        // Read here: inside the Row the layout scope hides this scope's maxHeight.
+        val screenHeight = maxHeight
         if (maxWidth >= WIDE_FROM) {
             Row(modifier = Modifier.fillMaxSize()) {
+                // Title, names and the forgot button sit as one block, centred on the screen height. The names wrap
+                // their content and scroll inside when there are many people.
                 Column(
                     modifier = Modifier.weight(1f).fillMaxHeight().padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
                 ) {
                     SignInTitle(textAlign = TextAlign.Start, modifier = Modifier.fillMaxWidth())
                     StaffNameGrid(
@@ -104,7 +111,7 @@ fun StaffSignInScreen(viewModel: StaffSignInViewModel = hiltViewModel(), modifie
                         pickedId = pickedId,
                         columns = GridCells.Adaptive(160.dp),
                         onPick = viewModel::pick,
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        modifier = Modifier.weight(1f, fill = false).fillMaxWidth(),
                     )
                     if (owners.isNotEmpty()) {
                         SecondaryButton(
@@ -114,13 +121,17 @@ fun StaffSignInScreen(viewModel: StaffSignInViewModel = hiltViewModel(), modifie
                         )
                     }
                 }
+                // The pad, centred on the screen height. Its minimum height is the pane's, so the centring holds; a
+                // large font makes it taller than that and it scrolls.
                 Column(
                     modifier = Modifier
                         .widthIn(min = 360.dp, max = 400.dp)
                         .fillMaxHeight()
                         .verticalScroll(rememberScrollState())
-                        .padding(24.dp),
+                        .padding(horizontal = 24.dp, vertical = 24.dp)
+                        .heightIn(min = (screenHeight - 48.dp).coerceAtLeast(0.dp)),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                 ) {
                     SignInPad(
                         picked = picked,
