@@ -492,7 +492,7 @@
     <string name="pin_enter">Enter PIN</string>
     <string name="staff_signin_title">Who is working?</string>
     <string name="staff_signin_pin_hint">Enter your PIN to sign in.</string>
-    <string name="staff_signin_someone_else">Not you? Choose someone else</string>
+    <string name="staff_signin_pick_first">Tap your name</string>
     <string name="staff_signed_in_switch">Signed in as %1$s · Switch user</string>
     <string name="pin_owner_needed">Owner PIN needed</string>
     <string name="pin_for_void">Needed to void a sale</string>

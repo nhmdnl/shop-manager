@@ -110,7 +110,8 @@ class StaffSignInViewModelTest {
 
         assertEquals(PinResult.Ok, vm.enter("2222"))
 
-        assertEquals(amina, settings.settings.first().lastStaffId)
+        // The remembered write runs on the view model's scope, so wait for it to land.
+        assertEquals(amina, settings.settings.first { it.lastStaffId == amina }.lastStaffId)
         val next = newVm()
         assertEquals(amina, next.picked.first { it != null })
     }
@@ -123,6 +124,7 @@ class StaffSignInViewModelTest {
         val vm = newVm()
         vm.pickAndWait(amina)
         assertEquals(PinResult.Ok, vm.enter("2222"))
+        settings.settings.first { it.lastStaffId == amina }
         session.signOut()
 
         vm.pickAndWait(grace)

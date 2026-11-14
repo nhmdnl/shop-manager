@@ -53,16 +53,14 @@ class StaffSignInViewModel @Inject constructor(
         tapped.value = id
     }
 
-    fun back() {
-        tapped.value = null
-    }
-
     /** Checks the PIN; on Ok the session holds the person, they are remembered and the screen is left. */
     suspend fun enter(pin: String): PinResult {
         val id = picked.value ?: return PinResult.Wrong(0)
         val result = staffGuard.signIn(id, pin)
         if (result == PinResult.Ok) {
-            settings.setLastStaffId(id)
+            // Launched on the view model's scope, not awaited here: the screen's own scope is cancelled as soon as the
+            // session changes, which would cancel this write and the next sign-in would not remember this person.
+            viewModelScope.launch { settings.setLastStaffId(id) }
             tapped.value = null
         }
         return result
