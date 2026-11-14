@@ -11,6 +11,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
@@ -36,11 +38,13 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -57,6 +61,7 @@ import com.archsolutions.shopmanager.core.designsystem.ThemeMode
 import com.archsolutions.shopmanager.core.util.AppClock
 import com.archsolutions.shopmanager.data.db.AppDatabase
 import com.archsolutions.shopmanager.data.repo.StaffRepo
+import com.archsolutions.shopmanager.data.settings.PinResult
 import com.archsolutions.shopmanager.data.settings.SettingsStore
 import com.archsolutions.shopmanager.data.staff.StaffGuard
 import com.archsolutions.shopmanager.data.staff.StaffSession
@@ -68,6 +73,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -95,6 +101,8 @@ class StaffSignInTest {
         .setQueryExecutor(queryExecutor)
         .build()
     private val viewModelStore = ViewModelStore()
+    /** Where a second, fresh sign-in screen lives: as if the first one had been left. */
+    private val secondScreenStore = ViewModelStore()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val clock = object : AppClock {
         override fun nowMillis(): Long = System.currentTimeMillis()
@@ -108,26 +116,45 @@ class StaffSignInTest {
     @After
     fun tearDown() {
         viewModelStore.clear()
+        secondScreenStore.clear()
         scope.cancel()
         queryExecutor.shutdown()
         queryExecutor.awaitTermination(5, TimeUnit.SECONDS)
         db.close()
     }
 
-    /** Owner Grace (1111), cashier Amina (2222), and cashier Peter (3333) who is switched off. */
-    private fun staffShop(): StaffSignInViewModel = runBlocking {
-        val settings = SettingsStore(PreferenceDataStoreFactory.create(scope = scope, produceFile = { File(context.cacheDir, "signin_${System.nanoTime()}.preferences_pb") }))
-        val repo = StaffRepo(db, db.staffDao(), settings, clock, pinIterations = 1_000)
+    private lateinit var settings: SettingsStore
+    private lateinit var repo: StaffRepo
+    private lateinit var guard: StaffGuard
+
+    /** Owner Grace (1111), cashier Amina (2222), cashier Peter (3333) who is switched off, and [extraCashiers] (4444). */
+    private fun staffShop(extraCashiers: List<String> = emptyList()): StaffSignInViewModel = runBlocking {
+        settings = SettingsStore(PreferenceDataStoreFactory.create(scope = scope, produceFile = { File(context.cacheDir, "signin_${System.nanoTime()}.preferences_pb") }))
+        repo = StaffRepo(db, db.staffDao(), settings, clock, pinIterations = 1_000)
         recoveryCode = repo.enableStaff("Grace", "1111")
         cashierId = repo.addStaff("Amina", Role.CASHIER, "2222")
         val peter = repo.addStaff("Peter", Role.CASHIER, "3333")
         repo.setActive(peter, false)
-        val guard = StaffGuard(repo, session, clock)
-        val factory = viewModelFactory { initializer { StaffSignInViewModel(repo, guard, session) } }
-        ViewModelProvider(viewModelStore, factory)[StaffSignInViewModel::class.java]
+        extraCashiers.forEach { repo.addStaff(it, Role.CASHIER, "4444") }
+        guard = StaffGuard(repo, session, clock)
+        ViewModelProvider(viewModelStore, screenFactory())[StaffSignInViewModel::class.java]
     }
 
+    private fun screenFactory() = viewModelFactory { initializer { StaffSignInViewModel(repo, guard, session, settings) } }
+
+    /** A new sign-in screen view model on the same shop, as a screen opened after the first one was left. */
+    private fun freshScreenModel(): StaffSignInViewModel = ViewModelProvider(secondScreenStore, screenFactory())[StaffSignInViewModel::class.java]
+
     private fun tapPin(pin: String) = pin.forEach { composeRule.onNodeWithText(it.toString()).performClick() }
+
+    /**
+     * Taps the enabled keypad. While a dialog is open over the sign-in screen, the screen's own keys are still in the
+     * tree (greyed out until someone is picked), so a plain text match finds two keys.
+     */
+    private fun tapEnabledPin(pin: String) = pin.forEach { composeRule.onNode(hasText(it.toString()) and isEnabled()).performClick() }
+
+    /** Like [tapPin], for a pad that may sit below the fold (large fonts): each key is scrolled into view first. */
+    private fun tapPinScrolling(pin: String) = pin.forEach { composeRule.onNodeWithText(it.toString()).performScrollTo().performClick() }
 
     @Test
     fun signInScreenListsActiveStaffOnly() {
@@ -137,6 +164,73 @@ class StaffSignInTest {
         composeRule.onNodeWithText("Grace").assertIsDisplayed()
         composeRule.onNodeWithText("Amina").assertIsDisplayed()
         assertTrue(composeRule.onAllNodesWithText("Peter").fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
+    fun namesAndKeysShowTogetherBeforeAnyPick() {
+        val viewModel = staffShop()
+        composeRule.setContent { ShopManagerTheme(themeMode = ThemeMode.LIGHT) { StaffSignInScreen(viewModel) } }
+
+        composeRule.onNodeWithText("Grace").assertIsDisplayed()
+        composeRule.onNodeWithText("5").assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.staff_signin_pick_first)).assertIsDisplayed()
+    }
+
+    @Test
+    fun keysDoNothingBeforeAPick() {
+        val viewModel = staffShop()
+        composeRule.setContent { ShopManagerTheme(themeMode = ThemeMode.LIGHT) { StaffSignInScreen(viewModel) } }
+
+        // Nobody is picked, so the keys are greyed out: a press does nothing and no PIN is checked.
+        composeRule.onNodeWithText("2").assertIsNotEnabled()
+        repeat(4) { composeRule.onNodeWithText("2").performClick() }
+        composeRule.waitForIdle()
+
+        assertEquals(null, session.currentId)
+        composeRule.onNodeWithText(context.getString(R.string.staff_signin_pick_first)).assertIsDisplayed()
+        assertTrue(composeRule.onAllNodesWithText(context.resources.getQuantityString(R.plurals.plurals_pin_tries_left, 4, 4)).fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
+    fun lastPersonIsPickedWhenTheScreenOpens() {
+        val firstScreen = staffShop()
+        // Amina signs in on the first screen, so the device remembers her; then the session ends (idle or switch-user).
+        firstScreen.pick(cashierId)
+        runBlocking { firstScreen.picked.first { it == cashierId } }
+        assertEquals(PinResult.Ok, runBlocking { firstScreen.enter("2222") })
+        runBlocking { settings.settings.first { it.lastStaffId == cashierId } }
+        session.signOut()
+
+        // A fresh screen asks for Amina's PIN straight away: nobody taps a name.
+        composeRule.setContent {
+            val current by session.current.collectAsState()
+            val freshScreen = remember { freshScreenModel() }
+            ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
+                if (shouldShowSignIn(staffEnabled = true, signedIn = current != null, onboarding = false)) StaffSignInScreen(freshScreen)
+            }
+        }
+
+        val hint = context.getString(R.string.staff_signin_pin_hint)
+        composeRule.waitUntil(timeoutMillis = 5_000) { composeRule.onAllNodesWithText(hint).fetchSemanticsNodes().isNotEmpty() }
+        composeRule.onNodeWithText(hint).assertIsDisplayed()
+
+        tapPin("2222")
+        composeRule.waitUntil(timeoutMillis = 5_000) { session.currentId == cashierId }
+    }
+
+    @Test
+    fun manyStaffOnAPhoneKeepTheKeysOnScreen() {
+        val viewModel = staffShop(extraCashiers = listOf("Daniel", "Sara", "Yonas", "Hana", "Kidane", "Selam"))
+        composeRule.setContent {
+            ShopManagerTheme(themeMode = ThemeMode.LIGHT) {
+                Box(Modifier.fillMaxSize()) {
+                    Box(Modifier.requiredWidth(390.dp).fillMaxHeight()) { StaffSignInScreen(viewModel) }
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Amina").performClick()
+        composeRule.onNodeWithText("0").assertIsDisplayed()
     }
 
     @Test
@@ -163,6 +257,9 @@ class StaffSignInTest {
         composeRule.setContent { ShopManagerTheme(themeMode = ThemeMode.LIGHT) { StaffSignInScreen(viewModel) } }
 
         composeRule.onNodeWithText("Amina").performClick()
+        // The pad opens on the same screen as the names: the names stay, the PIN is asked for below them.
+        composeRule.onNodeWithText(context.getString(R.string.staff_signin_pin_hint)).assertIsDisplayed()
+        composeRule.onNodeWithText("Grace").assertIsDisplayed()
         tapPin("9999")
 
         val expected = context.resources.getQuantityString(R.plurals.plurals_pin_tries_left, 4, 4)
@@ -183,8 +280,8 @@ class StaffSignInTest {
         composeRule.onNodeWithText(context.getString(R.string.staff_forgot_pin)).performClick()
         composeRule.onNode(hasSetTextAction()).performTextInput(recoveryCode)
         composeRule.onNodeWithText(context.getString(R.string.action_next)).performClick()
-        tapPin("5555")
-        tapPin("5555")
+        tapEnabledPin("5555")
+        tapEnabledPin("5555")
 
         // The new code is on screen until it is confirmed, and it is not the old one.
         composeRule.waitUntil(timeoutMillis = 5_000) { viewModel.shownCode.value != null }
@@ -223,7 +320,7 @@ class StaffSignInTest {
         composeRule.onNodeWithText(context.getString(R.string.staff_signin_pin_hint)).assertIsDisplayed()
         assertNothingClipped()
 
-        tapPin("9999")
+        tapPinScrolling("9999")
         val expected = context.resources.getQuantityString(R.plurals.plurals_pin_tries_left, 4, 4)
         composeRule.waitUntil(timeoutMillis = 5_000) { composeRule.onAllNodesWithText(expected).fetchSemanticsNodes().isNotEmpty() }
         assertNothingClipped()

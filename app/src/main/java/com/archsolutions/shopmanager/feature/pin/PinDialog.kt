@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -263,6 +264,10 @@ internal fun pinFailureMessage(resources: android.content.res.Resources, result:
 /** Minutes to show for a lock wait of [seconds] (rounded up), or null below 60 s where seconds read better. */
 internal fun lockWaitMinutes(seconds: Int): Int? = if (seconds >= 60) (seconds + 59) / 60 else null
 
+/**
+ * The PIN keypad. [enabled] = false shows the keys greyed out and ignores them; [keyHeight] sets the key height at
+ * normal font size; [showIcon] = false drops the lock circle above the title.
+ */
 @Composable
 internal fun PinPad(
     title: String,
@@ -271,15 +276,21 @@ internal fun PinPad(
     message: String?,
     onDigit: (String) -> Unit,
     onBackspace: () -> Unit,
+    enabled: Boolean = true,
+    keyHeight: Dp = 56.dp,
+    showIcon: Boolean = true,
 ) {
     val colors = LocalShopColors.current
     val activity = LocalUserActivity.current
+    val keyInk = if (enabled) colors.ink else colors.muted
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Box(
-            modifier = Modifier.size(52.dp).clip(CircleShape).background(colors.greenTint),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.green)
+        if (showIcon) {
+            Box(
+                modifier = Modifier.size(52.dp).clip(CircleShape).background(colors.greenTint),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.green)
+            }
         }
         Text(title, fontFamily = DisplayFontFamily, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = colors.ink, textAlign = TextAlign.Center)
         Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = colors.muted, textAlign = TextAlign.Center)
@@ -307,11 +318,11 @@ internal fun PinPad(
                 row.forEach { key ->
                     when (key) {
                         "" -> Spacer(modifier = Modifier.weight(1f))
-                        BACKSPACE -> KeypadKey(onClick = { activity(); onBackspace() }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.AutoMirrored.Outlined.Backspace, contentDescription = stringResource(R.string.pin_backspace), tint = colors.ink)
+                        BACKSPACE -> KeypadKey(onClick = { activity(); onBackspace() }, modifier = Modifier.weight(1f), enabled = enabled, height = keyHeight) {
+                            Icon(Icons.AutoMirrored.Outlined.Backspace, contentDescription = stringResource(R.string.pin_backspace), tint = keyInk)
                         }
-                        else -> KeypadKey(onClick = { activity(); onDigit(key) }, modifier = Modifier.weight(1f)) {
-                            Text(key, fontFamily = DisplayFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, color = colors.ink)
+                        else -> KeypadKey(onClick = { activity(); onDigit(key) }, modifier = Modifier.weight(1f), enabled = enabled, height = keyHeight) {
+                            Text(key, fontFamily = DisplayFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, color = keyInk)
                         }
                     }
                 }
@@ -321,8 +332,15 @@ internal fun PinPad(
 }
 
 @Composable
-private fun KeypadKey(onClick: () -> Unit, modifier: Modifier, content: @Composable () -> Unit) {
-    Surface(onClick = onClick, shape = RoundedCornerShape(14.dp), color = LocalShopColors.current.segmentTrack, modifier = modifier.height(fontScaled(56.dp))) {
+private fun KeypadKey(onClick: () -> Unit, modifier: Modifier, enabled: Boolean, height: Dp, content: @Composable () -> Unit) {
+    val track = LocalShopColors.current.segmentTrack
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(14.dp),
+        color = if (enabled) track else track.copy(alpha = 0.5f),
+        modifier = modifier.height(fontScaled(height)),
+    ) {
         Box(contentAlignment = Alignment.Center) { content() }
     }
 }

@@ -22,7 +22,7 @@ import javax.inject.Inject
 class StaffGateViewModel @Inject constructor(
     private val session: StaffSession,
     staffRepo: StaffRepo,
-    settingsStore: SettingsStore,
+    private val settingsStore: SettingsStore,
 ) : ViewModel() {
     /** Null until the first read: the gate treats unknown as covered, never as staff off. */
     val settings: StateFlow<ShopSettings?> = settingsStore.settings
@@ -57,7 +57,17 @@ class StaffGateViewModel @Inject constructor(
 
     fun checkIdle() = settings.value?.let { session.checkIdle(it.idleTimeoutMinutes) }
 
-    fun switchUser() = session.signOut()
+    /**
+     * Switch user forgets the remembered person, so the sign-in screen that comes next does not offer the one who just
+     * left. The forget is written first, so the old pick never shows; a failed write must not keep anyone signed in.
+     * An idle sign-out does not come through here and keeps the person.
+     */
+    fun switchUser() {
+        viewModelScope.launch {
+            runCatching { settingsStore.setLastStaffId(null) }
+            session.signOut()
+        }
+    }
 
     /** Keeps the idle clock fresh for activity that never reaches the Activity (dialog keypads, soft-keyboard typing). */
     fun touch() = session.touch()
