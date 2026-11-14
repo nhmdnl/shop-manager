@@ -1,6 +1,6 @@
 # Staff sign-in on one screen: design
 
-Date 2026-11-14. Status: approach chosen by the user (A); this short design awaits their approval.
+Date 2026-11-14. Status: approved by the user 2026-11-14 (approach A).
 Branch `signin-grid` (from `develop` 2d92120).
 
 ## Why
