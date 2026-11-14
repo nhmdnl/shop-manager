@@ -106,7 +106,7 @@ git commit -m "Sign-in: remember the last person and pick them when the screen o
 
 **Interfaces:**
 - Consumes: Task 1's `picked`, `pick(id)`, `enter(pin)`, `people`.
-- Produces: `PinPad(..., enabled: Boolean = true, keyHeight: Dp = 56.dp)`. With `enabled = false` the keys are disabled
+- Produces: `PinPad(..., enabled: Boolean = true, keyHeight: Dp = 56.dp, showIcon: Boolean = true)`. `showIcon = false` drops the lock circle. With `enabled = false` the keys are disabled
   (`Surface(enabled = false)`) and show at reduced emphasis. `PinDialog` keeps calling it without the new arguments,
   so the dialog does not change.
 - Produces: `@Composable fun StaffTile(name: String, roleLabel: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier)`:
@@ -121,8 +121,9 @@ Layout, from the spec (`BoxWithConstraints`, wide when `maxWidth >= 600.dp`):
   of tiles taking the remaining height, then "Forgot the Owner PIN" as a `SecondaryButton` (only when an Owner exists).
   Right (width 360 to 400 dp, centred, its own `verticalScroll`): the `PinPad` with `keyHeight = 64.dp`.
 - **Narrow:** one `Column` with `verticalScroll`: the title, a `LazyVerticalGrid(GridCells.Fixed(2))` with
-  `heightIn(max = fontScaled(232.dp))` (about two rows; it scrolls inside for more people), the forgot button, then
-  the `PinPad` with `keyHeight = 64.dp`.
+  `heightIn(max = fontScaled(140.dp))` (one row and a sliver of the next; it scrolls inside for more people), then
+  the `PinPad` with `keyHeight = 64.dp` and `showIcon = false`, then the forgot button below the pad. This keeps the
+  "0" key on a 390 x 750 dp screen at normal font size.
 - Pad title: the picked person's name, subtitle `staff_signin_pin_hint`. With nobody picked: title
   `staff_signin_pick_first`, subtitle empty, `enabled = false`.
 - Keep as they are: `remember(pickedId)` for the `PinEntry` and the message (a new pick clears digits and the error),
@@ -131,7 +132,8 @@ Layout, from the spec (`BoxWithConstraints`, wide when `maxWidth >= 600.dp`):
 - [ ] **Step 1: Write the failing device tests** in `StaffSignInTest` (shop: Grace 1111 Owner, Amina 2222, Peter off):
   - Update `rightPinLeavesTheScreenAndTheSessionHoldsThePerson`, `wrongPinShowsTriesLeft` and
     `signInScreenDoesNotClipAt200PercentFont` to the one-screen flow: tap the tile by name, then `tapPin`. In the 200%
-    test, assert the hint and the "0" key are displayed straight after the tile tap, with no other navigation.
+    test, assert the hint is displayed straight after the tile tap, with no other navigation; at 200% the keys may
+    sit below the fold, so `performScrollTo()` a key before tapping it.
   - `namesAndKeysShowTogetherBeforeAnyPick`: both "Grace" and the key "5" are displayed, and
     `staff_signin_pick_first` is displayed.
   - `keysDoNothingBeforeAPick`: tap "2" four times with nobody picked; `session.current.value == null` and
