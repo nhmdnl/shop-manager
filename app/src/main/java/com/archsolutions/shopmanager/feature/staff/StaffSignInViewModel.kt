@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.archsolutions.shopmanager.data.db.entities.StaffEntity
 import com.archsolutions.shopmanager.data.repo.StaffRepo
 import com.archsolutions.shopmanager.data.settings.PinResult
+import com.archsolutions.shopmanager.data.settings.SettingsStore
 import com.archsolutions.shopmanager.data.staff.RecoveryOutcome
 import com.archsolutions.shopmanager.data.staff.StaffGuard
 import com.archsolutions.shopmanager.data.staff.StaffSession
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -25,29 +27,44 @@ class StaffSignInViewModel @Inject constructor(
     staffRepo: StaffRepo,
     private val staffGuard: StaffGuard,
     session: StaffSession,
+    private val settings: SettingsStore,
 ) : ViewModel() {
     val people: StateFlow<List<StaffEntity>> = staffRepo.staff
         .map { all -> all.filter { it.active } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val _picked = MutableStateFlow<Long?>(null)
+    /** The person tapped on the list, if any. */
+    private val tapped = MutableStateFlow<Long?>(null)
 
-    /** The person whose PIN is being asked for, or null while the list shows. */
-    val picked: StateFlow<Long?> = _picked.asStateFlow()
+    /**
+     * The person whose PIN is being asked for, or null when nobody is: the tapped person if still active, else the
+     * last person to sign in on this device if still active. Eager so [enter] can read it at any time.
+     */
+    val picked: StateFlow<Long?> = combine(
+        tapped,
+        people,
+        settings.settings.map { it.lastStaffId },
+    ) { tappedId, active, lastId ->
+        val activeIds = active.map { it.id }
+        tappedId?.takeIf { it in activeIds } ?: lastId?.takeIf { it in activeIds }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     fun pick(id: Long) {
-        _picked.value = id
+        tapped.value = id
     }
 
     fun back() {
-        _picked.value = null
+        tapped.value = null
     }
 
-    /** Checks the PIN; on Ok the session holds the person and the screen is left. */
+    /** Checks the PIN; on Ok the session holds the person, they are remembered and the screen is left. */
     suspend fun enter(pin: String): PinResult {
-        val id = _picked.value ?: return PinResult.Wrong(0)
+        val id = picked.value ?: return PinResult.Wrong(0)
         val result = staffGuard.signIn(id, pin)
-        if (result == PinResult.Ok) _picked.value = null
+        if (result == PinResult.Ok) {
+            settings.setLastStaffId(id)
+            tapped.value = null
+        }
         return result
     }
 
@@ -73,7 +90,7 @@ class StaffSignInViewModel @Inject constructor(
         // recovery code nobody confirmed are nobody's to see any more.
         viewModelScope.launch {
             session.current.drop(1).collect {
-                _picked.value = null
+                tapped.value = null
                 _shownCode.value = null
             }
         }

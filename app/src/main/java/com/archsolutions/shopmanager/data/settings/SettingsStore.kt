@@ -40,6 +40,8 @@ data class ShopSettings(
     val staffEnabled: Boolean = false,
     val recoveryHash: String = "",
     val idleTimeoutMinutes: Int = 10,
+    /** The person who last signed in on this device; null until someone has. */
+    val lastStaffId: Long? = null,
 )
 
 @Singleton
@@ -66,6 +68,7 @@ class SettingsStore(
         val KEY_STAFF_ENABLED = booleanPreferencesKey("staff_enabled")
         val KEY_RECOVERY_HASH = stringPreferencesKey("recovery_hash")
         val KEY_IDLE_TIMEOUT_MINUTES = intPreferencesKey("idle_timeout_minutes")
+        val KEY_LAST_STAFF_ID = longPreferencesKey("last_staff_id")
     }
 
     val settings: Flow<ShopSettings> = dataStore.data.map { prefs ->
@@ -86,6 +89,7 @@ class SettingsStore(
             staffEnabled = prefs[KEY_STAFF_ENABLED] ?: false,
             recoveryHash = prefs[KEY_RECOVERY_HASH] ?: "",
             idleTimeoutMinutes = prefs[KEY_IDLE_TIMEOUT_MINUTES] ?: 10,
+            lastStaffId = prefs[KEY_LAST_STAFF_ID],
         )
     }
 
@@ -147,6 +151,11 @@ class SettingsStore(
 
     suspend fun setIdleTimeoutMinutes(minutes: Int) {
         dataStore.edit { it[KEY_IDLE_TIMEOUT_MINUTES] = minutes }
+    }
+
+    /** Null clears it (nobody has signed in on this device yet). */
+    suspend fun setLastStaffId(id: Long?) {
+        dataStore.edit { if (id == null) it.remove(KEY_LAST_STAFF_ID) else it[KEY_LAST_STAFF_ID] = id }
     }
 }
 

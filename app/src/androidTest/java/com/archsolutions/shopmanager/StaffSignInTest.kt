@@ -123,7 +123,7 @@ class StaffSignInTest {
         val peter = repo.addStaff("Peter", Role.CASHIER, "3333")
         repo.setActive(peter, false)
         val guard = StaffGuard(repo, session, clock)
-        val factory = viewModelFactory { initializer { StaffSignInViewModel(repo, guard, session) } }
+        val factory = viewModelFactory { initializer { StaffSignInViewModel(repo, guard, session, settings) } }
         ViewModelProvider(viewModelStore, factory)[StaffSignInViewModel::class.java]
     }
 
