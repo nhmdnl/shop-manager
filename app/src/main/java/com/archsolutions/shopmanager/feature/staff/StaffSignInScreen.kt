@@ -18,7 +18,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -43,7 +46,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.archsolutions.shopmanager.R
 import com.archsolutions.shopmanager.core.designsystem.DisplayFontFamily
 import com.archsolutions.shopmanager.core.designsystem.LocalShopColors
-import com.archsolutions.shopmanager.core.designsystem.components.SecondaryButton
 import com.archsolutions.shopmanager.core.designsystem.fontScaled
 import com.archsolutions.shopmanager.data.db.entities.StaffEntity
 import com.archsolutions.shopmanager.data.settings.PinResult
@@ -113,13 +115,7 @@ fun StaffSignInScreen(viewModel: StaffSignInViewModel = hiltViewModel(), modifie
                         onPick = viewModel::pick,
                         modifier = Modifier.weight(1f, fill = false).fillMaxWidth(),
                     )
-                    if (owners.isNotEmpty()) {
-                        SecondaryButton(
-                            text = stringResource(R.string.staff_forgot_pin),
-                            onClick = { recovering = true },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
+                    if (owners.isNotEmpty()) ForgotPinButton(onClick = { recovering = true })
                 }
                 // The pad, centred on the screen height. Its minimum height is the pane's, so the centring holds; a
                 // large font makes it taller than that and it scrolls.
@@ -171,13 +167,7 @@ fun StaffSignInScreen(viewModel: StaffSignInViewModel = hiltViewModel(), modifie
                     onBackspace = entry::backspace,
                     showIcon = false,
                 )
-                if (owners.isNotEmpty()) {
-                    SecondaryButton(
-                        text = stringResource(R.string.staff_forgot_pin),
-                        onClick = { recovering = true },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
+                if (owners.isNotEmpty()) ForgotPinButton(onClick = { recovering = true })
             }
         }
     }
@@ -210,6 +200,27 @@ fun StaffSignInScreen(viewModel: StaffSignInViewModel = hiltViewModel(), modifie
         }
     }
     shownCode?.let { code -> RecoveryCodeDialog(code = code, onWritten = viewModel::codeWritten) }
+}
+
+/**
+ * "Forgot the Owner PIN": a text link under the names, not a full-width button. It wraps its text and sits where its
+ * column puts it (left in the wide layout, centred in the narrow one).
+ */
+@Composable
+private fun ForgotPinButton(onClick: () -> Unit) {
+    val colors = LocalShopColors.current
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.heightIn(min = 48.dp),
+        colors = ButtonDefaults.textButtonColors(contentColor = colors.ink),
+    ) {
+        Text(
+            stringResource(R.string.staff_forgot_pin),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.ink,
+        )
+    }
 }
 
 @Composable

@@ -3,7 +3,6 @@ package com.archsolutions.shopmanager.feature.staff
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -19,8 +19,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,16 +43,17 @@ fun StaffTile(name: String, roleLabel: String, selected: Boolean, onClick: () ->
             .clip(shape)
             .background(if (selected) colors.greenTint else colors.surface)
             .border(BorderStroke(if (selected) 2.dp else 1.dp, if (selected) colors.green else colors.line), shape)
-            .clickable(onClick = onClick)
-            .semantics { this.selected = selected }
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
             .padding(14.dp),
         verticalArrangement = Arrangement.Center,
     ) {
+        // The initial is decoration: the name already says who this is, so TalkBack must not read it as well.
         Box(
             modifier = Modifier
                 .size(fontScaled(44.dp))
                 .clip(CircleShape)
-                .background(if (selected) colors.green else colors.segmentTrack),
+                .background(if (selected) colors.green else colors.segmentTrack)
+                .clearAndSetSemantics {},
             contentAlignment = Alignment.Center,
         ) {
             Text(
